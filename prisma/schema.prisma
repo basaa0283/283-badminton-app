@@ -14,13 +14,17 @@ datasource db {
 model User {
   id              String    @id @default(cuid())
   lineId          String?   @unique // LINE User ID
-  nickname        String    // ニックネーム（公開）
+  name            String?   // NextAuth標準フィールド
+  email           String?   @unique // NextAuth標準フィールド
+  emailVerified   DateTime? // NextAuth標準フィールド
+  image           String?   // NextAuth標準フィールド（プロフィール画像URL）
+  nickname        String    @default("名無し") // ニックネーム（公開）
   firstName       String?   // 名（非公開）
   lastName        String?   // 姓（非公開）
   gender          String?   // 性別: male / female
   age             Int?      // 年齢
   ageVisible      Boolean   @default(true) // 年齢を公開するか
-  profileImageUrl String?   // プロフィール画像URL
+  profileImageUrl String?   // プロフィール画像URL（後方互換性）
   comment         String?   // その他コメント
   role            String    @default("guest") // admin / subadmin / member / visitor / guest
   createdAt       DateTime  @default(now())
