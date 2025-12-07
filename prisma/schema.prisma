@@ -1,0 +1,129 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ユーザー（メンバー）
+model User {
+  id              String    @id @default(cuid())
+  lineId          String?   @unique // LINE User ID
+  nickname        String    // ニックネーム（公開）
+  firstName       String?   // 名（非公開）
+  lastName        String?   // 姓（非公開）
+  gender          String?   // 性別: male / female
+  age             Int?      // 年齢
+  ageVisible      Boolean   @default(true) // 年齢を公開するか
+  profileImageUrl String?   // プロフィール画像URL
+  comment         String?   // その他コメント
+  role            String    @default("guest") // admin / subadmin / member / visitor / guest
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // リレーション
+  attendances     Attendance[]
+  createdEvents   Event[]      @relation("EventCreator")
+  sentMessages    Message[]    @relation("MessageSender")
+
+  // NextAuth用
+  accounts        Account[]
+  sessions        Session[]
+}
+
+// NextAuth Account
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// NextAuth Session
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// NextAuth VerificationToken
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// イベント
+model Event {
+  id              String    @id @default(cuid())
+  title           String    // イベント名
+  description     String?   // 説明
+  eventDate       DateTime  // 開催日時
+  location        String?   // 場所
+  capacity        Int?      // 定員（nullなら無制限）
+  fee             Int?      // 参加費（nullなら非表示）
+  feeVisible      Boolean   @default(false) // 参加費を表示するか
+  deadline        DateTime? // 締め切り日時
+  deadlineEnabled Boolean   @default(false) // 締め切りを有効にするか
+  createdById     String    // 作成者
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // リレーション
+  createdBy       User         @relation("EventCreator", fields: [createdById], references: [id])
+  attendances     Attendance[]
+  messages        Message[]
+}
+
+// 出欠
+model Attendance {
+  id          String   @id @default(cuid())
+  userId      String
+  eventId     String
+  status      String   // attending / not_attending / waitlist
+  comment     String?  // コメント
+  position    Int?     // キャンセル待ち順（waitlistの場合）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // リレーション
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}
+
+// メッセージ（対象者へのメッセージ送信用）
+model Message {
+  id          String   @id @default(cuid())
+  eventId     String
+  senderId    String
+  targetType  String   // all / attending / not_attending / no_response
+  content     String
+  sentAt      DateTime @default(now())
+
+  // リレーション
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sender      User     @relation("MessageSender", fields: [senderId], references: [id])
+}

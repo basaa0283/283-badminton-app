@@ -1,65 +1,113 @@
-import Image from "next/image";
+"use client";
+
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Link from "next/link";
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">読み込み中...</div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
+  const isAdmin = session.user.role === "admin" || session.user.role === "subadmin";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-gray-100">
+      {/* ヘッダー */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-900">283バドミントン</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">{session.user.nickname}</span>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="text-sm text-gray-500 hover:text-gray-700"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              ログアウト
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </header>
+
+      {/* メインコンテンツ */}
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        {/* クイックアクション */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <Link
+            href="/events"
+            className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <div className="text-2xl mb-2">📅</div>
+            <div className="font-medium">イベント一覧</div>
+            <div className="text-sm text-gray-500">出欠を確認・登録</div>
+          </Link>
+
+          <Link
+            href="/members"
+            className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
           >
-            Documentation
-          </a>
+            <div className="text-2xl mb-2">👥</div>
+            <div className="font-medium">メンバー</div>
+            <div className="text-sm text-gray-500">メンバー一覧</div>
+          </Link>
+
+          <Link
+            href="/profile"
+            className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+          >
+            <div className="text-2xl mb-2">👤</div>
+            <div className="font-medium">プロフィール</div>
+            <div className="text-sm text-gray-500">自分の情報を編集</div>
+          </Link>
+
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+            >
+              <div className="text-2xl mb-2">⚙️</div>
+              <div className="font-medium">管理</div>
+              <div className="text-sm text-gray-500">イベント・メンバー管理</div>
+            </Link>
+          )}
+        </div>
+
+        {/* 権限表示 */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-sm text-gray-500">
+            あなたの権限: <span className="font-medium text-gray-700">{getRoleName(session.user.role)}</span>
+          </div>
         </div>
       </main>
     </div>
   );
+}
+
+function getRoleName(role: string): string {
+  const roles: Record<string, string> = {
+    admin: "管理者",
+    subadmin: "副管理者",
+    member: "一般",
+    visitor: "ビジター",
+    guest: "ゲスト",
+  };
+  return roles[role] || role;
 }
