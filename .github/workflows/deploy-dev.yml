@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: 283-badminton-dev  # Azure App Service名（後で変更）
+  AZURE_WEBAPP_NAME: dev-283-badminton-app
   NODE_VERSION: '20.x'
 
 jobs:
