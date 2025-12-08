@@ -111,8 +111,8 @@ model Attendance {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // リレーション
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // リレーション（SQL Server循環参照対策: userはNoAction）
+  user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
@@ -127,7 +127,7 @@ model Message {
   content     String   @db.NVarChar(2000)
   sentAt      DateTime @default(now())
 
-  // リレーション
+  // リレーション（SQL Server循環参照対策: senderはNoAction）
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  sender      User     @relation("MessageSender", fields: [senderId], references: [id])
+  sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
