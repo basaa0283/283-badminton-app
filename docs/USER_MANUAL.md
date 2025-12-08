@@ -8,10 +8,10 @@
 
 ## アクセス方法
 
-### ローカル開発環境
-```
-http://localhost:3000
-```
+| 環境 | URL |
+|------|-----|
+| DEV環境 | https://dev-283-badminton-app.azurewebsites.net |
+| ローカル | http://localhost:3000 |
 
 ---
 

@@ -1,36 +1,131 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 283バドミントン 出欠管理アプリ
 
-## Getting Started
+283バドミントンサークルのイベント出欠管理Webアプリケーションです。
 
-First, run the development server:
+## 概要
+
+LINEアカウントでログインして、練習会などのイベントへの参加・不参加を登録できます。
+
+### 主な機能
+
+- LINEログイン認証
+- イベント作成・編集・削除（管理者）
+- 出欠登録（参加/不参加/キャンセル待ち）
+- メンバー一覧・権限管理
+- プロフィール編集
+
+## 環境
+
+| 環境 | URL | 用途 |
+|------|-----|------|
+| DEV | https://dev-283-badminton-app.azurewebsites.net | 開発・検証用 |
+| LOCAL | http://localhost:3000 | ローカル開発 |
+
+## 技術スタック
+
+| カテゴリ | 技術 |
+|---------|------|
+| フレームワーク | Next.js 16 (App Router) |
+| 言語 | TypeScript |
+| ORM | Prisma 5 |
+| データベース | SQLite (ローカル) / Azure SQL Database (DEV/本番) |
+| 認証 | NextAuth.js + LINE OAuth |
+| スタイリング | Tailwind CSS |
+| ホスティング | Azure App Service |
+| CI/CD | GitHub Actions |
+
+## クイックスタート
+
+### 前提条件
+
+- Node.js 20.x
+- npm
+
+### セットアップ
 
 ```bash
+# リポジトリをクローン
+git clone https://github.com/basaa0283/283-badminton-app.git
+cd 283-badminton-app
+
+# 依存関係をインストール
+npm install
+
+# 環境変数を設定
+cp .env.example .env
+# .env を編集して LINE_CHANNEL_ID, LINE_CHANNEL_SECRET, NEXTAUTH_SECRET を設定
+
+# データベースをセットアップ
+npx prisma db push
+npx prisma generate
+
+# 開発サーバーを起動
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 にアクセス
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ドキュメント
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| ドキュメント | 説明 |
+|-------------|------|
+| [docs/USER_MANUAL.md](docs/USER_MANUAL.md) | ユーザーマニュアル |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | 開発ガイド |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | システム設計書 |
+| [docs/AZURE_SETUP.md](docs/AZURE_SETUP.md) | Azure環境セットアップ |
 
-## Learn More
+## ディレクトリ構成
 
-To learn more about Next.js, take a look at the following resources:
+```
+283-badminton-app/
+├── src/
+│   ├── app/                 # Next.js App Router
+│   │   ├── api/             # API Routes
+│   │   ├── events/          # イベント関連ページ
+│   │   ├── members/         # メンバー関連ページ
+│   │   ├── profile/         # プロフィールページ
+│   │   ├── admin/           # 管理画面
+│   │   └── login/           # ログインページ
+│   ├── components/          # Reactコンポーネント
+│   │   ├── layout/          # レイアウト
+│   │   ├── events/          # イベント関連
+│   │   ├── members/         # メンバー関連
+│   │   └── ui/              # 共通UI
+│   ├── lib/                 # ライブラリ
+│   │   ├── auth.ts          # NextAuth設定
+│   │   ├── prisma.ts        # Prismaクライアント
+│   │   ├── permissions.ts   # 権限チェック
+│   │   └── validations.ts   # バリデーション
+│   └── types/               # 型定義
+├── prisma/
+│   ├── schema.prisma        # DBスキーマ (SQLite)
+│   └── schema.sqlserver.prisma # DBスキーマ (SQL Server)
+├── docs/                    # ドキュメント
+└── .github/workflows/       # CI/CD
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 権限
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| 権限 | 説明 |
+|------|------|
+| admin | 全ての機能が使用可能 |
+| subadmin | イベント作成・編集・削除、権限変更が可能 |
+| member | イベント参加、メンバー詳細閲覧が可能 |
+| visitor | イベント参加のみ可能 |
+| guest | 初回ログイン時の権限。イベント参加のみ可能 |
 
-## Deploy on Vercel
+## ブランチ戦略
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| ブランチ | 用途 |
+|---------|------|
+| master | 安定版 |
+| dev/release | DEV環境デプロイ用 |
+| feature/* | 機能開発用 |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ライセンス
+
+Private
+
+---
+
+*最終更新: 2024年12月*
