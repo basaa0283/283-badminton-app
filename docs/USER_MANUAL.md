@@ -10,7 +10,7 @@
 
 | 環境 | URL |
 |------|-----|
-| DEV環境 | https://dev-283-badminton-app.azurewebsites.net |
+| DEV環境 | https://dev-283-badminton-app-dae7h5bjbddcdnd3.japaneast-01.azurewebsites.net |
 | ローカル | http://localhost:3000 |
 
 ---

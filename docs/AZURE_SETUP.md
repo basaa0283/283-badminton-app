@@ -77,7 +77,7 @@ Azure App Service + Azure SQL Database を使用したDEV環境の構築手順�
 | 名前 | 値 |
 |------|-----|
 | `DATABASE_URL` | `sqlserver://sql-283-badminton-dev.database.windows.net:1433;database=db-283-badminton-dev;user=sqladmin;password=YOUR_PASSWORD;encrypt=true;trustServerCertificate=false` |
-| `NEXTAUTH_URL` | `https://283-badminton-dev.azurewebsites.net` |
+| `NEXTAUTH_URL` | `https://dev-283-badminton-app-dae7h5bjbddcdnd3.japaneast-01.azurewebsites.net` |
 | `NEXTAUTH_SECRET` | (openssl rand -base64 32 で生成) |
 | `LINE_CHANNEL_ID` | (LINE Developersから取得) |
 | `LINE_CHANNEL_SECRET` | (LINE Developersから取得) |
@@ -95,7 +95,7 @@ Azure Portal → SQL Database → 接続文字列 → ADO.NET
 LINE Developers Console → チャネル → LINE Login → コールバックURL に追加:
 
 ```
-https://283-badminton-dev.azurewebsites.net/api/auth/callback/line
+https://dev-283-badminton-app-dae7h5bjbddcdnd3.japaneast-01.azurewebsites.net/api/auth/callback/line
 ```
 
 **注意**: ローカル用のURLも残しておく
@@ -115,7 +115,7 @@ http://localhost:3000/api/auth/callback/line
 |---------------|-----|
 | `AZURE_WEBAPP_PUBLISH_PROFILE` | (App Serviceからダウンロード) |
 | `DATABASE_URL` | (Azure SQL Database接続文字列) |
-| `NEXTAUTH_URL` | `https://283-badminton-dev.azurewebsites.net` |
+| `NEXTAUTH_URL` | `https://dev-283-badminton-app-dae7h5bjbddcdnd3.japaneast-01.azurewebsites.net` |
 | `NEXTAUTH_SECRET` | (openssl rand -base64 32 で生成) |
 | `LINE_CHANNEL_ID` | (LINE Developersから取得) |
 | `LINE_CHANNEL_SECRET` | (LINE Developersから取得) |
@@ -168,7 +168,7 @@ GitHub → Actions → Deploy to Azure App Service (DEV) → Run workflow
 
 ## 8. 動作確認
 
-1. `https://283-badminton-dev.azurewebsites.net` にアクセス
+1. `https://dev-283-badminton-app-dae7h5bjbddcdnd3.japaneast-01.azurewebsites.net` にアクセス
 2. LINEログインをテスト
 3. 各機能の動作確認
 

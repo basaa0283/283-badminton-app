@@ -18,7 +18,7 @@ LINEアカウントでログインして、練習会などのイベントへの�
 
 | 環境 | URL | 用途 |
 |------|-----|------|
-| DEV | https://dev-283-badminton-app.azurewebsites.net | 開発・検証用 |
+| DEV | https://dev-283-badminton-app-dae7h5bjbddcdnd3.japaneast-01.azurewebsites.net | 開発・検証用 |
 | LOCAL | http://localhost:3000 | ローカル開発 |
 
 ## 技術スタック
