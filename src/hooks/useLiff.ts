@@ -31,6 +31,8 @@ export function useLiff() {
         }
       } catch (err) {
         setError(err as Error);
+        // LIFF初期化に失敗してもページは利用可能にする（ブラウザ環境での通常ログイン用）
+        setIsInitialized(true);
       }
     };
 
@@ -38,15 +40,32 @@ export function useLiff() {
   }, []);
 
   const login = () => {
-    if (!liff.isLoggedIn()) {
-      liff.login();
+    try {
+      if (liff && typeof liff.isLoggedIn === "function" && !liff.isLoggedIn()) {
+        liff.login();
+      }
+    } catch {
+      // LIFF未初期化の場合は何もしない
     }
   };
 
   const logout = () => {
-    if (liff.isLoggedIn()) {
-      liff.logout();
-      window.location.reload();
+    try {
+      if (liff && typeof liff.isLoggedIn === "function" && liff.isLoggedIn()) {
+        liff.logout();
+        window.location.reload();
+      }
+    } catch {
+      // LIFF未初期化の場合は何もしない
+    }
+  };
+
+  // liffオブジェクトが正しく初期化されているかをチェックするヘルパー
+  const isInClient = (): boolean => {
+    try {
+      return liff && typeof liff.isInClient === "function" && liff.isInClient();
+    } catch {
+      return false;
     }
   };
 
@@ -58,5 +77,6 @@ export function useLiff() {
     login,
     logout,
     liff,
+    isInClient,
   };
 }

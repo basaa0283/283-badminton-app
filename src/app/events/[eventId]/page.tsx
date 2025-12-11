@@ -19,6 +19,7 @@ interface EventDetail {
   title: string;
   description: string | null;
   eventDate: string;
+  eventEndDate: string | null;
   location: string | null;
   capacity: number | null;
   fee: number | null;
@@ -45,6 +46,7 @@ interface EventDetail {
       id: string;
       nickname: string;
       profileImageUrl: string | null;
+      gender: string | null;
     };
   }> | null;
 }
@@ -191,7 +193,10 @@ export default function EventDetailPage() {
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-                <span>{format(eventDate, "yyyy年M月d日(E) HH:mm", { locale: ja })}</span>
+                <span>
+                  {format(eventDate, "yyyy年M月d日(E) HH:mm", { locale: ja })}
+                  {event.eventEndDate && ` 〜 ${format(new Date(event.eventEndDate), "HH:mm", { locale: ja })}`}
+                </span>
               </div>
 
               {event.location && (

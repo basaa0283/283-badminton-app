@@ -39,6 +39,7 @@ export default function NewEventPage() {
     title: string;
     description: string;
     eventDate: string;
+    eventEndDate: string;
     location: string;
     capacity: string;
     fee: string;
@@ -53,6 +54,7 @@ export default function NewEventPage() {
         title: formData.title,
         description: formData.description || undefined,
         eventDate: new Date(formData.eventDate).toISOString(),
+        eventEndDate: formData.eventEndDate ? new Date(formData.eventEndDate).toISOString() : undefined,
         location: formData.location || undefined,
         capacity: formData.capacity ? parseInt(formData.capacity) : undefined,
         fee: formData.fee ? parseInt(formData.fee) : undefined,

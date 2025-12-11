@@ -11,7 +11,20 @@ interface Attendee {
     id: string;
     nickname: string;
     profileImageUrl: string | null;
+    gender: string | null;
   };
+}
+
+// 性別に応じた背景色を取得
+function getGenderBgClass(gender: string | null): string {
+  switch (gender) {
+    case "male":
+      return "bg-blue-50 border-l-4 border-blue-400";
+    case "female":
+      return "bg-pink-50 border-l-4 border-pink-400";
+    default:
+      return "bg-gray-50";
+  }
 }
 
 interface AttendeeListProps {
@@ -52,7 +65,10 @@ function AttendeeSection({
       <h4 className="text-sm font-medium text-gray-700 mb-2">{title}</h4>
       <div className="space-y-2">
         {attendees.map((attendee) => (
-          <div key={attendee.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+          <div
+            key={attendee.id}
+            className={`flex items-center gap-3 p-2 rounded-lg ${getGenderBgClass(attendee.user.gender)}`}
+          >
             {attendee.user.profileImageUrl ? (
               <img
                 src={attendee.user.profileImageUrl}

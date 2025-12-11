@@ -8,6 +8,7 @@ interface EventFormData {
   title: string;
   description: string;
   eventDate: string;
+  eventEndDate: string;
   location: string;
   capacity: string;
   fee: string;
@@ -31,6 +32,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成" }: Eve
     title: initialData?.title || "",
     description: initialData?.description || "",
     eventDate: initialData?.eventDate || "",
+    eventEndDate: initialData?.eventEndDate || "",
     location: initialData?.location || "",
     capacity: initialData?.capacity || "",
     fee: initialData?.fee || "",
@@ -53,6 +55,17 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成" }: Eve
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // 終了時刻が開始時刻より前の場合はエラー
+    if (formData.eventEndDate && formData.eventDate) {
+      const startDate = new Date(formData.eventDate);
+      const endDate = new Date(formData.eventEndDate);
+      if (endDate <= startDate) {
+        setError("終了時刻は開始時刻より後に設定してください");
+        setLoading(false);
+        return;
+      }
+    }
 
     try {
       await onSubmit(formData);
@@ -97,6 +110,20 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成" }: Eve
           value={formData.eventDate}
           onChange={handleChange}
           required
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="eventEndDate" className="block text-sm font-medium text-gray-700 mb-1">
+          終了時刻（任意）
+        </label>
+        <input
+          type="datetime-local"
+          id="eventEndDate"
+          name="eventEndDate"
+          value={formData.eventEndDate}
+          onChange={handleChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>

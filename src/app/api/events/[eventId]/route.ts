@@ -36,6 +36,7 @@ export async function GET(request: NextRequest, { params }: Params) {
                 id: true,
                 nickname: true,
                 profileImageUrl: true,
+                gender: true,
               },
             },
           },
@@ -65,6 +66,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         title: event.title,
         description: event.description,
         eventDate: event.eventDate,
+        eventEndDate: event.eventEndDate,
         location: event.location,
         capacity: event.capacity,
         fee: event.feeVisible ? event.fee : null,
@@ -153,6 +155,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
     if (parsed.data.description !== undefined) updateData.description = parsed.data.description || null;
     if (parsed.data.eventDate !== undefined) updateData.eventDate = new Date(parsed.data.eventDate);
+    if (parsed.data.eventEndDate !== undefined)
+      updateData.eventEndDate = parsed.data.eventEndDate ? new Date(parsed.data.eventEndDate) : null;
     if (parsed.data.location !== undefined) updateData.location = parsed.data.location || null;
     if (parsed.data.capacity !== undefined) updateData.capacity = parsed.data.capacity || null;
     if (parsed.data.fee !== undefined) updateData.fee = parsed.data.fee || null;

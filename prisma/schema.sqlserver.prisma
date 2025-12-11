@@ -84,6 +84,7 @@ model Event {
   title           String    // イベント名
   description     String?   @db.NVarChar(2000) // 説明
   eventDate       DateTime  // 開催日時
+  eventEndDate    DateTime? // 終了日時（任意）
   location        String?   // 場所
   capacity        Int?      // 定員（nullなら無制限）
   fee             Int?      // 参加費（nullなら非表示）

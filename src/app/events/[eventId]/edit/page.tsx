@@ -14,6 +14,7 @@ interface EventData {
   title: string;
   description: string | null;
   eventDate: string;
+  eventEndDate: string | null;
   location: string | null;
   capacity: number | null;
   fee: number | null;
@@ -90,6 +91,7 @@ export default function EditEventPage() {
     title: string;
     description: string;
     eventDate: string;
+    eventEndDate: string;
     location: string;
     capacity: string;
     fee: string;
@@ -104,6 +106,7 @@ export default function EditEventPage() {
         title: formData.title,
         description: formData.description || null,
         eventDate: new Date(formData.eventDate).toISOString(),
+        eventEndDate: formData.eventEndDate ? new Date(formData.eventEndDate).toISOString() : null,
         location: formData.location || null,
         capacity: formData.capacity ? parseInt(formData.capacity) : null,
         fee: formData.fee ? parseInt(formData.fee) : null,
@@ -143,6 +146,7 @@ export default function EditEventPage() {
                 title: event.title,
                 description: event.description || "",
                 eventDate: formatDateForInput(event.eventDate),
+                eventEndDate: event.eventEndDate ? formatDateForInput(event.eventEndDate) : "",
                 location: event.location || "",
                 capacity: event.capacity?.toString() || "",
                 fee: event.fee?.toString() || "",

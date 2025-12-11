@@ -5,6 +5,7 @@ export const createEventSchema = z.object({
   title: z.string().min(1, "タイトルは必須です").max(100, "タイトルは100文字以内で入力してください"),
   description: z.string().max(1000, "説明は1000文字以内で入力してください").optional(),
   eventDate: z.string().datetime({ message: "有効な日時を入力してください" }),
+  eventEndDate: z.string().datetime().optional().nullable(),
   location: z.string().max(200, "場所は200文字以内で入力してください").optional(),
   capacity: z.number().int().positive("定員は1以上で入力してください").optional().nullable(),
   fee: z.number().int().nonnegative("参加費は0以上で入力してください").optional().nullable(),

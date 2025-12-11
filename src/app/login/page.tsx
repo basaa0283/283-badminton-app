@@ -1,22 +1,32 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useLiff } from "@/hooks/useLiff";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const { isInitialized, isLiffLoggedIn, profile, login: liffLogin, liff } = useLiff();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { isInitialized, isLiffLoggedIn, profile, login: liffLogin, isInClient } = useLiff();
+
+  // 既にログイン済みの場合はホームにリダイレクト
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.push("/");
+    }
+  }, [status, session, router]);
 
   useEffect(() => {
     // LIFF内でログイン済みの場合、NextAuthでサインイン
-    if (isInitialized && isLiffLoggedIn && profile) {
+    if (isInitialized && isLiffLoggedIn && profile && status !== "authenticated") {
       signIn("line", { callbackUrl: "/" });
     }
-  }, [isInitialized, isLiffLoggedIn, profile]);
+  }, [isInitialized, isLiffLoggedIn, profile, status]);
 
   const handleLogin = async () => {
     // LIFF環境の場合はLIFFログイン、それ以外はNextAuth
-    if (isInitialized && liff.isInClient()) {
+    if (isInitialized && isInClient()) {
       liffLogin();
     } else {
       await signIn("line", { callbackUrl: "/" });
@@ -33,9 +43,13 @@ export default function LoginPage() {
           出欠管理アプリ
         </p>
 
-        {!isInitialized ? (
+        {(!isInitialized || status === "loading") ? (
           <div className="text-center text-gray-500">
             読み込み中...
+          </div>
+        ) : status === "authenticated" ? (
+          <div className="text-center text-gray-500">
+            リダイレクト中...
           </div>
         ) : (
           <button
