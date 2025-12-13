@@ -1,10 +1,41 @@
 import { NextAuthOptions } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
+
+const isDevelopment = process.env.NODE_ENV === "development";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   providers: [
+    // 開発環境のみ: テストユーザーでログイン
+    ...(isDevelopment
+      ? [
+          CredentialsProvider({
+            id: "dev-login",
+            name: "開発用ログイン",
+            credentials: {
+              userId: { label: "User ID", type: "text" },
+            },
+            async authorize(credentials) {
+              if (!credentials?.userId) return null;
+
+              const user = await prisma.user.findUnique({
+                where: { id: credentials.userId },
+              });
+
+              if (!user) return null;
+
+              return {
+                id: user.id,
+                name: user.nickname,
+                email: user.email,
+                image: user.profileImageUrl,
+              };
+            },
+          }),
+        ]
+      : []),
     {
       id: "line",
       name: "LINE",
@@ -85,10 +116,11 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user, profile, account }) {
+    async jwt({ token, user }) {
       // 初回ログイン時、userオブジェクトが渡される
       if (user) {
         token.sub = user.id;
+        token.id = user.id;
       }
       return token;
     },
