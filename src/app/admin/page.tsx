@@ -66,9 +66,9 @@ export default function AdminPage() {
           <Link href="/admin/history">
             <Card hover>
               <CardContent className="py-6">
-                <div className="text-3xl mb-2">📊</div>
-                <h2 className="font-semibold text-gray-900">履歴管理</h2>
-                <p className="text-sm text-gray-500 mt-1">ログイン・出欠回答履歴を確認</p>
+                <div className="text-3xl mb-2">📋</div>
+                <h2 className="font-semibold text-gray-900">出欠回答履歴</h2>
+                <p className="text-sm text-gray-500 mt-1">出欠の変更履歴を確認</p>
               </CardContent>
             </Card>
           </Link>
