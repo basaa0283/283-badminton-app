@@ -28,6 +28,11 @@ model User {
   comment         String?   // その他コメント
   role            String    @default("guest") // admin / subadmin / member / visitor / guest
   lastActiveAt    DateTime? // 最終操作日時
+
+  // 管理者専用フィールド（一般ユーザーには見えない）
+  skillLevel      String?   // スキルレベル: beginner / intermediate / advanced / expert
+  adminNote       String?   // 管理者メモ
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

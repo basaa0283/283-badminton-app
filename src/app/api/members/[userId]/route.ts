@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
-import { updateMemberRoleSchema } from "@/lib/validations";
+import { adminUpdateMemberSchema } from "@/lib/validations";
 
 interface Params {
   params: Promise<{ userId: string }>;
@@ -29,18 +29,24 @@ export async function GET(request: NextRequest, { params }: Params) {
     }
 
     const { userId } = await params;
+    const isAdmin = permissions.canAccessAdmin(role);
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
         nickname: true,
+        firstName: true,
+        lastName: true,
         profileImageUrl: true,
         role: true,
         gender: true,
         age: true,
         ageVisible: true,
         comment: true,
+        lastActiveAt: true,
+        skillLevel: true,
+        adminNote: true,
         createdAt: true,
         _count: {
           select: {
@@ -59,20 +65,46 @@ export async function GET(request: NextRequest, { params }: Params) {
       );
     }
 
+    // 過去のイベント参加回数を取得（終了したイベントのみ）
+    const pastAttendanceCount = await prisma.attendance.count({
+      where: {
+        userId: userId,
+        status: "attending",
+        event: {
+          eventDate: { lt: new Date() },
+        },
+      },
+    });
+
+    // 管理者には全フィールド、一般ユーザーには制限されたフィールドを返す
+    const responseData: Record<string, unknown> = {
+      id: user.id,
+      nickname: user.nickname,
+      profileImageUrl: user.profileImageUrl,
+      role: user.role,
+      gender: user.gender,
+      age: user.ageVisible ? user.age : null,
+      ageVisible: user.ageVisible,
+      comment: user.comment,
+      lastActiveAt: user.lastActiveAt,
+      createdAt: user.createdAt,
+      attendanceCount: user._count.attendances,
+      pastAttendanceCount,
+    };
+
+    // 管理者権限の場合、追加の管理者専用フィールドを含める
+    if (isAdmin) {
+      responseData.firstName = user.firstName;
+      responseData.lastName = user.lastName;
+      responseData.skillLevel = user.skillLevel;
+      responseData.adminNote = user.adminNote;
+      // 管理者には年齢を常に表示
+      responseData.age = user.age;
+    }
+
     return NextResponse.json({
       success: true,
-      data: {
-        id: user.id,
-        nickname: user.nickname,
-        profileImageUrl: user.profileImageUrl,
-        role: user.role,
-        gender: user.gender,
-        age: user.ageVisible ? user.age : null,
-        ageVisible: user.ageVisible,
-        comment: user.comment,
-        createdAt: user.createdAt,
-        attendanceCount: user._count.attendances,
-      },
+      data: responseData,
     });
   } catch (error) {
     console.error("Member GET error:", error);
@@ -83,7 +115,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-// PUT /api/members/[userId] - メンバー権限更新
+// PUT /api/members/[userId] - メンバー情報更新（管理者用）
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
@@ -95,16 +127,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const role = session.user.role as UserRole;
-    if (!permissions.canEditMemberRole(role)) {
+    if (!permissions.canAccessAdmin(role)) {
       return NextResponse.json(
-        { success: false, error: { code: "FORBIDDEN", message: "権限変更の権限がありません" } },
+        { success: false, error: { code: "FORBIDDEN", message: "メンバー編集の権限がありません" } },
         { status: 403 }
       );
     }
 
     const { userId } = await params;
     const body = await request.json();
-    const parsed = updateMemberRoleSchema.safeParse(body);
+    const parsed = adminUpdateMemberSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -119,8 +151,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
-    // 自分自身の権限は変更できない
-    if (userId === session.user.id) {
+    // 自分自身の権限は変更できない（権限変更の場合のみ）
+    if (parsed.data.role && userId === session.user.id) {
       return NextResponse.json(
         { success: false, error: { code: "FORBIDDEN", message: "自分自身の権限は変更できません" } },
         { status: 403 }
@@ -143,13 +175,35 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
+    // 更新データを構築
+    const updateData: Record<string, unknown> = {};
+    if (parsed.data.nickname !== undefined) updateData.nickname = parsed.data.nickname;
+    if (parsed.data.firstName !== undefined) updateData.firstName = parsed.data.firstName;
+    if (parsed.data.lastName !== undefined) updateData.lastName = parsed.data.lastName;
+    if (parsed.data.gender !== undefined) updateData.gender = parsed.data.gender;
+    if (parsed.data.age !== undefined) updateData.age = parsed.data.age;
+    if (parsed.data.ageVisible !== undefined) updateData.ageVisible = parsed.data.ageVisible;
+    if (parsed.data.comment !== undefined) updateData.comment = parsed.data.comment;
+    if (parsed.data.role !== undefined) updateData.role = parsed.data.role;
+    if (parsed.data.skillLevel !== undefined) updateData.skillLevel = parsed.data.skillLevel;
+    if (parsed.data.adminNote !== undefined) updateData.adminNote = parsed.data.adminNote;
+
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { role: parsed.data.role },
+      data: updateData,
       select: {
         id: true,
         nickname: true,
+        firstName: true,
+        lastName: true,
+        profileImageUrl: true,
         role: true,
+        gender: true,
+        age: true,
+        ageVisible: true,
+        comment: true,
+        skillLevel: true,
+        adminNote: true,
       },
     });
 

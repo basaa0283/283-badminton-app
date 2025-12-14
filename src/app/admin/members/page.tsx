@@ -5,29 +5,51 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
-import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
-import { Modal } from "@/components/ui/Modal";
-import { permissions, UserRole, getRoleName } from "@/lib/permissions";
+import { permissions, UserRole } from "@/lib/permissions";
 
 interface Member {
   id: string;
   nickname: string;
   profileImageUrl: string | null;
   role: string;
+  skillLevel?: string | null;
+  lastActiveAt?: string | null;
 }
 
-const ROLES: UserRole[] = ["admin", "subadmin", "member", "visitor", "guest"];
+function getSkillLevelShort(level: string | null | undefined): string {
+  switch (level) {
+    case "beginner": return "初";
+    case "intermediate": return "中";
+    case "advanced": return "上";
+    case "expert": return "Ex";
+    default: return "";
+  }
+}
+
+function formatRelativeTime(dateString: string | null | undefined): string {
+  if (!dateString) return "未操作";
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return "たった今";
+  if (diffMins < 60) return `${diffMins}分前`;
+  if (diffHours < 24) return `${diffHours}時間前`;
+  if (diffDays < 7) return `${diffDays}日前`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}週前`;
+  return `${Math.floor(diffDays / 30)}ヶ月前`;
+}
 
 export default function AdminMembersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [newRole, setNewRole] = useState<UserRole>("guest");
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -64,40 +86,8 @@ export default function AdminMembersPage() {
     }
   };
 
-  const openRoleModal = (member: Member) => {
-    setSelectedMember(member);
-    setNewRole(member.role as UserRole);
-  };
-
-  const handleRoleChange = async () => {
-    if (!selectedMember) return;
-
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/members/${selectedMember.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        setMembers((prev) =>
-          prev.map((m) =>
-            m.id === selectedMember.id ? { ...m, role: newRole } : m
-          )
-        );
-        setSelectedMember(null);
-      } else {
-        alert(data.error?.message || "権限の変更に失敗しました");
-      }
-    } catch (error) {
-      console.error("Failed to update role:", error);
-      alert("権限の変更に失敗しました");
-    } finally {
-      setSaving(false);
-    }
+  const handleMemberClick = (memberId: string) => {
+    router.push(`/admin/members/${memberId}`);
   };
 
   if (status === "loading" || !session || loading) {
@@ -107,15 +97,6 @@ export default function AdminMembersPage() {
       </div>
     );
   }
-
-  const currentRole = session.user.role as UserRole;
-  const isAdmin = currentRole === "admin";
-
-  // 自分より上の権限には変更できない
-  const availableRoles = ROLES.filter((role) => {
-    if (role === "admin" && !isAdmin) return false;
-    return true;
-  });
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -128,11 +109,17 @@ export default function AdminMembersPage() {
           </Link>
         </div>
 
-        <h1 className="text-xl font-bold text-gray-900 mb-4">メンバー管理</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-4">
+          メンバー管理 ({members.length})
+        </h1>
 
         <div className="space-y-2">
           {members.map((member) => (
-            <Card key={member.id}>
+            <Card
+              key={member.id}
+              hover
+              onClick={() => handleMemberClick(member.id)}
+            >
               <CardContent className="py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -148,20 +135,20 @@ export default function AdminMembersPage() {
                       </div>
                     )}
                     <div>
-                      <div className="font-medium text-gray-900">{member.nickname}</div>
-                      <RoleBadge role={member.role} />
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900">{member.nickname}</span>
+                        <RoleBadge role={member.role} />
+                        {member.skillLevel && (
+                          <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
+                            {getSkillLevelShort(member.skillLevel)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatRelativeTime(member.lastActiveAt)}
+                      </div>
                     </div>
                   </div>
-
-                  {member.id !== session.user.id && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => openRoleModal(member)}
-                    >
-                      権限変更
-                    </Button>
-                  )}
 
                   {member.id === session.user.id && (
                     <span className="text-xs text-gray-400">自分</span>
@@ -172,72 +159,6 @@ export default function AdminMembersPage() {
           ))}
         </div>
       </main>
-
-      <Modal
-        isOpen={!!selectedMember}
-        onClose={() => setSelectedMember(null)}
-        title="権限変更"
-      >
-        {selectedMember && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              {selectedMember.profileImageUrl ? (
-                <img
-                  src={selectedMember.profileImageUrl}
-                  alt=""
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-500">{selectedMember.nickname[0]}</span>
-                </div>
-              )}
-              <div>
-                <div className="font-medium">{selectedMember.nickname}</div>
-                <div className="text-sm text-gray-500">
-                  現在: {getRoleName(selectedMember.role as UserRole)}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                新しい権限
-              </label>
-              <select
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value as UserRole)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {availableRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {getRoleName(role)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => setSelectedMember(null)}
-                disabled={saving}
-              >
-                キャンセル
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={handleRoleChange}
-                loading={saving}
-                disabled={newRole === selectedMember.role}
-              >
-                変更する
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

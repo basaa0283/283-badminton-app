@@ -40,6 +40,7 @@ export async function GET() {
         ageVisible: true,
         comment: true,
         lastActiveAt: true,
+        skillLevel: true,
         createdAt: true,
       },
     });
@@ -54,6 +55,7 @@ export async function GET() {
       ageVisible: user.ageVisible,
       comment: user.comment,
       lastActiveAt: user.lastActiveAt,
+      skillLevel: user.skillLevel,
       createdAt: user.createdAt,
     }));
 
