@@ -37,7 +37,6 @@ export function Header() {
 
         <nav className="flex gap-1 mt-3 -mx-2 overflow-x-auto">
           <NavLink href="/events">イベント</NavLink>
-          <NavLink href="/members">メンバー</NavLink>
           <NavLink href="/profile">プロフィール</NavLink>
           {isAdmin && <NavLink href="/admin">管理</NavLink>}
           <button

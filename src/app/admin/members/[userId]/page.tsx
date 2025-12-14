@@ -22,7 +22,7 @@ interface MemberDetail {
   ageVisible: boolean;
   comment: string | null;
   lastActiveAt: string | null;
-  skillLevel: string | null;
+  skillLevel: number | null;
   adminNote: string | null;
   createdAt: string;
   attendanceCount: number;
@@ -30,22 +30,15 @@ interface MemberDetail {
 }
 
 const ROLES: UserRole[] = ["admin", "subadmin", "member", "visitor", "guest"];
-const SKILL_LEVELS = [
-  { value: "", label: "未設定" },
-  { value: "beginner", label: "初心者" },
-  { value: "intermediate", label: "中級者" },
-  { value: "advanced", label: "上級者" },
-  { value: "expert", label: "エキスパート" },
-];
 const GENDERS = [
   { value: "", label: "未設定" },
   { value: "male", label: "男性" },
   { value: "female", label: "女性" },
 ];
 
-function getSkillLevelName(level: string | null): string {
-  const item = SKILL_LEVELS.find((l) => l.value === level);
-  return item?.label || "未設定";
+function getSkillLevelDisplay(level: number | null): string {
+  if (level === null) return "未設定";
+  return `Lv.${level}`;
 }
 
 function formatRelativeTime(dateString: string | null): string {
@@ -126,7 +119,7 @@ export default function MemberDetailPage() {
           ageVisible: data.data.ageVisible ?? true,
           comment: data.data.comment || "",
           role: data.data.role || "",
-          skillLevel: data.data.skillLevel || "",
+          skillLevel: data.data.skillLevel?.toString() || "",
           adminNote: data.data.adminNote || "",
         });
       } else {
@@ -155,7 +148,7 @@ export default function MemberDetailPage() {
           ageVisible: formData.ageVisible,
           comment: formData.comment || null,
           role: formData.role || undefined,
-          skillLevel: formData.skillLevel || null,
+          skillLevel: formData.skillLevel ? parseInt(formData.skillLevel) : null,
           adminNote: formData.adminNote || null,
         }),
       });
@@ -358,19 +351,17 @@ export default function MemberDetailPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    スキルレベル
+                    スキルレベル (1-10)
                   </label>
-                  <select
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
                     value={formData.skillLevel}
                     onChange={(e) => setFormData({ ...formData, skillLevel: e.target.value })}
+                    placeholder="1-10"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    {SKILL_LEVELS.map((level) => (
-                      <option key={level.value} value={level.value}>
-                        {level.label}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div>
@@ -449,7 +440,7 @@ export default function MemberDetailPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-gray-500">スキルレベル</div>
-                    <div className="font-medium">{getSkillLevelName(member.skillLevel)}</div>
+                    <div className="font-medium">{getSkillLevelDisplay(member.skillLevel)}</div>
                   </div>
                 </div>
 

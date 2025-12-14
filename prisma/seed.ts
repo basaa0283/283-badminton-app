@@ -32,7 +32,7 @@ async function main() {
       role: "admin",
       comment: "管理者です。よろしくお願いします！",
       lastActiveAt: new Date(now.getTime() - 10 * 60 * 1000), // 10分前
-      skillLevel: "expert",
+      skillLevel: 10,
       adminNote: "サークル代表。何かあれば連絡してください。",
     },
   });
@@ -49,7 +49,7 @@ async function main() {
       role: "subadmin",
       comment: "副管理者としてお手伝いします",
       lastActiveAt: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2時間前
-      skillLevel: "advanced",
+      skillLevel: 8,
       adminNote: "会計担当。イベント運営のサポートをお願い。",
     },
   });
@@ -67,7 +67,7 @@ async function main() {
         role: "member",
         comment: "バドミントン歴5年です",
         lastActiveAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), // 1日前
-        skillLevel: "intermediate",
+        skillLevel: 5,
         adminNote: "積極的に参加してくれる。次期副リーダー候補。",
       },
     }),
@@ -83,7 +83,7 @@ async function main() {
         role: "member",
         comment: "初心者ですが頑張ります！",
         lastActiveAt: new Date(now.getTime() - 30 * 60 * 1000), // 30分前
-        skillLevel: "beginner",
+        skillLevel: 2,
         adminNote: "2ヶ月前に入会。基礎練習中心でお願い。",
       },
     }),
@@ -99,7 +99,7 @@ async function main() {
         role: "member",
         comment: "ダブルス専門です",
         lastActiveAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), // 3日前
-        skillLevel: "advanced",
+        skillLevel: 8,
       },
     }),
     prisma.user.create({
@@ -113,7 +113,7 @@ async function main() {
         ageVisible: true,
         role: "member",
         lastActiveAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), // 5日前
-        skillLevel: "intermediate",
+        skillLevel: 5,
       },
     }),
     prisma.user.create({
@@ -128,7 +128,7 @@ async function main() {
         role: "member",
         comment: "週末参加メインです",
         lastActiveAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 1週間前
-        skillLevel: "intermediate",
+        skillLevel: 5,
         adminNote: "仕事が忙しく最近参加少なめ。フォローが必要かも。",
       },
     }),

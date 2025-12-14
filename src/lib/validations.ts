@@ -51,7 +51,7 @@ export const adminUpdateMemberSchema = z.object({
   ageVisible: z.boolean().optional(),
   comment: z.string().max(500).optional().nullable(),
   role: z.enum(["admin", "subadmin", "member", "visitor", "guest"]).optional(),
-  skillLevel: z.enum(["beginner", "intermediate", "advanced", "expert"]).optional().nullable(),
+  skillLevel: z.number().int().min(1, "スキルレベルは1以上で入力してください").max(10, "スキルレベルは10以下で入力してください").optional().nullable(),
   adminNote: z.string().max(1000).optional().nullable(),
 });
 

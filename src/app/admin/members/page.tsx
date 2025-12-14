@@ -14,18 +14,8 @@ interface Member {
   nickname: string;
   profileImageUrl: string | null;
   role: string;
-  skillLevel?: string | null;
+  skillLevel?: number | null;
   lastActiveAt?: string | null;
-}
-
-function getSkillLevelShort(level: string | null | undefined): string {
-  switch (level) {
-    case "beginner": return "初";
-    case "intermediate": return "中";
-    case "advanced": return "上";
-    case "expert": return "Ex";
-    default: return "";
-  }
 }
 
 function formatRelativeTime(dateString: string | null | undefined): string {
@@ -140,7 +130,7 @@ export default function AdminMembersPage() {
                         <RoleBadge role={member.role} />
                         {member.skillLevel && (
                           <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
-                            {getSkillLevelShort(member.skillLevel)}
+                            Lv.{member.skillLevel}
                           </span>
                         )}
                       </div>

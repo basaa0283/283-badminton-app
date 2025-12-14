@@ -30,7 +30,7 @@ model User {
   lastActiveAt    DateTime? // 最終操作日時
 
   // 管理者専用フィールド（一般ユーザーには見えない）
-  skillLevel      String?   // スキルレベル: beginner / intermediate / advanced / expert
+  skillLevel      Int?      // スキルレベル: 1-10
   adminNote       String?   // 管理者メモ
 
   createdAt       DateTime  @default(now())
