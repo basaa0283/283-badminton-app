@@ -27,11 +27,18 @@ model User {
   profileImageUrl String?   // プロフィール画像URL（後方互換性）
   comment         String?   // その他コメント
   role            String    @default("guest") // admin / subadmin / member / visitor / guest
+  lastActiveAt    DateTime? // 最終操作日時
+
+  // 管理者専用フィールド（一般ユーザーには見えない）
+  skillLevel      Int?      // スキルレベル: 1-10
+  adminNote       String?   // 管理者メモ
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   // リレーション
   attendances     Attendance[]
+  attendanceHistories AttendanceHistory[]
   createdEvents   Event[]      @relation("EventCreator")
   sentMessages    Message[]    @relation("MessageSender")
 
@@ -98,6 +105,7 @@ model Event {
   // リレーション
   createdBy       User         @relation("EventCreator", fields: [createdById], references: [id])
   attendances     Attendance[]
+  attendanceHistories AttendanceHistory[]
   messages        Message[]
 }
 
@@ -117,6 +125,24 @@ model Attendance {
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
+}
+
+// 出欠回答履歴（変更のたびに記録）
+model AttendanceHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  eventId     String
+  status      String   // attending / not_attending / waitlist / cancelled
+  comment     String?  // コメント
+  changedAt   DateTime @default(now()) // 変更日時
+
+  // リレーション
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([changedAt])
 }
 
 // メッセージ（対象者へのメッセージ送信用）

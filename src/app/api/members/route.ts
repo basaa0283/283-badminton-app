@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 
-// GET /api/members - メンバー一覧取得
+// GET /api/members - メンバー一覧取得（管理者権限のみ）
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -16,47 +16,48 @@ export async function GET() {
     }
 
     const role = session.user.role as UserRole;
-    const canViewDetails = permissions.canViewMemberDetails(role);
+
+    // 管理者権限チェック
+    if (!permissions.canAccessAdmin(role)) {
+      return NextResponse.json(
+        { success: false, error: { code: "FORBIDDEN", message: "権限がありません" } },
+        { status: 403 }
+      );
+    }
 
     const users = await prisma.user.findMany({
       where: {
         role: { not: "guest" }, // ゲストは一覧に表示しない
       },
-      orderBy: [{ role: "asc" }, { nickname: "asc" }],
+      orderBy: { lastActiveAt: { sort: "desc", nulls: "last" } },
       select: {
         id: true,
         nickname: true,
         profileImageUrl: true,
         role: true,
-        gender: canViewDetails,
-        age: canViewDetails,
-        ageVisible: canViewDetails,
-        comment: canViewDetails,
-        createdAt: canViewDetails,
+        gender: true,
+        age: true,
+        ageVisible: true,
+        comment: true,
+        lastActiveAt: true,
+        skillLevel: true,
+        createdAt: true,
       },
     });
 
-    const members = users.map((user) => {
-      if (canViewDetails) {
-        return {
-          id: user.id,
-          nickname: user.nickname,
-          profileImageUrl: user.profileImageUrl,
-          role: user.role,
-          gender: user.gender,
-          age: user.ageVisible ? user.age : null,
-          ageVisible: user.ageVisible,
-          comment: user.comment,
-          createdAt: user.createdAt,
-        };
-      }
-      return {
-        id: user.id,
-        nickname: user.nickname,
-        profileImageUrl: user.profileImageUrl,
-        role: user.role,
-      };
-    });
+    const members = users.map((user) => ({
+      id: user.id,
+      nickname: user.nickname,
+      profileImageUrl: user.profileImageUrl,
+      role: user.role,
+      gender: user.gender,
+      age: user.ageVisible ? user.age : null,
+      ageVisible: user.ageVisible,
+      comment: user.comment,
+      lastActiveAt: user.lastActiveAt,
+      skillLevel: user.skillLevel,
+      createdAt: user.createdAt,
+    }));
 
     return NextResponse.json({ success: true, data: members });
   } catch (error) {

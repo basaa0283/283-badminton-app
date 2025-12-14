@@ -89,12 +89,14 @@ export async function POST(request: NextRequest, { params }: Params) {
     const wasAttending = existingAttendance?.status === "attending";
     const isNowNotAttending = parsed.data.status === "not_attending";
 
+    const finalStatus = status === "waitlist" ? "waitlist" : parsed.data.status;
+
     if (existingAttendance) {
       // 更新
       await prisma.attendance.update({
         where: { id: existingAttendance.id },
         data: {
-          status: status === "waitlist" ? "waitlist" : parsed.data.status,
+          status: finalStatus,
           comment: parsed.data.comment || null,
           position: status === "waitlist" ? position : null,
         },
@@ -105,12 +107,28 @@ export async function POST(request: NextRequest, { params }: Params) {
         data: {
           userId,
           eventId,
-          status: status === "waitlist" ? "waitlist" : parsed.data.status,
+          status: finalStatus,
           comment: parsed.data.comment || null,
           position: status === "waitlist" ? position : null,
         },
       });
     }
+
+    // 出欠履歴を記録
+    await prisma.attendanceHistory.create({
+      data: {
+        userId,
+        eventId,
+        status: finalStatus,
+        comment: parsed.data.comment || null,
+      },
+    });
+
+    // lastActiveAtを更新
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lastActiveAt: new Date() },
+    });
 
     // 参加→不参加の場合、キャンセル待ち繰り上げ
     if (wasAttending && isNowNotAttending) {

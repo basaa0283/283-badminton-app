@@ -6,6 +6,7 @@ async function main() {
   console.log("Seeding database...");
 
   // 既存データの削除（オプション）
+  await prisma.attendanceHistory.deleteMany();
   await prisma.attendance.deleteMany();
   await prisma.message.deleteMany();
   await prisma.event.deleteMany();
@@ -15,7 +16,10 @@ async function main() {
 
   console.log("Creating users...");
 
-  // テストユーザー作成
+  // イベント作成
+  const now = new Date();
+
+  // テストユーザー作成（lastActiveAtを設定）
   const admin = await prisma.user.create({
     data: {
       id: "admin-user-1",
@@ -27,6 +31,9 @@ async function main() {
       ageVisible: true,
       role: "admin",
       comment: "管理者です。よろしくお願いします！",
+      lastActiveAt: new Date(now.getTime() - 10 * 60 * 1000), // 10分前
+      skillLevel: 10,
+      adminNote: "サークル代表。何かあれば連絡してください。",
     },
   });
 
@@ -41,6 +48,9 @@ async function main() {
       ageVisible: true,
       role: "subadmin",
       comment: "副管理者としてお手伝いします",
+      lastActiveAt: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2時間前
+      skillLevel: 8,
+      adminNote: "会計担当。イベント運営のサポートをお願い。",
     },
   });
 
@@ -56,6 +66,9 @@ async function main() {
         ageVisible: true,
         role: "member",
         comment: "バドミントン歴5年です",
+        lastActiveAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), // 1日前
+        skillLevel: 5,
+        adminNote: "積極的に参加してくれる。次期副リーダー候補。",
       },
     }),
     prisma.user.create({
@@ -69,6 +82,9 @@ async function main() {
         ageVisible: true,
         role: "member",
         comment: "初心者ですが頑張ります！",
+        lastActiveAt: new Date(now.getTime() - 30 * 60 * 1000), // 30分前
+        skillLevel: 2,
+        adminNote: "2ヶ月前に入会。基礎練習中心でお願い。",
       },
     }),
     prisma.user.create({
@@ -82,6 +98,8 @@ async function main() {
         ageVisible: false,
         role: "member",
         comment: "ダブルス専門です",
+        lastActiveAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), // 3日前
+        skillLevel: 8,
       },
     }),
     prisma.user.create({
@@ -94,6 +112,8 @@ async function main() {
         age: 27,
         ageVisible: true,
         role: "member",
+        lastActiveAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), // 5日前
+        skillLevel: 5,
       },
     }),
     prisma.user.create({
@@ -107,6 +127,9 @@ async function main() {
         ageVisible: true,
         role: "member",
         comment: "週末参加メインです",
+        lastActiveAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 1週間前
+        skillLevel: 5,
+        adminNote: "仕事が忙しく最近参加少なめ。フォローが必要かも。",
       },
     }),
   ]);
@@ -119,6 +142,7 @@ async function main() {
         gender: "male",
         role: "visitor",
         comment: "見学希望です",
+        lastActiveAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), // 2日前
       },
     }),
     prisma.user.create({
@@ -127,6 +151,7 @@ async function main() {
         nickname: "渡辺さん",
         gender: "female",
         role: "visitor",
+        // lastActiveAtなし（未操作）
       },
     }),
   ]);
@@ -136,15 +161,13 @@ async function main() {
       id: "guest-user-1",
       nickname: "新規ゲスト",
       role: "guest",
+      // lastActiveAtなし（未操作）
     },
   });
 
   console.log(`Created ${2 + members.length + visitors.length + 1} users`);
 
   console.log("Creating events...");
-
-  // イベント作成
-  const now = new Date();
 
   // 過去のイベント
   const pastEvent1 = await prisma.event.create({
@@ -300,6 +323,36 @@ async function main() {
 
   const attendanceCount = await prisma.attendance.count();
   console.log(`Created ${attendanceCount} attendances`);
+
+  console.log("Creating attendance histories...");
+
+  // 出欠回答履歴（いくつかの変更履歴を作成）
+  await prisma.attendanceHistory.createMany({
+    data: [
+      // 田中一郎: 12月練習会に最初「参加」で回答、その後コメント更新
+      { userId: members[0].id, eventId: futureEvent1.id, status: "attending", changedAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000) },
+      { userId: members[0].id, eventId: futureEvent1.id, status: "attending", comment: "楽しみにしています！", changedAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000) },
+
+      // 佐藤美咲: 12月練習会に「参加」回答
+      { userId: members[1].id, eventId: futureEvent1.id, status: "attending", changedAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
+
+      // 山田健太: 12月練習会に最初「参加」→「不参加」に変更
+      { userId: members[2].id, eventId: futureEvent1.id, status: "attending", changedAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000) },
+      { userId: members[2].id, eventId: futureEvent1.id, status: "not_attending", comment: "予定あり", changedAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000) },
+
+      // 高橋誠: 少人数練習会でキャンセル待ち
+      { userId: members[4].id, eventId: limitedEvent.id, status: "waitlist", comment: "キャンセル出たら参加希望", changedAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000) },
+
+      // 管理太郎: 各イベントに参加
+      { userId: admin.id, eventId: futureEvent1.id, status: "attending", changedAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000) },
+      { userId: admin.id, eventId: futureEvent2.id, status: "attending", comment: "サポートします", changedAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000) },
+      { userId: admin.id, eventId: futureEvent3.id, status: "attending", changedAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000) },
+      { userId: admin.id, eventId: limitedEvent.id, status: "attending", changedAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
+    ],
+  });
+
+  const historyCount = await prisma.attendanceHistory.count();
+  console.log(`Created ${historyCount} attendance histories`);
 
   console.log("Seed completed!");
 }

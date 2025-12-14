@@ -41,8 +41,23 @@ export const updateMemberRoleSchema = z.object({
   role: z.enum(["admin", "subadmin", "member", "visitor", "guest"]),
 });
 
+// 管理者によるメンバー情報更新スキーマ
+export const adminUpdateMemberSchema = z.object({
+  nickname: z.string().min(1, "ニックネームは必須です").max(50, "ニックネームは50文字以内で入力してください").optional(),
+  firstName: z.string().max(50).optional().nullable(),
+  lastName: z.string().max(50).optional().nullable(),
+  gender: z.enum(["male", "female"]).optional().nullable(),
+  age: z.number().int().min(0).max(150).optional().nullable(),
+  ageVisible: z.boolean().optional(),
+  comment: z.string().max(500).optional().nullable(),
+  role: z.enum(["admin", "subadmin", "member", "visitor", "guest"]).optional(),
+  skillLevel: z.number().int().min(1, "スキルレベルは1以上で入力してください").max(10, "スキルレベルは10以下で入力してください").optional().nullable(),
+  adminNote: z.string().max(1000).optional().nullable(),
+});
+
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export type AttendanceInput = z.infer<typeof attendanceSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+export type AdminUpdateMemberInput = z.infer<typeof adminUpdateMemberSchema>;
