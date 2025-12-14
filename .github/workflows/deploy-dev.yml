@@ -34,6 +34,11 @@ jobs:
           cp prisma/schema.sqlserver.prisma prisma/schema.prisma
           npx prisma generate
 
+      - name: Run Database Migration
+        run: npx prisma db push --accept-data-loss
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Build Next.js
         run: npm run build
         env:
