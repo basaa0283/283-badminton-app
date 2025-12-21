@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "npx prisma db push --accept-data-loss && next start",
+    "start:local": "next start",
     "lint": "eslint",
     "db:seed": "npx tsx prisma/seed.ts"
   },

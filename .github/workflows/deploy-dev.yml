@@ -34,10 +34,9 @@ jobs:
           cp prisma/schema.sqlserver.prisma prisma/schema.prisma
           npx prisma generate
 
-      - name: Run Database Migration
-        run: npx prisma db push --accept-data-loss
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # マイグレーションはApp Service起動時に実行される（npm start内）
+      # GitHub ActionsからAzure SQL Serverへの直接接続は
+      # ファイアウォールの制約があるため、ここでは実行しない
 
       - name: Build Next.js
         run: npm run build
