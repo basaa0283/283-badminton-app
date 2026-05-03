@@ -68,6 +68,10 @@ export default function MemberDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteExpired, setInviteExpired] = useState(false);
+  const [generatingInvite, setGeneratingInvite] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // 編集用フォームの状態
   const [formData, setFormData] = useState({
@@ -122,6 +126,10 @@ export default function MemberDetailPage() {
           skillLevel: data.data.skillLevel?.toString() || "",
           adminNote: data.data.adminNote || "",
         });
+
+        if (data.data.role === "visitor") {
+          fetchInvitation();
+        }
       } else {
         alert("メンバーが見つかりません");
         router.push("/admin/members");
@@ -131,6 +139,48 @@ export default function MemberDetailPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchInvitation = async () => {
+    try {
+      const res = await fetch(`/api/admin/invitations/${userId}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        setInviteUrl(data.data.inviteUrl);
+        setInviteExpired(data.data.isExpired);
+      }
+    } catch (error) {
+      console.error("Failed to fetch invitation:", error);
+    }
+  };
+
+  const handleGenerateInvite = async () => {
+    setGeneratingInvite(true);
+    try {
+      const res = await fetch(`/api/admin/invitations/${userId}`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setInviteUrl(data.data.inviteUrl);
+        setInviteExpired(false);
+      }
+    } catch (error) {
+      console.error("Failed to generate invitation:", error);
+    } finally {
+      setGeneratingInvite(false);
+    }
+  };
+
+  const handleCopyInviteUrl = async () => {
+    if (!inviteUrl) return;
+    await navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleRevokeInvite = async () => {
+    if (!confirm("招待リンクを無効化しますか？")) return;
+    await fetch(`/api/admin/invitations/${userId}`, { method: "DELETE" });
+    setInviteUrl(null);
   };
 
   const handleSave = async () => {
@@ -450,6 +500,46 @@ export default function MemberDetailPage() {
                     <div className="font-medium text-gray-700 bg-yellow-50 p-2 rounded">
                       {member.adminNote}
                     </div>
+                  </div>
+                )}
+
+                {member.role === "visitor" && (
+                  <div className="pt-4 border-t">
+                    <div className="text-sm font-medium text-gray-700 mb-3">招待リンク</div>
+                    {!inviteUrl || inviteExpired ? (
+                      <div className="space-y-2">
+                        {inviteExpired && (
+                          <p className="text-xs text-orange-600">招待リンクの有効期限が切れています</p>
+                        )}
+                        <Button
+                          onClick={handleGenerateInvite}
+                          loading={generatingInvite}
+                          className="w-full text-sm"
+                        >
+                          {inviteUrl ? "再発行する" : "招待リンクを発行する"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all">
+                          {inviteUrl}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleCopyInviteUrl} className="flex-1 text-sm">
+                            {copied ? "コピーしました！" : "URLをコピー"}
+                          </Button>
+                          <Button variant="secondary" onClick={handleGenerateInvite} loading={generatingInvite} className="text-sm">
+                            再発行
+                          </Button>
+                        </div>
+                        <button
+                          onClick={handleRevokeInvite}
+                          className="text-xs text-red-500 hover:text-red-700 w-full text-center"
+                        >
+                          無効化する
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -27,17 +27,23 @@ model User {
   profileImageUrl String?   @db.NVarChar(500) // プロフィール画像URL（後方互換性）
   comment         String?   @db.NVarChar(1000) // その他コメント
   role            String    @default("guest") // admin / subadmin / member / visitor / guest
+  lastActiveAt    DateTime? // 最終操作日時
+  skillLevel      Int?      // スキルレベル: 1-10
+  adminNote       String?   @db.NVarChar(2000) // 管理者メモ
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   // リレーション
-  attendances     Attendance[]
-  createdEvents   Event[]      @relation("EventCreator")
-  sentMessages    Message[]    @relation("MessageSender")
+  attendances          Attendance[]
+  attendanceHistories  AttendanceHistory[]
+  createdEvents        Event[]      @relation("EventCreator")
+  sentMessages         Message[]    @relation("MessageSender")
 
   // NextAuth用
   accounts        Account[]
   sessions        Session[]
+
+  invitationToken InvitationToken?
 }
 
 // NextAuth Account
@@ -96,9 +102,10 @@ model Event {
   updatedAt       DateTime  @updatedAt
 
   // リレーション
-  createdBy       User         @relation("EventCreator", fields: [createdById], references: [id])
-  attendances     Attendance[]
-  messages        Message[]
+  createdBy           User         @relation("EventCreator", fields: [createdById], references: [id])
+  attendances         Attendance[]
+  attendanceHistories AttendanceHistory[]
+  messages            Message[]
 }
 
 // 出欠
@@ -117,6 +124,34 @@ model Attendance {
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
+}
+
+// 出欠回答履歴
+model AttendanceHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  eventId     String
+  status      String
+  comment     String?  @db.NVarChar(500)
+  changedAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([changedAt])
+}
+
+// 招待トークン
+model InvitationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @default(cuid())
+  userId    String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 // メッセージ（対象者へのメッセージ送信用）

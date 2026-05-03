@@ -45,6 +45,8 @@ model User {
   // NextAuth用
   accounts        Account[]
   sessions        Session[]
+
+  invitationToken InvitationToken?
 }
 
 // NextAuth Account
@@ -143,6 +145,17 @@ model AttendanceHistory {
   @@index([userId])
   @@index([eventId])
   @@index([changedAt])
+}
+
+// 招待トークン（仮アカウントをLINEアカウントに紐づけるためのワンタイムトークン）
+model InvitationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @default(cuid())
+  userId    String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // メッセージ（対象者へのメッセージ送信用）
