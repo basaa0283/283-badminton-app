@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { RoleBadge } from "@/components/ui/Badge";
 import { permissions, UserRole } from "@/lib/permissions";
 
@@ -40,6 +41,9 @@ export default function AdminMembersPage() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newMemberNickname, setNewMemberNickname] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -80,6 +84,31 @@ export default function AdminMembersPage() {
     router.push(`/admin/members/${memberId}`);
   };
 
+  const handleCreateProvisional = async () => {
+    if (!newMemberNickname.trim()) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/admin/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: newMemberNickname.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewMemberNickname("");
+        setShowCreateForm(false);
+        await fetchMembers();
+        router.push(`/admin/members/${data.data.id}`);
+      } else {
+        alert(data.error?.message || "作成に失敗しました");
+      }
+    } catch {
+      alert("作成に失敗しました");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   if (status === "loading" || !session || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -99,9 +128,38 @@ export default function AdminMembersPage() {
           </Link>
         </div>
 
-        <h1 className="text-xl font-bold text-gray-900 mb-4">
-          メンバー管理 ({members.length})
-        </h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold text-gray-900">
+            メンバー管理 ({members.length})
+          </h1>
+          <Button onClick={() => setShowCreateForm(true)} className="text-sm">
+            + 仮アカウント作成
+          </Button>
+        </div>
+
+        {showCreateForm && (
+          <Card className="mb-4">
+            <CardContent className="py-4">
+              <p className="text-sm font-medium text-gray-700 mb-3">仮アカウント作成</p>
+              <input
+                type="text"
+                value={newMemberNickname}
+                onChange={(e) => setNewMemberNickname(e.target.value)}
+                placeholder="ニックネーム（例：田中さん）"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onKeyDown={(e) => e.key === "Enter" && handleCreateProvisional()}
+              />
+              <div className="flex gap-2">
+                <Button variant="secondary" className="flex-1 text-sm" onClick={() => { setShowCreateForm(false); setNewMemberNickname(""); }}>
+                  キャンセル
+                </Button>
+                <Button className="flex-1 text-sm" onClick={handleCreateProvisional} loading={creating} disabled={!newMemberNickname.trim()}>
+                  作成
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="space-y-2">
           {members.map((member) => (

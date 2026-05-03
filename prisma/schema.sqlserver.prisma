@@ -37,14 +37,16 @@ model User {
   updatedAt       DateTime  @updatedAt
 
   // リレーション
-  attendances     Attendance[]
-  attendanceHistories AttendanceHistory[]
-  createdEvents   Event[]      @relation("EventCreator")
-  sentMessages    Message[]    @relation("MessageSender")
+  attendances          Attendance[]
+  attendanceHistories  AttendanceHistory[]
+  createdEvents        Event[]      @relation("EventCreator")
+  sentMessages         Message[]    @relation("MessageSender")
 
   // NextAuth用
   accounts        Account[]
   sessions        Session[]
+
+  invitationToken InvitationToken?
 }
 
 // NextAuth Account
@@ -103,10 +105,10 @@ model Event {
   updatedAt       DateTime  @updatedAt
 
   // リレーション
-  createdBy       User         @relation("EventCreator", fields: [createdById], references: [id])
-  attendances     Attendance[]
+  createdBy           User         @relation("EventCreator", fields: [createdById], references: [id])
+  attendances         Attendance[]
   attendanceHistories AttendanceHistory[]
-  messages        Message[]
+  messages            Message[]
 }
 
 // 出欠
@@ -143,6 +145,17 @@ model AttendanceHistory {
   @@index([userId])
   @@index([eventId])
   @@index([changedAt])
+}
+
+// 招待トークン
+model InvitationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @default(cuid())
+  userId    String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 // メッセージ（対象者へのメッセージ送信用）
