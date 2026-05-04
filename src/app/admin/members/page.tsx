@@ -147,7 +147,7 @@ export default function AdminMembersPage() {
                 onChange={(e) => setNewMemberNickname(e.target.value)}
                 placeholder="ニックネーム（例：田中さん）"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                onKeyDown={(e) => e.key === "Enter" && handleCreateProvisional()}
+                onKeyDown={(e) => !e.isComposing && e.key === "Enter" && handleCreateProvisional()}
               />
               <div className="flex gap-2">
                 <Button variant="secondary" className="flex-1 text-sm" onClick={() => { setShowCreateForm(false); setNewMemberNickname(""); }}>
