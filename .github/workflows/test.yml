@@ -1,0 +1,35 @@
+# 単体テスト & Lint 自動実行
+name: Test
+
+on:
+  push:
+    branches:
+      - dev/release
+      - master
+  pull_request:
+    branches:
+      - dev/release
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run tests
+        run: npm test
