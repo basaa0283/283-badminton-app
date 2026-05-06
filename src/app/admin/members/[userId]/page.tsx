@@ -73,6 +73,18 @@ export default function MemberDetailPage() {
   const [generatingInvite, setGeneratingInvite] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  interface ProxyEvent {
+    id: string;
+    title: string;
+    eventDate: string;
+    location: string | null;
+    capacity: number | null;
+    attendingCount: number;
+    attendance: { status: string; position: number | null } | null;
+  }
+  const [proxyEvents, setProxyEvents] = useState<ProxyEvent[]>([]);
+  const [proxyLoading, setProxyLoading] = useState(false);
+
   // 編集用フォームの状態
   const [formData, setFormData] = useState({
     nickname: "",
@@ -105,6 +117,7 @@ export default function MemberDetailPage() {
   useEffect(() => {
     if (status === "authenticated" && userId) {
       fetchMember();
+      fetchProxyEvents();
     }
   }, [status, userId]);
 
@@ -181,6 +194,37 @@ export default function MemberDetailPage() {
     if (!confirm("招待リンクを無効化しますか？")) return;
     await fetch(`/api/admin/invitations/${userId}`, { method: "DELETE" });
     setInviteUrl(null);
+  };
+
+  const fetchProxyEvents = async () => {
+    try {
+      const res = await fetch(`/api/admin/members/${userId}/attendance`);
+      const data = await res.json();
+      if (data.success) setProxyEvents(data.data);
+    } catch (error) {
+      console.error("Failed to fetch proxy events:", error);
+    }
+  };
+
+  const handleProxyAttendance = async (eventId: string, status: "attending" | "not_attending") => {
+    setProxyLoading(true);
+    try {
+      const res = await fetch(`/api/admin/members/${userId}/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchProxyEvents();
+      } else {
+        alert(`登録に失敗しました: ${data.error?.message || data.error?.code}`);
+      }
+    } catch (err) {
+      alert("登録に失敗しました: " + String(err));
+    } finally {
+      setProxyLoading(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -557,6 +601,60 @@ export default function MemberDetailPage() {
                     )}
                   </div>
                 )}
+
+                {/* 代理出欠登録 */}
+                <div className="pt-4 border-t">
+                  <div className="text-sm font-medium text-gray-700 mb-3">代理出欠登録</div>
+                  {proxyEvents.length === 0 ? (
+                    <p className="text-xs text-gray-400">直近のイベントはありません</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {proxyEvents.map((event) => {
+                        const status = event.attendance?.status;
+                        return (
+                          <div key={event.id} className="bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{event.title}</p>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(event.eventDate).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                  {event.location && ` · ${event.location}`}
+                                </p>
+                                {event.capacity && (
+                                  <p className="text-xs text-gray-400">{event.attendingCount}/{event.capacity}人</p>
+                                )}
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                <button
+                                  onClick={() => handleProxyAttendance(event.id, "attending")}
+                                  disabled={proxyLoading}
+                                  className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                                    status === "attending" || status === "waitlist"
+                                      ? "bg-green-500 text-white"
+                                      : "bg-gray-200 text-gray-600 hover:bg-green-100"
+                                  }`}
+                                >
+                                  {status === "waitlist" ? `待${event.attendance?.position}` : "参加"}
+                                </button>
+                                <button
+                                  onClick={() => handleProxyAttendance(event.id, "not_attending")}
+                                  disabled={proxyLoading}
+                                  className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                                    status === "not_attending"
+                                      ? "bg-red-500 text-white"
+                                      : "bg-gray-200 text-gray-600 hover:bg-red-100"
+                                  }`}
+                                >
+                                  不参加
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
                 <div className="pt-4 space-y-2">
                   <Button onClick={() => setEditing(true)} className="w-full">

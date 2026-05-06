@@ -136,6 +136,7 @@ model AttendanceHistory {
   eventId     String
   status      String   // attending / not_attending / waitlist / cancelled
   comment     String?  @db.NVarChar(500) // コメント
+  isProxy     Boolean  @default(false) // 管理者による代理登録
   changedAt   DateTime @default(now()) // 変更日時
 
   // リレーション（SQL Server循環参照対策: userはNoAction）

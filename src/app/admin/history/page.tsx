@@ -13,6 +13,7 @@ interface AttendanceHistoryItem {
   id: string;
   status: string;
   comment: string | null;
+  isProxy: boolean;
   changedAt: string;
   user: {
     id: string;
@@ -103,7 +104,7 @@ export default function HistoryPage() {
             {histories.map((history) => (
               <div
                 key={history.id}
-                className="px-4 py-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                className={`px-4 py-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors ${history.isProxy ? "bg-amber-50" : ""}`}
                 onClick={() => handleHistoryClick(history.event.id)}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -121,6 +122,11 @@ export default function HistoryPage() {
                   <span className="text-gray-400 mr-2">{formatEventDate(history.event.eventDate)}</span>
                   {history.event.title}
                 </div>
+                {history.isProxy && (
+                  <span className="inline-block text-xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded mt-1">
+                    管理者代理登録
+                  </span>
+                )}
                 {history.comment && (
                   <div className="text-sm text-gray-400 mt-1">
                     {history.comment}
