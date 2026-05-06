@@ -60,14 +60,10 @@ export const authOptions: NextAuthOptions = {
     },
   ],
   events: {
-    // ユーザー作成後にnicknameとlineIdを設定
     async createUser({ user }) {
       await prisma.user.update({
         where: { id: user.id },
-        data: {
-          nickname: user.name || "名無し",
-          lineId: user.id, // LINE User ID (profile.sub)
-        },
+        data: { nickname: user.name || "名無し" },
       });
     },
   },
@@ -75,21 +71,14 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === "line" && profile) {
         const lineProfile = profile as { sub: string; name: string; picture?: string };
-
-        // 既存ユーザーのlineIdを更新（Account経由で紐づいていない場合）
-        const existingUser = await prisma.user.findFirst({
+        const existingUser = await prisma.user.findUnique({ where: { id: user.id } });
+        await prisma.user.update({
           where: { id: user.id },
+          data: {
+            lineId: lineProfile.sub,
+            nickname: existingUser?.nickname === "名無し" ? lineProfile.name : existingUser?.nickname,
+          },
         });
-
-        if (existingUser && !existingUser.lineId) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              lineId: lineProfile.sub,
-              nickname: existingUser.nickname === "名無し" ? lineProfile.name : existingUser.nickname,
-            },
-          });
-        }
       }
       return true;
     },
