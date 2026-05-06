@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
+import { notifyWaitlistPromotion } from "@/lib/line-messaging";
 
 const proxyAttendanceSchema = z.object({
   eventId: z.string().min(1),
@@ -133,6 +134,12 @@ export async function POST(
       data: { userId, eventId, status: finalStatus, isProxy: true },
     });
 
+    // 参加→不参加の場合、キャンセル待ち繰り上げ
+    const wasAttending = existing?.status === "attending";
+    if (wasAttending && status === "not_attending") {
+      await promoteFromWaitlist(eventId, event.capacity);
+    }
+
     return NextResponse.json({ success: true, data: { status: finalStatus, position } });
   } catch (error) {
     console.error("POST /api/admin/members/[userId]/attendance error:", error);
@@ -140,5 +147,42 @@ export async function POST(
       { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
       { status: 500 }
     );
+  }
+}
+
+async function promoteFromWaitlist(eventId: string, capacity: number | null): Promise<void> {
+  if (!capacity) return;
+
+  const currentAttending = await prisma.attendance.count({
+    where: { eventId, status: "attending" },
+  });
+  if (currentAttending >= capacity) return;
+
+  const nextInLine = await prisma.attendance.findFirst({
+    where: { eventId, status: "waitlist" },
+    orderBy: { position: "asc" },
+    include: { user: { select: { lineId: true, nickname: true } } },
+  });
+  if (!nextInLine) return;
+
+  await prisma.attendance.update({
+    where: { id: nextInLine.id },
+    data: { status: "attending", position: null },
+  });
+  await prisma.attendance.updateMany({
+    where: { eventId, status: "waitlist", position: { gt: nextInLine.position || 0 } },
+    data: { position: { decrement: 1 } },
+  });
+
+  if (nextInLine.user.lineId) {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (event) {
+      notifyWaitlistPromotion({
+        lineId: nextInLine.user.lineId,
+        eventTitle: event.title,
+        eventDate: event.eventDate,
+        location: event.location,
+      }).catch((err) => console.error("[notify] waitlist promotion failed:", err));
+    }
   }
 }

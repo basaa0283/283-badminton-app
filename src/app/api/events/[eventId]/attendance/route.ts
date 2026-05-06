@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { attendanceSchema } from "@/lib/validations";
+import { notifyWaitlistPromotion } from "@/lib/line-messaging";
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -199,10 +200,17 @@ async function promoteFromWaitlist(eventId: string, capacity: number | null) {
     },
   });
 
-  // TODO: LINE通知を送信
-  // if (nextInLine.user.lineId) {
-  //   await sendLineNotification(nextInLine.user.lineId, "キャンセル待ちから繰り上げになりました！");
-  // }
+  if (nextInLine.user.lineId) {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (event) {
+      notifyWaitlistPromotion({
+        lineId: nextInLine.user.lineId,
+        eventTitle: event.title,
+        eventDate: event.eventDate,
+        location: event.location,
+      }).catch((err) => console.error("[notify] waitlist promotion failed:", err));
+    }
+  }
 
   console.log(`Promoted user ${nextInLine.user.nickname} from waitlist for event ${eventId}`);
 }
