@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,6 +11,8 @@ import { permissions, UserRole } from "@/lib/permissions";
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [notificationEnabled, setNotificationEnabled] = useState<boolean | null>(null);
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -26,6 +28,30 @@ export default function AdminPage() {
       }
     }
   }, [session, router]);
+
+  useEffect(() => {
+    if (session) {
+      fetch("/api/admin/settings")
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.success) setNotificationEnabled(json.data.notificationEnabled);
+        });
+    }
+  }, [session]);
+
+  const handleToggle = async () => {
+    if (notificationEnabled === null || toggling) return;
+    setToggling(true);
+    const next = !notificationEnabled;
+    const res = await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notificationEnabled: next }),
+    });
+    const json = await res.json();
+    if (json.success) setNotificationEnabled(next);
+    setToggling(false);
+  };
 
   if (status === "loading" || !session) {
     return (
@@ -72,6 +98,29 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </Link>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow px-4 py-4">
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">通知設定</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-900">LINE通知</p>
+              <p className="text-xs text-gray-500 mt-0.5">新イベント・リマインダー・キャンセル待ち繰り上がり</p>
+            </div>
+            <button
+              onClick={handleToggle}
+              disabled={toggling || notificationEnabled === null}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+                notificationEnabled ? "bg-green-500" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  notificationEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </main>
     </div>

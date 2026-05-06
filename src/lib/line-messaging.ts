@@ -1,5 +1,13 @@
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { prisma } from "./prisma";
+
+async function isNotificationEnabled(): Promise<boolean> {
+  const setting = await prisma.systemSetting.findUnique({
+    where: { key: "notificationEnabled" },
+  });
+  return setting ? setting.value === "true" : true;
+}
 
 const MESSAGING_API_URL = "https://api.line.me/v2/bot/message";
 const TOKEN = process.env.LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN;
@@ -63,6 +71,7 @@ export async function notifyWaitlistPromotion(params: {
   eventDate: Date;
   location: string | null;
 }): Promise<void> {
+  if (!(await isNotificationEnabled())) return;
   const text =
     `【283バドミントン】\nキャンセル待ちが繰り上がりました🎉\n\n` +
     `${params.eventTitle}\n` +
@@ -79,6 +88,7 @@ export async function notifyNewEvent(params: {
   location: string | null;
   appUrl: string;
 }): Promise<void> {
+  if (!(await isNotificationEnabled())) return;
   const text =
     `【283バドミントン】\n新しいイベントが追加されました！\n\n` +
     `${params.eventTitle}\n` +
@@ -95,6 +105,7 @@ export async function notifyEventReminder(params: {
   location: string | null;
   hoursUntil: number;
 }): Promise<void> {
+  if (!(await isNotificationEnabled())) return;
   const label = params.hoursUntil <= 3 ? "まもなく" : "明日";
   const text =
     `【283バドミントン】\n${label}のイベントのお知らせ\n\n` +

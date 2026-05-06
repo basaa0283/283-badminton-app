@@ -159,6 +159,12 @@ model InvitationToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+// システム設定（key-value）
+model SystemSetting {
+  key   String @id
+  value String @db.NVarChar(500)
+}
+
 // メッセージ（対象者へのメッセージ送信用）
 model Message {
   id          String   @id @default(cuid())
