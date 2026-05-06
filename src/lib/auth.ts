@@ -163,7 +163,7 @@ export const authOptions: NextAuthOptions = {
       name: "next-auth.state",
       options: {
         httpOnly: true,
-        sameSite: "lax" as const,
+        sameSite: "none" as const,
         path: "/",
         secure: true,
       },
@@ -172,7 +172,7 @@ export const authOptions: NextAuthOptions = {
       name: "next-auth.pkce.code_verifier",
       options: {
         httpOnly: true,
-        sameSite: "lax" as const,
+        sameSite: "none" as const,
         path: "/",
         secure: true,
       },
@@ -181,7 +181,7 @@ export const authOptions: NextAuthOptions = {
       name: "next-auth.nonce",
       options: {
         httpOnly: true,
-        sameSite: "lax" as const,
+        sameSite: "none" as const,
         path: "/",
         secure: true,
       },
