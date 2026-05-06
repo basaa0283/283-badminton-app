@@ -35,12 +35,10 @@ export async function DELETE(
     }
 
     // SQL ServerはonDelete: NoActionのため関連レコードを先に削除
-    await prisma.$transaction(async (tx) => {
-      await tx.invitationToken.deleteMany({ where: { userId } });
-      await tx.attendanceHistory.deleteMany({ where: { userId } });
-      await tx.attendance.deleteMany({ where: { userId } });
-      await tx.user.delete({ where: { id: userId } });
-    });
+    await prisma.invitationToken.deleteMany({ where: { userId } });
+    await prisma.attendanceHistory.deleteMany({ where: { userId } });
+    await prisma.attendance.deleteMany({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
