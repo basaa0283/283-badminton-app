@@ -20,14 +20,17 @@ export function AttendanceForm({
   isDeadlinePassed,
   onSubmit,
 }: AttendanceFormProps) {
-  const [status, setStatus] = useState<"attending" | "not_attending">(
-    (currentAttendance?.status as "attending" | "not_attending") || "attending"
-  );
+  const initialStatus =
+    currentAttendance?.status === "attending" || currentAttendance?.status === "not_attending"
+      ? currentAttendance.status
+      : null;
+  const [status, setStatus] = useState<"attending" | "not_attending" | null>(initialStatus);
   const [comment, setComment] = useState(currentAttendance?.comment || "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!status) return;
     setLoading(true);
     try {
       await onSubmit(status, comment);
@@ -96,9 +99,13 @@ export function AttendanceForm({
         <div className="text-xs text-gray-500 text-right mt-1">{comment.length}/200</div>
       </div>
 
-      <Button type="submit" className="w-full" loading={loading}>
+      <Button type="submit" className="w-full" loading={loading} disabled={status === null}>
         {currentAttendance ? "回答を更新する" : "回答を送信する"}
       </Button>
+
+      {!currentAttendance && status === null && (
+        <p className="text-xs text-gray-500 text-center">参加 / 不参加 を選択してください</p>
+      )}
 
       {currentAttendance && (
         <p className="text-xs text-gray-500 text-center">

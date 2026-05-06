@@ -29,11 +29,38 @@ describe("AttendanceForm", () => {
     expect(screen.getByText("参加")).toBeInTheDocument();
   });
 
-  it("初期状態は参加が選択", () => {
+  it("初期状態（未回答）は参加・不参加どちらも未選択", () => {
     render(
       <AttendanceForm
         eventId="evt-1"
         isDeadlinePassed={false}
+        onSubmit={vi.fn()}
+      />,
+    );
+    const attendingBtn = screen.getByRole("button", { name: "参加" });
+    const notAttendingBtn = screen.getByRole("button", { name: "不参加" });
+    expect(attendingBtn.className).not.toContain("border-green-500");
+    expect(notAttendingBtn.className).not.toContain("border-red-500");
+  });
+
+  it("初期状態（未回答）では送信ボタンがdisabled", () => {
+    render(
+      <AttendanceForm
+        eventId="evt-1"
+        isDeadlinePassed={false}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "回答を送信する" })).toBeDisabled();
+    expect(screen.getByText("参加 / 不参加 を選択してください")).toBeInTheDocument();
+  });
+
+  it("既存回答が attending なら attending が選択された状態", () => {
+    render(
+      <AttendanceForm
+        eventId="evt-1"
+        isDeadlinePassed={false}
+        currentAttendance={{ status: "attending", comment: null, position: null }}
         onSubmit={vi.fn()}
       />,
     );
@@ -54,7 +81,7 @@ describe("AttendanceForm", () => {
     expect(notAttendingBtn.className).toContain("border-red-500");
   });
 
-  it("不参加ボタンクリックで切替", async () => {
+  it("不参加ボタンクリックで選択される", async () => {
     render(
       <AttendanceForm
         eventId="evt-1"
@@ -66,7 +93,23 @@ describe("AttendanceForm", () => {
     expect(screen.getByRole("button", { name: "不参加" }).className).toContain("border-red-500");
   });
 
-  it("submit で onSubmit が呼ばれる", async () => {
+  it("参加→不参加 と切替できる", async () => {
+    render(
+      <AttendanceForm
+        eventId="evt-1"
+        isDeadlinePassed={false}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "参加" }));
+    expect(screen.getByRole("button", { name: "参加" }).className).toContain("border-green-500");
+
+    await userEvent.click(screen.getByRole("button", { name: "不参加" }));
+    expect(screen.getByRole("button", { name: "参加" }).className).not.toContain("border-green-500");
+    expect(screen.getByRole("button", { name: "不参加" }).className).toContain("border-red-500");
+  });
+
+  it("参加を選択してsubmitすると onSubmit が呼ばれる", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
       <AttendanceForm
@@ -76,6 +119,7 @@ describe("AttendanceForm", () => {
       />,
     );
 
+    await userEvent.click(screen.getByRole("button", { name: "参加" }));
     await userEvent.click(screen.getByRole("button", { name: "回答を送信する" }));
 
     expect(onSubmit).toHaveBeenCalledWith("attending", "");
@@ -91,6 +135,7 @@ describe("AttendanceForm", () => {
       />,
     );
 
+    await userEvent.click(screen.getByRole("button", { name: "参加" }));
     await userEvent.type(screen.getByPlaceholderText("遅れます、途中退出など"), "5分遅刻");
     await userEvent.click(screen.getByRole("button", { name: "回答を送信する" }));
 
