@@ -100,10 +100,10 @@ export default function AdminMembersPage() {
         await fetchMembers();
         router.push(`/admin/members/${data.data.id}`);
       } else {
-        alert(data.error?.message || "作成に失敗しました");
+        alert(`作成に失敗しました (${data.error?.code}): ${data.error?.message || "詳細不明"}`);
       }
-    } catch {
-      alert("作成に失敗しました");
+    } catch (err) {
+      alert("作成に失敗しました: " + String(err));
     } finally {
       setCreating(false);
     }
