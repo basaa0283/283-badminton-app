@@ -183,6 +183,21 @@ export default function MemberDetailPage() {
     setInviteUrl(null);
   };
 
+  const handleDelete = async () => {
+    if (!confirm(`${member?.nickname} を削除しますか？この操作は取り消せません。`)) return;
+    try {
+      const res = await fetch(`/api/admin/members/${userId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        router.push("/admin/members");
+      } else {
+        alert(`削除に失敗しました: ${data.error?.message || data.error?.code}`);
+      }
+    } catch (err) {
+      alert("削除に失敗しました: " + String(err));
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -543,10 +558,18 @@ export default function MemberDetailPage() {
                   </div>
                 )}
 
-                <div className="pt-4">
+                <div className="pt-4 space-y-2">
                   <Button onClick={() => setEditing(true)} className="w-full">
                     編集
                   </Button>
+                  {!isSelf && (
+                    <button
+                      onClick={handleDelete}
+                      className="w-full text-sm text-red-500 hover:text-red-700 py-2"
+                    >
+                      このメンバーを削除する
+                    </button>
+                  )}
                 </div>
               </div>
             )}
