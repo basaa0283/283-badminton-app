@@ -73,11 +73,16 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "line" && profile) {
         const lineProfile = profile as { sub: string; name: string; picture?: string };
         const existingUser = await prisma.user.findUnique({ where: { id: user.id } });
-        await prisma.user.update({
+        await prisma.user.upsert({
           where: { id: user.id },
-          data: {
+          create: {
+            id: user.id,
             lineId: lineProfile.sub,
-            nickname: existingUser?.nickname === "名無し" ? lineProfile.name : existingUser?.nickname,
+            nickname: lineProfile.name || "名無し",
+          },
+          update: {
+            lineId: lineProfile.sub,
+            nickname: existingUser?.nickname === "名無し" ? lineProfile.name : (existingUser?.nickname ?? lineProfile.name),
           },
         });
       }
