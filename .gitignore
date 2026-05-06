@@ -49,3 +49,4 @@ next-env.d.ts
 
 # test coverage
 /coverage
+prod-env-settings.txt

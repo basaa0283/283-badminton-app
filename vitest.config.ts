@@ -3,7 +3,8 @@ import { resolve } from "path";
 
 export default defineConfig({
   test: {
-    environment: "node",
+    environment: "jsdom",
+    setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}", "tests/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",
@@ -16,6 +17,7 @@ export default defineConfig({
         "src/app/**/page.tsx",
         "src/app/**/layout.tsx",
         "src/app/**/route.ts",
+        "src/lib/prisma.ts",
       ],
     },
   },
