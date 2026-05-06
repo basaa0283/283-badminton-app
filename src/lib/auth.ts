@@ -120,4 +120,33 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
+  cookies: {
+    state: {
+      name: "next-auth.state",
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: true,
+      },
+    },
+    pkceCodeVerifier: {
+      name: "next-auth.pkce.code_verifier",
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: true,
+      },
+    },
+    nonce: {
+      name: "next-auth.nonce",
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: true,
+      },
+    },
+  },
 };
