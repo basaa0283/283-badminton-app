@@ -6,7 +6,7 @@ import { prisma } from "./prisma";
 const isDevelopment = process.env.NODE_ENV === "development";
 
 export const authOptions: NextAuthOptions = {
-  useSecureCookies: false,
+  useSecureCookies: true,
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   providers: [
     // 開発環境のみ: テストユーザーでログイン
@@ -139,7 +139,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: false,
+        secure: true,
       },
     },
     callbackUrl: {
@@ -147,7 +147,7 @@ export const authOptions: NextAuthOptions = {
       options: {
         sameSite: "lax" as const,
         path: "/",
-        secure: false,
+        secure: true,
       },
     },
     csrfToken: {
@@ -156,7 +156,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: false,
+        secure: true,
       },
     },
     state: {
@@ -165,7 +165,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: false,
+        secure: true,
       },
     },
     pkceCodeVerifier: {
@@ -174,7 +174,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: false,
+        secure: true,
       },
     },
     nonce: {
@@ -183,7 +183,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: false,
+        secure: true,
       },
     },
   },
