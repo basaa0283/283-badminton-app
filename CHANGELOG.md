@@ -3,6 +3,17 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [1.1.0] - 2026-05-06
+
+### Added
+
+- 単体テスト基盤として [Vitest](https://vitest.dev/) を導入 (#8)
+  - `src/lib/validations.ts` に対する28件のテストを追加
+  - カバレッジレポートは `npm run test:coverage` で生成
+- GitHub Actions による CI 上でのテスト自動実行ワークフロー (`.github/workflows/test.yml`) を追加
+  - `dev/release` / `master` への push および PR で自動実行
+- テスト方針ドキュメント `docs/TESTING.md` を追加
+
 ## [1.0.2] - 2026-05-06
 
 ### Fixed
@@ -73,6 +84,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[1.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/basaa0283/283-badminton-app/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/basaa0283/283-badminton-app/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/basaa0283/283-badminton-app/releases/tag/v1.0.0
