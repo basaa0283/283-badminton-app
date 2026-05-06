@@ -79,10 +79,12 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             lineId: lineProfile.sub,
             nickname: lineProfile.name || "名無し",
+            profileImageUrl: lineProfile.picture ?? null,
           },
           update: {
             lineId: lineProfile.sub,
             nickname: existingUser?.nickname === "名無し" ? lineProfile.name : (existingUser?.nickname ?? lineProfile.name),
+            profileImageUrl: lineProfile.picture ?? existingUser?.profileImageUrl ?? null,
           },
         });
       }
