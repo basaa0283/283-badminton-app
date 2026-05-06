@@ -45,6 +45,8 @@ model User {
   // NextAuth用
   accounts        Account[]
   sessions        Session[]
+
+  invitationToken InvitationToken?
 }
 
 // NextAuth Account
@@ -134,6 +136,7 @@ model AttendanceHistory {
   eventId     String
   status      String   // attending / not_attending / waitlist / cancelled
   comment     String?  // コメント
+  isProxy     Boolean  @default(false) // 管理者による代理登録
   changedAt   DateTime @default(now()) // 変更日時
 
   // リレーション
@@ -143,6 +146,23 @@ model AttendanceHistory {
   @@index([userId])
   @@index([eventId])
   @@index([changedAt])
+}
+
+// 招待トークン（仮アカウントをLINEアカウントに紐づけるためのワンタイムトークン）
+model InvitationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @default(cuid())
+  userId    String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// システム設定（key-value）
+model SystemSetting {
+  key   String @id
+  value String
 }
 
 // メッセージ（対象者へのメッセージ送信用）

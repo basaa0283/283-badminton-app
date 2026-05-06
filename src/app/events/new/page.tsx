@@ -46,6 +46,7 @@ export default function NewEventPage() {
     feeVisible: boolean;
     deadline: string;
     deadlineEnabled: boolean;
+    notifyMembers: boolean;
   }) => {
     const res = await fetch("/api/events", {
       method: "POST",
@@ -61,6 +62,7 @@ export default function NewEventPage() {
         feeVisible: formData.feeVisible,
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : undefined,
         deadlineEnabled: formData.deadlineEnabled,
+        notifyMembers: formData.notifyMembers,
       }),
     });
 
@@ -83,7 +85,7 @@ export default function NewEventPage() {
             <h1 className="text-lg font-bold text-gray-900">イベント作成</h1>
           </CardHeader>
           <CardContent>
-            <EventForm onSubmit={handleSubmit} submitLabel="作成する" />
+            <EventForm onSubmit={handleSubmit} submitLabel="作成する" showNotifyOption />
           </CardContent>
         </Card>
       </main>

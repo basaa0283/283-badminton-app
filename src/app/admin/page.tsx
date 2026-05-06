@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -8,24 +8,74 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/Card";
 import { permissions, UserRole } from "@/lib/permissions";
 
+type NotifySettings = {
+  notifyReminderEnabled: boolean;
+  notifyWaitlistEnabled: boolean;
+};
+
+type SettingKey = keyof NotifySettings;
+
+const NOTIFY_ITEMS: { key: SettingKey; label: string; description: string }[] = [
+  { key: "notifyReminderEnabled", label: "リマインダー通知", description: "イベント24時間前・2時間前に参加者へ通知" },
+  { key: "notifyWaitlistEnabled", label: "キャンセル待ち通知", description: "繰り上がり時に対象者へ通知" },
+];
+
+function Toggle({ enabled, disabled, onToggle }: { enabled: boolean; disabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      disabled={disabled}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+        enabled ? "bg-green-500" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+          enabled ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
+  );
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [settings, setSettings] = useState<NotifySettings | null>(null);
+  const [toggling, setToggling] = useState<SettingKey | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
   useEffect(() => {
     if (session) {
       const role = session.user.role as UserRole;
-      if (!permissions.canAccessAdmin(role)) {
-        router.push("/");
-      }
+      if (!permissions.canAccessAdmin(role)) router.push("/");
     }
   }, [session, router]);
+
+  useEffect(() => {
+    if (session) {
+      fetch("/api/admin/settings")
+        .then((r) => r.json())
+        .then((json) => { if (json.success) setSettings(json.data); });
+    }
+  }, [session]);
+
+  const handleToggle = async (key: SettingKey) => {
+    if (!settings || toggling) return;
+    setToggling(key);
+    const next = !settings[key];
+    const res = await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: next }),
+    });
+    const json = await res.json();
+    if (json.success) setSettings((prev) => prev ? { ...prev, [key]: next } : prev);
+    setToggling(null);
+  };
 
   if (status === "loading" || !session) {
     return (
@@ -72,6 +122,25 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </Link>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow divide-y divide-gray-100">
+          <div className="px-4 py-3">
+            <h2 className="text-sm font-semibold text-gray-700">通知設定（LINE）</h2>
+          </div>
+          {NOTIFY_ITEMS.map((item) => (
+            <div key={item.key} className="flex items-center justify-between px-4 py-3">
+              <div>
+                <p className="text-sm text-gray-900">{item.label}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>
+              </div>
+              <Toggle
+                enabled={settings ? settings[item.key] : true}
+                disabled={toggling !== null || settings === null}
+                onToggle={() => handleToggle(item.key)}
+              />
+            </div>
+          ))}
         </div>
       </main>
     </div>

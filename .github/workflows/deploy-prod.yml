@@ -1,15 +1,15 @@
-# Azure App Service デプロイ (DEV環境)
-name: Deploy to Azure App Service (DEV)
+# Azure App Service デプロイ (PROD環境)
+name: Deploy to Azure App Service (PROD)
 
 on:
   push:
     branches:
-      - dev/release
+      - master
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: dev-283-badminton-app
-  NODE_VERSION: '20.x'
+  AZURE_WEBAPP_NAME: prod-283-badminton-app
+  NODE_VERSION: '22.x'
 
 jobs:
   build-and-deploy:
@@ -30,20 +30,15 @@ jobs:
 
       - name: Setup Prisma for SQL Server
         run: |
-          # SQL Server用スキーマをコピー
           cp prisma/schema.sqlserver.prisma prisma/schema.prisma
           npx prisma generate
-
-      # マイグレーションはApp Service起動時に実行される（npm start内）
-      # GitHub ActionsからAzure SQL Serverへの直接接続は
-      # ファイアウォールの制約があるため、ここでは実行しない
 
       - name: Build Next.js
         run: npm run build
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL_PROD }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET_PROD }}
           LINE_CHANNEL_ID: ${{ secrets.LINE_CHANNEL_ID }}
           LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
 
@@ -51,5 +46,5 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
           package: .

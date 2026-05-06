@@ -68,6 +68,23 @@ export default function MemberDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteExpired, setInviteExpired] = useState(false);
+  const [generatingInvite, setGeneratingInvite] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  interface ProxyEvent {
+    id: string;
+    title: string;
+    eventDate: string;
+    location: string | null;
+    capacity: number | null;
+    attendingCount: number;
+    attendance: { status: string; position: number | null } | null;
+  }
+  const [proxyEvents, setProxyEvents] = useState<ProxyEvent[]>([]);
+  const [proxyLoading, setProxyLoading] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<Record<string, "attending" | "not_attending">>({});
 
   // 編集用フォームの状態
   const [formData, setFormData] = useState({
@@ -101,6 +118,7 @@ export default function MemberDetailPage() {
   useEffect(() => {
     if (status === "authenticated" && userId) {
       fetchMember();
+      fetchProxyEvents();
     }
   }, [status, userId]);
 
@@ -122,6 +140,10 @@ export default function MemberDetailPage() {
           skillLevel: data.data.skillLevel?.toString() || "",
           adminNote: data.data.adminNote || "",
         });
+
+        if (data.data.role === "visitor") {
+          fetchInvitation();
+        }
       } else {
         alert("メンバーが見つかりません");
         router.push("/admin/members");
@@ -130,6 +152,97 @@ export default function MemberDetailPage() {
       console.error("Failed to fetch member:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchInvitation = async () => {
+    try {
+      const res = await fetch(`/api/admin/invitations/${userId}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        setInviteUrl(data.data.inviteUrl);
+        setInviteExpired(data.data.isExpired);
+      }
+    } catch (error) {
+      console.error("Failed to fetch invitation:", error);
+    }
+  };
+
+  const handleGenerateInvite = async () => {
+    setGeneratingInvite(true);
+    try {
+      const res = await fetch(`/api/admin/invitations/${userId}`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setInviteUrl(data.data.inviteUrl);
+        setInviteExpired(false);
+      }
+    } catch (error) {
+      console.error("Failed to generate invitation:", error);
+    } finally {
+      setGeneratingInvite(false);
+    }
+  };
+
+  const handleCopyInviteUrl = async () => {
+    if (!inviteUrl) return;
+    await navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleRevokeInvite = async () => {
+    if (!confirm("招待リンクを無効化しますか？")) return;
+    await fetch(`/api/admin/invitations/${userId}`, { method: "DELETE" });
+    setInviteUrl(null);
+  };
+
+  const fetchProxyEvents = async () => {
+    try {
+      const res = await fetch(`/api/admin/members/${userId}/attendance`);
+      const data = await res.json();
+      if (data.success) setProxyEvents(data.data);
+    } catch (error) {
+      console.error("Failed to fetch proxy events:", error);
+    }
+  };
+
+  const handleProxyConfirm = async (eventId: string) => {
+    const status = pendingStatus[eventId];
+    if (!status) return;
+    setProxyLoading(true);
+    try {
+      const res = await fetch(`/api/admin/members/${userId}/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingStatus((prev) => { const next = { ...prev }; delete next[eventId]; return next; });
+        await fetchProxyEvents();
+      } else {
+        alert(`登録に失敗しました: ${data.error?.message || data.error?.code}`);
+      }
+    } catch (err) {
+      alert("登録に失敗しました: " + String(err));
+    } finally {
+      setProxyLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`${member?.nickname} を削除しますか？この操作は取り消せません。`)) return;
+    try {
+      const res = await fetch(`/api/admin/members/${userId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        router.push("/admin/members");
+      } else {
+        alert(`削除に失敗しました: ${data.error?.message || data.error?.code}`);
+      }
+    } catch (err) {
+      alert("削除に失敗しました: " + String(err));
     }
   };
 
@@ -453,10 +566,141 @@ export default function MemberDetailPage() {
                   </div>
                 )}
 
-                <div className="pt-4">
+                {member.role === "visitor" && (
+                  <div className="pt-4 border-t">
+                    <div className="text-sm font-medium text-gray-700 mb-3">招待リンク</div>
+                    {!inviteUrl || inviteExpired ? (
+                      <div className="space-y-2">
+                        {inviteExpired && (
+                          <p className="text-xs text-orange-600">招待リンクの有効期限が切れています</p>
+                        )}
+                        <Button
+                          onClick={handleGenerateInvite}
+                          loading={generatingInvite}
+                          className="w-full text-sm"
+                        >
+                          {inviteUrl ? "再発行する" : "招待リンクを発行する"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all">
+                          {inviteUrl}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleCopyInviteUrl} className="flex-1 text-sm">
+                            {copied ? "コピーしました！" : "URLをコピー"}
+                          </Button>
+                          <Button variant="secondary" onClick={handleGenerateInvite} loading={generatingInvite} className="text-sm">
+                            再発行
+                          </Button>
+                        </div>
+                        <button
+                          onClick={handleRevokeInvite}
+                          className="text-xs text-red-500 hover:text-red-700 w-full text-center"
+                        >
+                          無効化する
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 代理出欠登録 */}
+                <div className="pt-4 border-t">
+                  <div className="text-sm font-medium text-gray-700 mb-3">代理出欠登録</div>
+                  {proxyEvents.length === 0 ? (
+                    <p className="text-xs text-gray-400">直近のイベントはありません</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {proxyEvents.map((event) => {
+                        const currentStatus = event.attendance?.status ?? null;
+                        const selected = pendingStatus[event.id] ?? null;
+                        const hasChange = selected !== null && selected !== currentStatus;
+
+                        const statusLabel = currentStatus === "attending"
+                          ? "参加"
+                          : currentStatus === "waitlist"
+                          ? `キャンセル待ち${event.attendance?.position}番`
+                          : currentStatus === "not_attending"
+                          ? "不参加"
+                          : null;
+
+                        return (
+                          <div key={event.id} className="bg-gray-50 rounded-lg p-3 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{event.title}</p>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(event.eventDate).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                  {event.location && ` · ${event.location}`}
+                                </p>
+                              </div>
+                              {statusLabel ? (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                                  currentStatus === "attending" ? "bg-green-100 text-green-700"
+                                  : currentStatus === "waitlist" ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-gray-200 text-gray-500"
+                                }`}>
+                                  {statusLabel}
+                                </span>
+                              ) : (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 shrink-0">未登録</span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setPendingStatus((prev) => ({ ...prev, [event.id]: "attending" }))}
+                                className={`flex-1 text-xs py-1.5 rounded font-medium transition-colors border ${
+                                  selected === "attending"
+                                    ? "bg-green-500 text-white border-green-500"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-green-400"
+                                }`}
+                              >
+                                参加
+                              </button>
+                              <button
+                                onClick={() => setPendingStatus((prev) => ({ ...prev, [event.id]: "not_attending" }))}
+                                className={`flex-1 text-xs py-1.5 rounded font-medium transition-colors border ${
+                                  selected === "not_attending"
+                                    ? "bg-red-500 text-white border-red-500"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-red-400"
+                                }`}
+                              >
+                                不参加
+                              </button>
+                              <button
+                                onClick={() => handleProxyConfirm(event.id)}
+                                disabled={!hasChange || proxyLoading}
+                                className={`flex-1 text-xs py-1.5 rounded font-medium transition-colors ${
+                                  hasChange
+                                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                                    : "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                }`}
+                              >
+                                確定
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 space-y-2">
                   <Button onClick={() => setEditing(true)} className="w-full">
                     編集
                   </Button>
+                  {!isSelf && (
+                    <button
+                      onClick={handleDelete}
+                      className="w-full text-sm text-red-500 hover:text-red-700 py-2"
+                    >
+                      このメンバーを削除する
+                    </button>
+                  )}
                 </div>
               </div>
             )}

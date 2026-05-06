@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { createEventSchema } from "@/lib/validations";
+import { notifyNewEvent } from "@/lib/line-messaging";
 
 // GET /api/events - イベント一覧取得
 export async function GET(request: NextRequest) {
@@ -149,6 +150,25 @@ export async function POST(request: NextRequest) {
         createdById: session.user.id,
       },
     });
+
+    if (parsed.data.notifyMembers) {
+      const members = await prisma.user.findMany({
+        where: {
+          role: { in: ["member", "subadmin", "admin"] },
+          lineId: { not: null },
+        },
+        select: { lineId: true },
+      });
+      const lineIds = members.map((u) => u.lineId as string);
+      const appUrl = process.env.NEXTAUTH_URL || "";
+      notifyNewEvent({
+        lineIds,
+        eventTitle: event.title,
+        eventDate: event.eventDate,
+        location: event.location,
+        appUrl,
+      }).catch((err) => console.error("[notify] new event failed:", err));
+    }
 
     return NextResponse.json({ success: true, data: event }, { status: 201 });
   } catch (error) {
