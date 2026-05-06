@@ -46,3 +46,6 @@ next-env.d.ts
 # sqlite database
 *.db
 *.db-journal
+
+# test coverage
+/coverage
