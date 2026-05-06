@@ -15,15 +15,17 @@ interface EventFormData {
   feeVisible: boolean;
   deadline: string;
   deadlineEnabled: boolean;
+  notifyMembers: boolean;
 }
 
 interface EventFormProps {
   initialData?: Partial<EventFormData>;
   onSubmit: (data: EventFormData) => Promise<void>;
   submitLabel?: string;
+  showNotifyOption?: boolean;
 }
 
-export function EventForm({ initialData, onSubmit, submitLabel = "作成" }: EventFormProps) {
+export function EventForm({ initialData, onSubmit, submitLabel = "作成", showNotifyOption = false }: EventFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +41,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成" }: Eve
     feeVisible: initialData?.feeVisible || false,
     deadline: initialData?.deadline || "",
     deadlineEnabled: initialData?.deadlineEnabled || false,
+    notifyMembers: true,
   });
 
   const handleChange = (
@@ -241,6 +244,22 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成" }: Eve
           </div>
         )}
       </div>
+
+      {showNotifyOption && (
+        <div className="flex items-center gap-3 pt-2">
+          <input
+            type="checkbox"
+            id="notifyMembers"
+            name="notifyMembers"
+            checked={formData.notifyMembers}
+            onChange={handleChange}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="notifyMembers" className="text-sm font-medium text-gray-700">
+            作成時にメンバーへLINE通知を送る
+          </label>
+        </div>
+      )}
 
       <div className="flex gap-3 pt-4">
         <Button type="button" variant="secondary" className="flex-1" onClick={() => router.back()}>

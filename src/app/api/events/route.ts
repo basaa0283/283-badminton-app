@@ -151,23 +151,24 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // member・subadmin・admin の lineId を持つユーザー全員に通知
-    const members = await prisma.user.findMany({
-      where: {
-        role: { in: ["member", "subadmin", "admin"] },
-        lineId: { not: null },
-      },
-      select: { lineId: true },
-    });
-    const lineIds = members.map((u) => u.lineId as string);
-    const appUrl = process.env.NEXTAUTH_URL || "";
-    notifyNewEvent({
-      lineIds,
-      eventTitle: event.title,
-      eventDate: event.eventDate,
-      location: event.location,
-      appUrl,
-    }).catch((err) => console.error("[notify] new event failed:", err));
+    if (parsed.data.notifyMembers) {
+      const members = await prisma.user.findMany({
+        where: {
+          role: { in: ["member", "subadmin", "admin"] },
+          lineId: { not: null },
+        },
+        select: { lineId: true },
+      });
+      const lineIds = members.map((u) => u.lineId as string);
+      const appUrl = process.env.NEXTAUTH_URL || "";
+      notifyNewEvent({
+        lineIds,
+        eventTitle: event.title,
+        eventDate: event.eventDate,
+        location: event.location,
+        appUrl,
+      }).catch((err) => console.error("[notify] new event failed:", err));
+    }
 
     return NextResponse.json({ success: true, data: event }, { status: 201 });
   } catch (error) {

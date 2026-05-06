@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 
+const SETTING_KEYS = ["notifyNewEventEnabled", "notifyReminderEnabled", "notifyWaitlistEnabled"] as const;
+type SettingKey = (typeof SETTING_KEYS)[number];
+
 // GET /api/admin/settings
 export async function GET(_request: NextRequest) {
   try {
@@ -15,14 +18,16 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ success: false, error: { code: "FORBIDDEN" } }, { status: 403 });
     }
 
-    const settings = await prisma.systemSetting.findMany();
+    const settings = await prisma.systemSetting.findMany({
+      where: { key: { in: [...SETTING_KEYS] } },
+    });
     const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
 
     return NextResponse.json({
       success: true,
-      data: {
-        notificationEnabled: map["notificationEnabled"] !== "false",
-      },
+      data: Object.fromEntries(
+        SETTING_KEYS.map((key) => [key, map[key] !== "false"])
+      ),
     });
   } catch (error) {
     return NextResponse.json(
@@ -45,12 +50,14 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
 
-    if (typeof body.notificationEnabled === "boolean") {
-      await prisma.systemSetting.upsert({
-        where: { key: "notificationEnabled" },
-        update: { value: String(body.notificationEnabled) },
-        create: { key: "notificationEnabled", value: String(body.notificationEnabled) },
-      });
+    for (const key of SETTING_KEYS) {
+      if (typeof body[key] === "boolean") {
+        await prisma.systemSetting.upsert({
+          where: { key },
+          update: { value: String(body[key]) },
+          create: { key, value: String(body[key]) },
+        });
+      }
     }
 
     return NextResponse.json({ success: true });

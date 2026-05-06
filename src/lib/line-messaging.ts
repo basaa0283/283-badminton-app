@@ -2,10 +2,8 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { prisma } from "./prisma";
 
-async function isNotificationEnabled(): Promise<boolean> {
-  const setting = await prisma.systemSetting.findUnique({
-    where: { key: "notificationEnabled" },
-  });
+async function isSettingEnabled(key: string): Promise<boolean> {
+  const setting = await prisma.systemSetting.findUnique({ where: { key } });
   return setting ? setting.value === "true" : true;
 }
 
@@ -40,7 +38,6 @@ async function multicast(lineIds: string[], text: string): Promise<void> {
     return;
   }
   if (lineIds.length === 0) return;
-  // multicast は最大 500 件
   for (let i = 0; i < lineIds.length; i += 500) {
     const chunk = lineIds.slice(i, i + 500);
     const res = await fetch(`${MESSAGING_API_URL}/multicast`, {
@@ -71,7 +68,7 @@ export async function notifyWaitlistPromotion(params: {
   eventDate: Date;
   location: string | null;
 }): Promise<void> {
-  if (!(await isNotificationEnabled())) return;
+  if (!(await isSettingEnabled("notifyWaitlistEnabled"))) return;
   const text =
     `【283バドミントン】\nキャンセル待ちが繰り上がりました🎉\n\n` +
     `${params.eventTitle}\n` +
@@ -88,7 +85,7 @@ export async function notifyNewEvent(params: {
   location: string | null;
   appUrl: string;
 }): Promise<void> {
-  if (!(await isNotificationEnabled())) return;
+  if (!(await isSettingEnabled("notifyNewEventEnabled"))) return;
   const text =
     `【283バドミントン】\n新しいイベントが追加されました！\n\n` +
     `${params.eventTitle}\n` +
@@ -105,7 +102,7 @@ export async function notifyEventReminder(params: {
   location: string | null;
   hoursUntil: number;
 }): Promise<void> {
-  if (!(await isNotificationEnabled())) return;
+  if (!(await isSettingEnabled("notifyReminderEnabled"))) return;
   const label = params.hoursUntil <= 3 ? "まもなく" : "明日";
   const text =
     `【283バドミントン】\n${label}のイベントのお知らせ\n\n` +

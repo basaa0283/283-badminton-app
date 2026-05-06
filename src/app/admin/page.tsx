@@ -8,24 +8,52 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/Card";
 import { permissions, UserRole } from "@/lib/permissions";
 
+type NotifySettings = {
+  notifyNewEventEnabled: boolean;
+  notifyReminderEnabled: boolean;
+  notifyWaitlistEnabled: boolean;
+};
+
+type SettingKey = keyof NotifySettings;
+
+const NOTIFY_ITEMS: { key: SettingKey; label: string; description: string }[] = [
+  { key: "notifyNewEventEnabled", label: "新イベント通知", description: "イベント作成時にメンバー全員へ通知" },
+  { key: "notifyReminderEnabled", label: "リマインダー通知", description: "イベント24時間前・2時間前に参加者へ通知" },
+  { key: "notifyWaitlistEnabled", label: "キャンセル待ち通知", description: "繰り上がり時に対象者へ通知" },
+];
+
+function Toggle({ enabled, disabled, onToggle }: { enabled: boolean; disabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      disabled={disabled}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+        enabled ? "bg-green-500" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+          enabled ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
+  );
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [notificationEnabled, setNotificationEnabled] = useState<boolean | null>(null);
-  const [toggling, setToggling] = useState(false);
+  const [settings, setSettings] = useState<NotifySettings | null>(null);
+  const [toggling, setToggling] = useState<SettingKey | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
   useEffect(() => {
     if (session) {
       const role = session.user.role as UserRole;
-      if (!permissions.canAccessAdmin(role)) {
-        router.push("/");
-      }
+      if (!permissions.canAccessAdmin(role)) router.push("/");
     }
   }, [session, router]);
 
@@ -33,24 +61,22 @@ export default function AdminPage() {
     if (session) {
       fetch("/api/admin/settings")
         .then((r) => r.json())
-        .then((json) => {
-          if (json.success) setNotificationEnabled(json.data.notificationEnabled);
-        });
+        .then((json) => { if (json.success) setSettings(json.data); });
     }
   }, [session]);
 
-  const handleToggle = async () => {
-    if (notificationEnabled === null || toggling) return;
-    setToggling(true);
-    const next = !notificationEnabled;
+  const handleToggle = async (key: SettingKey) => {
+    if (!settings || toggling) return;
+    setToggling(key);
+    const next = !settings[key];
     const res = await fetch("/api/admin/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notificationEnabled: next }),
+      body: JSON.stringify({ [key]: next }),
     });
     const json = await res.json();
-    if (json.success) setNotificationEnabled(next);
-    setToggling(false);
+    if (json.success) setSettings((prev) => prev ? { ...prev, [key]: next } : prev);
+    setToggling(null);
   };
 
   if (status === "loading" || !session) {
@@ -100,27 +126,23 @@ export default function AdminPage() {
           </Link>
         </div>
 
-        <div className="mt-6 bg-white rounded-lg shadow px-4 py-4">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">通知設定</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-900">LINE通知</p>
-              <p className="text-xs text-gray-500 mt-0.5">新イベント・リマインダー・キャンセル待ち繰り上がり</p>
-            </div>
-            <button
-              onClick={handleToggle}
-              disabled={toggling || notificationEnabled === null}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
-                notificationEnabled ? "bg-green-500" : "bg-gray-300"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                  notificationEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
+        <div className="mt-6 bg-white rounded-lg shadow divide-y divide-gray-100">
+          <div className="px-4 py-3">
+            <h2 className="text-sm font-semibold text-gray-700">通知設定（LINE）</h2>
           </div>
+          {NOTIFY_ITEMS.map((item) => (
+            <div key={item.key} className="flex items-center justify-between px-4 py-3">
+              <div>
+                <p className="text-sm text-gray-900">{item.label}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>
+              </div>
+              <Toggle
+                enabled={settings ? settings[item.key] : true}
+                disabled={toggling !== null || settings === null}
+                onToggle={() => handleToggle(item.key)}
+              />
+            </div>
+          ))}
         </div>
       </main>
     </div>
