@@ -94,13 +94,16 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 仮アカウント削除（InvitationTokenもカスケード削除される）
+      // InvitationTokenを先に削除（SQL ServerはonDelete: NoActionのためカスケード削除されない）
+      await tx.invitationToken.deleteMany({ where: { userId: provisionalUser.id } });
+
+      // 仮アカウント削除
       await tx.user.delete({ where: { id: provisionalUser.id } });
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("POST /api/invite/complete error:", error);
-    return NextResponse.json({ success: false, error: { code: "INTERNAL_ERROR" } }, { status: 500 });
+    return NextResponse.json({ success: false, error: { code: "INTERNAL_ERROR", message: String(error) } }, { status: 500 });
   }
 }
