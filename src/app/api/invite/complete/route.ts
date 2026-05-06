@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
           age: provisionalUser.age ?? undefined,
           ageVisible: provisionalUser.ageVisible,
           comment: provisionalUser.comment ?? undefined,
-          role: provisionalUser.role,
+          role: provisionalUser.role === "visitor" ? "member" : provisionalUser.role,
           skillLevel: provisionalUser.skillLevel ?? undefined,
           adminNote: provisionalUser.adminNote ?? undefined,
         },
