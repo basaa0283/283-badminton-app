@@ -16,11 +16,18 @@ export default function InvitePage() {
 
   const [state, setState] = useState<State>("loading");
   const [nickname, setNickname] = useState("");
+  const [isLineIAB, setIsLineIAB] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && /Line\//.test(navigator.userAgent)) {
+      setIsLineIAB(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (status === "loading") return;
 
-    // ログイン済みの場合はそのまま完了フローへ
     if (status === "authenticated") {
       setState("already_logged_in");
       return;
@@ -53,6 +60,46 @@ export default function InvitePage() {
   const handleCompleteAsCurrentUser = () => {
     router.push(`/invite/complete?token=${token}`);
   };
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // LINE IAB検出時は外部ブラウザで開くよう誘導
+  if (isLineIAB) {
+    const isAndroid = /Android/.test(navigator.userAgent);
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="w-full max-w-md px-4">
+          <Card>
+            <CardContent className="py-8">
+              <h1 className="text-2xl font-bold text-center text-gray-900 mb-6">
+                283バドミントン
+              </h1>
+              <div className="text-center space-y-4">
+                <div className="text-4xl">🌐</div>
+                <p className="font-bold text-gray-900">ブラウザで開いてください</p>
+                <p className="text-sm text-gray-600">
+                  LINEアプリ内ではログインできません。
+                  {isAndroid
+                    ? "右上の「︙」→「他のアプリで開く」→ Chrome を選んでください。"
+                    : "右下の「︙」→「ブラウザで開く」を選んでください。"}
+                </p>
+                <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500 break-all">
+                  {typeof window !== "undefined" ? window.location.href : ""}
+                </div>
+                <Button onClick={handleCopy} className="w-full">
+                  {copied ? "コピーしました！" : "URLをコピー"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
