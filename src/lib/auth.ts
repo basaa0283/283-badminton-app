@@ -72,21 +72,25 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === "line" && profile) {
         const lineProfile = profile as { sub: string; name: string; picture?: string };
-        const existingUser = await prisma.user.findUnique({ where: { id: user.id } });
-        await prisma.user.upsert({
-          where: { id: user.id },
-          create: {
-            id: user.id,
-            lineId: lineProfile.sub,
-            nickname: lineProfile.name || "名無し",
-            profileImageUrl: lineProfile.picture ?? null,
-          },
-          update: {
-            lineId: lineProfile.sub,
-            nickname: existingUser?.nickname === "名無し" ? lineProfile.name : (existingUser?.nickname ?? lineProfile.name),
-            profileImageUrl: lineProfile.picture ?? existingUser?.profileImageUrl ?? null,
-          },
-        });
+        try {
+          const existingUser = await prisma.user.findUnique({ where: { id: user.id } });
+          if (!existingUser) {
+            // adapter.createUser/linkAccount が完了している前提なので通常ここには来ない
+            console.warn(`[signIn] User not found by id=${user.id}; skipping LINE info update`);
+            return true;
+          }
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              lineId: lineProfile.sub,
+              nickname: existingUser.nickname === "名無し" ? lineProfile.name : existingUser.nickname,
+              profileImageUrl: lineProfile.picture ?? existingUser.profileImageUrl ?? null,
+            },
+          });
+        } catch (error) {
+          // 失敗してもログインは通す（lineId などは次回ログイン時に再試行）
+          console.error("[signIn] Failed to update LINE info:", error);
+        }
       }
       return true;
     },
