@@ -135,8 +135,8 @@ describe("adminUpdateMemberSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("skillLevel が0以下で失敗する", () => {
-    const result = adminUpdateMemberSchema.safeParse({ skillLevel: 0 });
+  it("skillLevel が負の値で失敗する", () => {
+    const result = adminUpdateMemberSchema.safeParse({ skillLevel: -1 });
     expect(result.success).toBe(false);
   });
 
@@ -145,7 +145,7 @@ describe("adminUpdateMemberSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it.each([1, 5, 10])("skillLevel %d は有効", (skillLevel) => {
+  it.each([0, 1, 5, 10])("skillLevel %d は有効", (skillLevel) => {
     const result = adminUpdateMemberSchema.safeParse({ skillLevel });
     expect(result.success).toBe(true);
   });

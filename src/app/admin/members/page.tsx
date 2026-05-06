@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { RoleBadge } from "@/components/ui/Badge";
 import { permissions, UserRole } from "@/lib/permissions";
+import { formatSkillLevel } from "@/lib/skill-level";
 
 interface Member {
   id: string;
@@ -186,8 +187,11 @@ export default function AdminMembersPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-gray-900">{member.nickname}</span>
                         <RoleBadge role={member.role} />
-                        {member.skillLevel && (
-                          <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
+                        {member.skillLevel !== null && member.skillLevel !== undefined && (
+                          <span
+                            className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded"
+                            title={formatSkillLevel(member.skillLevel)}
+                          >
                             Lv.{member.skillLevel}
                           </span>
                         )}
