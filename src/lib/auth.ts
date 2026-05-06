@@ -6,6 +6,7 @@ import { prisma } from "./prisma";
 const isDevelopment = process.env.NODE_ENV === "development";
 
 export const authOptions: NextAuthOptions = {
+  useSecureCookies: false,
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   providers: [
     // 開発環境のみ: テストユーザーでログイン
@@ -127,7 +128,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: true,
+        secure: false,
       },
     },
     pkceCodeVerifier: {
@@ -136,7 +137,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: true,
+        secure: false,
       },
     },
     nonce: {
@@ -145,7 +146,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: true,
+        secure: false,
       },
     },
   },
