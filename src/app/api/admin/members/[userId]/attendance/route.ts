@@ -98,6 +98,11 @@ export async function POST(
       where: { userId_eventId: { userId, eventId } },
     });
 
+    // 現在と同じステータスなら何もしない
+    if (existing?.status === status) {
+      return NextResponse.json({ success: true, data: { status: existing.status, position: existing.position } });
+    }
+
     let finalStatus: "attending" | "not_attending" | "waitlist" = status;
     let position: number | null = null;
 
