@@ -85,7 +85,6 @@ export async function notifyNewEvent(params: {
   location: string | null;
   appUrl: string;
 }): Promise<void> {
-  if (!(await isSettingEnabled("notifyNewEventEnabled"))) return;
   const text =
     `【283バドミントン】\n新しいイベントが追加されました！\n\n` +
     `${params.eventTitle}\n` +

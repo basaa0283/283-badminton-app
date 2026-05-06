@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 
-const SETTING_KEYS = ["notifyNewEventEnabled", "notifyReminderEnabled", "notifyWaitlistEnabled"] as const;
+const SETTING_KEYS = ["notifyReminderEnabled", "notifyWaitlistEnabled"] as const;
 type SettingKey = (typeof SETTING_KEYS)[number];
 
 // GET /api/admin/settings

@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { permissions, UserRole } from "@/lib/permissions";
 
 type NotifySettings = {
-  notifyNewEventEnabled: boolean;
   notifyReminderEnabled: boolean;
   notifyWaitlistEnabled: boolean;
 };
@@ -17,7 +16,6 @@ type NotifySettings = {
 type SettingKey = keyof NotifySettings;
 
 const NOTIFY_ITEMS: { key: SettingKey; label: string; description: string }[] = [
-  { key: "notifyNewEventEnabled", label: "新イベント通知", description: "イベント作成時にメンバー全員へ通知" },
   { key: "notifyReminderEnabled", label: "リマインダー通知", description: "イベント24時間前・2時間前に参加者へ通知" },
   { key: "notifyWaitlistEnabled", label: "キャンセル待ち通知", description: "繰り上がり時に対象者へ通知" },
 ];
