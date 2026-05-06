@@ -54,7 +54,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: profile.sub,
           name: profile.name,
-          email: profile.email,
+          email: profile.email || `${profile.sub}@line.local`,
           image: profile.picture,
         };
       },
