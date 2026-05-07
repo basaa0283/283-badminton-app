@@ -24,6 +24,9 @@ export default function LoginPage() {
   const router = useRouter();
   const { isInitialized, isLiffLoggedIn, profile, login: liffLogin, isInClient } = useLiff();
   const [showDevLogin, setShowDevLogin] = useState(false);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+  const addDebug = (msg: string) =>
+    setDebugLog((prev) => [...prev.slice(-9), `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
   // 既にログイン済みの場合はホームにリダイレクト
   useEffect(() => {
@@ -55,32 +58,39 @@ export default function LoginPage() {
   };
 
   const handleLogin = async () => {
+    addDebug("handleLogin called");
+    addDebug(`isInitialized=${isInitialized}, isInClient=${isInClient()}, isLiffLoggedIn=${isLiffLoggedIn}`);
+
     if (isInitialized && isInClient()) {
-      // LIFF 環境
       const idToken = liff?.getIDToken?.();
+      addDebug(`idToken=${idToken ? `${idToken.substring(0, 20)}...` : "null"}`);
       if (!idToken) {
-        // tokenが取れないのでLIFF再ログイン
+        addDebug("calling forceLiffRelogin");
         forceLiffRelogin();
         return;
       }
-      const result = await signIn("liff", {
-        idToken,
-        callbackUrl: "/",
-        redirect: false,
-      });
-      if (result?.error) {
-        // verify失敗 → 強制LIFF再認証で fresh token 取得
-        forceLiffRelogin();
-        return;
-      }
-      if (result?.url) {
-        window.location.href = result.url;
+      addDebug("calling signIn(liff)");
+      try {
+        const result = await signIn("liff", {
+          idToken,
+          callbackUrl: "/",
+          redirect: false,
+        });
+        addDebug(`signIn result: error=${result?.error ?? "none"}, url=${result?.url ?? "none"}`);
+        if (result?.error) {
+          forceLiffRelogin();
+          return;
+        }
+        if (result?.url) {
+          window.location.href = result.url;
+        }
+      } catch (err) {
+        addDebug(`signIn threw: ${String(err)}`);
       }
     } else {
-      // 通常ブラウザは LINE OAuth
+      addDebug("falling back to LINE OAuth");
       await signIn("line", { callbackUrl: "/" });
     }
-    // liffLogin は使わなくなったが lint で未使用警告を出さないため参照
     void liffLogin;
   };
 
@@ -155,6 +165,31 @@ export default function LoginPage() {
             )}
           </div>
         )}
+
+        {/* DEBUG: LIFF状態とイベントログ（後で削除予定）*/}
+        <div className="mt-6 border-t pt-3 text-xs text-gray-500 space-y-1 break-all">
+          <div className="font-semibold text-gray-700">DEBUG</div>
+          <div>isInitialized: {String(isInitialized)}</div>
+          <div>isInClient: {isInitialized ? String(isInClient()) : "(待機中)"}</div>
+          <div>isLiffLoggedIn: {String(isLiffLoggedIn)}</div>
+          <div>profile: {profile ? profile.displayName : "null"}</div>
+          <div>liff.getIDToken: {isInitialized ? (() => {
+            try {
+              return liff?.getIDToken?.() ? "あり" : "なし";
+            } catch {
+              return "(エラー)";
+            }
+          })() : "(待機中)"}</div>
+          <div>session status: {status}</div>
+          {debugLog.length > 0 && (
+            <div className="mt-2 pt-2 border-t">
+              <div className="font-semibold">events:</div>
+              {debugLog.map((line, i) => (
+                <div key={i} className="font-mono">{line}</div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
