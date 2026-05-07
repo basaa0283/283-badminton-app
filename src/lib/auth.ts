@@ -6,7 +6,6 @@ import { prisma } from "./prisma";
 const isDevelopment = process.env.NODE_ENV === "development";
 
 export const authOptions: NextAuthOptions = {
-  useSecureCookies: true,
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   providers: [
     // 開発環境のみ: テストユーザーでログイン
@@ -131,60 +130,5 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
-  },
-  cookies: {
-    sessionToken: {
-      name: "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
-        secure: true,
-      },
-    },
-    callbackUrl: {
-      name: "next-auth.callback-url",
-      options: {
-        sameSite: "lax" as const,
-        path: "/",
-        secure: true,
-      },
-    },
-    csrfToken: {
-      name: "next-auth.csrf-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
-        secure: true,
-      },
-    },
-    state: {
-      name: "next-auth.state",
-      options: {
-        httpOnly: true,
-        sameSite: "none" as const,
-        path: "/",
-        secure: true,
-      },
-    },
-    pkceCodeVerifier: {
-      name: "next-auth.pkce.code_verifier",
-      options: {
-        httpOnly: true,
-        sameSite: "none" as const,
-        path: "/",
-        secure: true,
-      },
-    },
-    nonce: {
-      name: "next-auth.nonce",
-      options: {
-        httpOnly: true,
-        sameSite: "none" as const,
-        path: "/",
-        secure: true,
-      },
-    },
   },
 };
