@@ -5,8 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { useLiff } from "@/hooks/useLiff";
-import { liff } from "@/lib/liff";
 
 type State = "loading" | "valid" | "invalid" | "expired" | "already_logged_in";
 
@@ -14,7 +12,6 @@ export default function InvitePage() {
   const params = useParams();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { isInitialized: liffReady, isInClient, isLiffLoggedIn, login: liffLogin } = useLiff();
   const token = params.token as string;
 
   const [state, setState] = useState<State>("loading");
@@ -27,9 +24,6 @@ export default function InvitePage() {
       setIsLineIAB(true);
     }
   }, []);
-
-  // LIFF コンテキスト判定（SDK初期化後）
-  const inLiff = liffReady && isInClient();
 
   useEffect(() => {
     if (status === "loading") return;
@@ -60,20 +54,6 @@ export default function InvitePage() {
   };
 
   const handleLogin = () => {
-    if (inLiff) {
-      // LIFF経由のログイン
-      if (!isLiffLoggedIn) {
-        liffLogin();
-        return;
-      }
-      const idToken = liff?.getIDToken?.();
-      if (idToken) {
-        signIn("liff", { idToken, callbackUrl: `/invite/complete?token=${token}` });
-      } else {
-        liffLogin();
-      }
-      return;
-    }
     signIn("line", { callbackUrl: `/invite/complete?token=${token}` });
   };
 
@@ -87,8 +67,8 @@ export default function InvitePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // LINE IAB検出時、LIFF環境ならそのまま動作させる。LIFFでなければ外部ブラウザ誘導。
-  if (isLineIAB && !inLiff) {
+  // LINE IAB検出時は外部ブラウザで開くよう誘導
+  if (isLineIAB) {
     const isAndroid = /Android/.test(navigator.userAgent);
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">

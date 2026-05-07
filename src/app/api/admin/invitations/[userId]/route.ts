@@ -4,17 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 
-// LIFF ID が設定されていれば LIFF URL、なければ通常のWebアプリURLを返す。
-// LIFF URL なら LINE トーク内でタップしてもLIFF経由で開かれる。
-function buildInviteUrl(token: string): string {
-  const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-  if (liffId) {
-    return `https://liff.line.me/${liffId}/invite/${token}`;
-  }
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  return `${baseUrl}/invite/${token}`;
-}
-
 // POST /api/admin/invitations/[userId] - 招待トークン発行（再発行も可）
 export async function POST(
   _request: NextRequest,
@@ -46,7 +35,8 @@ export async function POST(
       data: { userId, expiresAt },
     });
 
-    const inviteUrl = buildInviteUrl(invitation.token);
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const inviteUrl = `${baseUrl}/invite/${invitation.token}`;
 
     return NextResponse.json({ success: true, data: { token: invitation.token, inviteUrl, expiresAt } });
   } catch (error) {
@@ -78,7 +68,8 @@ export async function GET(
       return NextResponse.json({ success: true, data: null });
     }
 
-    const inviteUrl = buildInviteUrl(invitation.token);
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const inviteUrl = `${baseUrl}/invite/${invitation.token}`;
     const isExpired = invitation.expiresAt < new Date();
 
     return NextResponse.json({

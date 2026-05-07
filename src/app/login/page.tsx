@@ -2,7 +2,6 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { useLiff } from "@/hooks/useLiff";
-import { liff } from "@/lib/liff";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -24,9 +23,6 @@ export default function LoginPage() {
   const router = useRouter();
   const { isInitialized, isLiffLoggedIn, profile, login: liffLogin, isInClient } = useLiff();
   const [showDevLogin, setShowDevLogin] = useState(false);
-  const [debugLog, setDebugLog] = useState<string[]>([]);
-  const addDebug = (msg: string) =>
-    setDebugLog((prev) => [...prev.slice(-9), `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
   // 既にログイン済みの場合はホームにリダイレクト
   useEffect(() => {
@@ -35,77 +31,17 @@ export default function LoginPage() {
     }
   }, [status, session, router]);
 
-  // 自動サインインは無限ループ防止のため一時無効化（ボタン押下のみ）
-
-  // LIFF環境で強制的に再認証する（getIDToken が null/失敗時の復旧）
-  const forceLiffRelogin = () => {
-    try {
-      if (liff && liff.isLoggedIn?.()) {
-        liff.logout();
-      }
-      liff?.login?.();
-    } catch (err) {
-      console.error("[handleLogin] liff re-login failed:", err);
-    }
-  };
+  // 自動サインインは無限ループの原因になるため削除
+  void isLiffLoggedIn;
+  void profile;
 
   const handleLogin = async () => {
-    addDebug("handleLogin called");
-    addDebug(`isInitialized=${isInitialized}, isInClient=${isInClient()}, isLiffLoggedIn=${isLiffLoggedIn}`);
-
-    if (!isInitialized || !isInClient()) {
-      addDebug("falling back to LINE OAuth");
+    // LIFF環境の場合はLIFFログイン、それ以外はNextAuth
+    if (isInitialized && isInClient()) {
+      liffLogin();
+    } else {
       await signIn("line", { callbackUrl: "/" });
-      void liffLogin;
-      return;
     }
-
-    // LIFF未ログイン → liff.login() で認証フローへ
-    if (!isLiffLoggedIn) {
-      addDebug("not logged in to LIFF, calling liff.login()");
-      try {
-        liff?.login?.();
-      } catch (err) {
-        addDebug(`liff.login threw: ${String(err)}`);
-      }
-      return;
-    }
-
-    // LIFFログイン済み → ID Token取得を試みる
-    let idToken: string | null = null;
-    try {
-      idToken = liff?.getIDToken?.() ?? null;
-    } catch (err) {
-      addDebug(`getIDToken threw: ${String(err)}`);
-    }
-    addDebug(`idToken=${idToken ? `${idToken.substring(0, 20)}...` : "null"}`);
-
-    if (!idToken) {
-      addDebug("calling forceLiffRelogin");
-      forceLiffRelogin();
-      return;
-    }
-
-    addDebug("calling signIn(liff)");
-    try {
-      const result = await signIn("liff", {
-        idToken,
-        callbackUrl: "/",
-        redirect: false,
-      });
-      addDebug(`signIn result: error=${result?.error ?? "none"}, url=${result?.url ?? "none"}`);
-      if (result?.error) {
-        forceLiffRelogin();
-        return;
-      }
-      if (result?.url) {
-        window.location.href = result.url;
-      }
-    } catch (err) {
-      addDebug(`signIn threw: ${String(err)}`);
-    }
-
-    void liffLogin;
   };
 
   const handleDevLogin = async (userId: string) => {
@@ -179,31 +115,6 @@ export default function LoginPage() {
             )}
           </div>
         )}
-
-        {/* DEBUG: LIFF状態とイベントログ（後で削除予定）*/}
-        <div className="mt-6 border-t pt-3 text-xs text-gray-500 space-y-1 break-all">
-          <div className="font-semibold text-gray-700">DEBUG</div>
-          <div>isInitialized: {String(isInitialized)}</div>
-          <div>isInClient: {isInitialized ? String(isInClient()) : "(待機中)"}</div>
-          <div>isLiffLoggedIn: {String(isLiffLoggedIn)}</div>
-          <div>profile: {profile ? profile.displayName : "null"}</div>
-          <div>liff.getIDToken: {isInitialized ? (() => {
-            try {
-              return liff?.getIDToken?.() ? "あり" : "なし";
-            } catch {
-              return "(エラー)";
-            }
-          })() : "(待機中)"}</div>
-          <div>session status: {status}</div>
-          {debugLog.length > 0 && (
-            <div className="mt-2 pt-2 border-t">
-              <div className="font-semibold">events:</div>
-              {debugLog.map((line, i) => (
-                <div key={i} className="font-mono">{line}</div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
