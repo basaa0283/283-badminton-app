@@ -1,7 +1,6 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import { useLiff } from "@/hooks/useLiff";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -21,7 +20,6 @@ const TEST_USERS = [
 export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { isInitialized, isLiffLoggedIn, profile, login: liffLogin, isInClient } = useLiff();
   const [showDevLogin, setShowDevLogin] = useState(false);
 
   // 既にログイン済みの場合はホームにリダイレクト
@@ -31,17 +29,8 @@ export default function LoginPage() {
     }
   }, [status, session, router]);
 
-  // 自動サインインは無限ループの原因になるため削除
-  void isLiffLoggedIn;
-  void profile;
-
   const handleLogin = async () => {
-    // LIFF環境の場合はLIFFログイン、それ以外はNextAuth
-    if (isInitialized && isInClient()) {
-      liffLogin();
-    } else {
-      await signIn("line", { callbackUrl: "/" });
-    }
+    await signIn("line", { callbackUrl: "/" });
   };
 
   const handleDevLogin = async (userId: string) => {
@@ -58,7 +47,7 @@ export default function LoginPage() {
           出欠管理アプリ
         </p>
 
-        {(!isInitialized || status === "loading") ? (
+        {status === "loading" ? (
           <div className="text-center text-gray-500">
             読み込み中...
           </div>
