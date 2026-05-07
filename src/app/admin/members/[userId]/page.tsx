@@ -631,7 +631,12 @@ export default function MemberDetailPage() {
                     <div className="space-y-2">
                       {proxyEvents.map((event) => {
                         const currentStatus = event.attendance?.status ?? null;
-                        const selected = pendingStatus[event.id] ?? null;
+                        // 未クリック時は現在のステータス（参加/不参加）をボタン選択状態として表示
+                        const selected =
+                          pendingStatus[event.id] ??
+                          (currentStatus === "attending" || currentStatus === "not_attending"
+                            ? currentStatus
+                            : null);
                         const hasChange = selected !== null && selected !== currentStatus;
 
                         const statusLabel = currentStatus === "attending"
