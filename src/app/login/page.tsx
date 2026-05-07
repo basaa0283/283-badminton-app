@@ -42,23 +42,46 @@ export default function LoginPage() {
     }
   }, [isInitialized, isLiffLoggedIn, profile, status, isInClient]);
 
+  // LIFF環境で強制的に再認証する（getIDToken が null/失敗時の復旧）
+  const forceLiffRelogin = () => {
+    try {
+      if (liff && liff.isLoggedIn?.()) {
+        liff.logout();
+      }
+      liff?.login?.();
+    } catch (err) {
+      console.error("[handleLogin] liff re-login failed:", err);
+    }
+  };
+
   const handleLogin = async () => {
-    // LIFF環境（LINE内ブラウザ + LIFF SDK初期化済み）なら LIFF ログイン
     if (isInitialized && isInClient()) {
-      if (!isLiffLoggedIn) {
-        liffLogin();
-      } else {
-        const idToken = liff?.getIDToken?.();
-        if (idToken) {
-          await signIn("liff", { idToken, callbackUrl: "/" });
-        } else {
-          liffLogin();
-        }
+      // LIFF 環境
+      const idToken = liff?.getIDToken?.();
+      if (!idToken) {
+        // tokenが取れないのでLIFF再ログイン
+        forceLiffRelogin();
+        return;
+      }
+      const result = await signIn("liff", {
+        idToken,
+        callbackUrl: "/",
+        redirect: false,
+      });
+      if (result?.error) {
+        // verify失敗 → 強制LIFF再認証で fresh token 取得
+        forceLiffRelogin();
+        return;
+      }
+      if (result?.url) {
+        window.location.href = result.url;
       }
     } else {
       // 通常ブラウザは LINE OAuth
       await signIn("line", { callbackUrl: "/" });
     }
+    // liffLogin は使わなくなったが lint で未使用警告を出さないため参照
+    void liffLogin;
   };
 
   const handleDevLogin = async (userId: string) => {
