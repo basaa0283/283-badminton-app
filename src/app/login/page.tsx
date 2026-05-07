@@ -61,36 +61,58 @@ export default function LoginPage() {
     addDebug("handleLogin called");
     addDebug(`isInitialized=${isInitialized}, isInClient=${isInClient()}, isLiffLoggedIn=${isLiffLoggedIn}`);
 
-    if (isInitialized && isInClient()) {
-      const idToken = liff?.getIDToken?.();
-      addDebug(`idToken=${idToken ? `${idToken.substring(0, 20)}...` : "null"}`);
-      if (!idToken) {
-        addDebug("calling forceLiffRelogin");
+    if (!isInitialized || !isInClient()) {
+      addDebug("falling back to LINE OAuth");
+      await signIn("line", { callbackUrl: "/" });
+      void liffLogin;
+      return;
+    }
+
+    // LIFF未ログイン → liff.login() で認証フローへ
+    if (!isLiffLoggedIn) {
+      addDebug("not logged in to LIFF, calling liff.login()");
+      try {
+        liff?.login?.();
+      } catch (err) {
+        addDebug(`liff.login threw: ${String(err)}`);
+      }
+      return;
+    }
+
+    // LIFFログイン済み → ID Token取得を試みる
+    let idToken: string | null = null;
+    try {
+      idToken = liff?.getIDToken?.() ?? null;
+    } catch (err) {
+      addDebug(`getIDToken threw: ${String(err)}`);
+    }
+    addDebug(`idToken=${idToken ? `${idToken.substring(0, 20)}...` : "null"}`);
+
+    if (!idToken) {
+      addDebug("calling forceLiffRelogin");
+      forceLiffRelogin();
+      return;
+    }
+
+    addDebug("calling signIn(liff)");
+    try {
+      const result = await signIn("liff", {
+        idToken,
+        callbackUrl: "/",
+        redirect: false,
+      });
+      addDebug(`signIn result: error=${result?.error ?? "none"}, url=${result?.url ?? "none"}`);
+      if (result?.error) {
         forceLiffRelogin();
         return;
       }
-      addDebug("calling signIn(liff)");
-      try {
-        const result = await signIn("liff", {
-          idToken,
-          callbackUrl: "/",
-          redirect: false,
-        });
-        addDebug(`signIn result: error=${result?.error ?? "none"}, url=${result?.url ?? "none"}`);
-        if (result?.error) {
-          forceLiffRelogin();
-          return;
-        }
-        if (result?.url) {
-          window.location.href = result.url;
-        }
-      } catch (err) {
-        addDebug(`signIn threw: ${String(err)}`);
+      if (result?.url) {
+        window.location.href = result.url;
       }
-    } else {
-      addDebug("falling back to LINE OAuth");
-      await signIn("line", { callbackUrl: "/" });
+    } catch (err) {
+      addDebug(`signIn threw: ${String(err)}`);
     }
+
     void liffLogin;
   };
 
