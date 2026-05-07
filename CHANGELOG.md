@@ -3,6 +3,32 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [1.2.0] - 2026-05-06
+
+### Added
+
+- LINE プロフィール画像を `User.profileImageUrl` に自動同期（メンバー一覧などにLINEアイコンが表示される）
+- スキルレベル定義（区民大会・公式戦・都内オープン3軸でマッピング）を追加
+  - 範囲を `1-10` から `0-10` に拡張（Lv.0 = サークル基準未達）
+  - 管理画面のメンバー詳細に「定義を見る」モーダルを追加
+- 単体テスト基盤の拡充（カバレッジ 8% → 88%）
+  - Vitest + React Testing Library で 218 件のテスト追加
+  - CI でカバレッジレポートを artifact として保存
+- 開発運用ルールを `CLAUDE.md` に明文化（master向けリリースは確認必須）
+
+### Fixed
+
+- イベント詳細ページで未回答時に「参加」ボタンが選択済みのように見えるUX問題を修正
+  - 未回答状態は両ボタン未選択・送信ボタン disabled に
+- LINE OAuth signIn コールバックが重複ユーザーを作成しうる問題を修正
+  - `upsert` を `update`-only に変更し、想定外のIDで新規作成しないよう防御
+- iOS Safari で LINE ログインが「State cookie was missing」エラーで完走できない問題を修正
+  - カスタムCookie設定を削除しNextAuthデフォルト（`__Secure-`プレフィックス・`maxAge` 付き永続Cookie）に切替
+
+### Notes
+
+- **iOS Safari プライベートモードではOAuth系ログイン全般が動作しません**（Safari の Cookie 制限による仕様）。通常モードでご利用ください。
+
 ## [1.1.0] - 2026-05-06
 
 ### Added
@@ -84,6 +110,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[1.2.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/basaa0283/283-badminton-app/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/basaa0283/283-badminton-app/compare/v1.0.0...v1.0.1

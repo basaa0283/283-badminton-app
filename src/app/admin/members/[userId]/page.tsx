@@ -8,7 +8,9 @@ import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
+import { Modal } from "@/components/ui/Modal";
 import { permissions, UserRole, getRoleName } from "@/lib/permissions";
+import { formatSkillLevel, SKILL_LEVELS, SKILL_LEVEL_MIN, SKILL_LEVEL_MAX } from "@/lib/skill-level";
 
 interface MemberDetail {
   id: string;
@@ -37,8 +39,7 @@ const GENDERS = [
 ];
 
 function getSkillLevelDisplay(level: number | null): string {
-  if (level === null) return "未設定";
-  return `Lv.${level}`;
+  return formatSkillLevel(level);
 }
 
 function formatRelativeTime(dateString: string | null): string {
@@ -85,6 +86,7 @@ export default function MemberDetailPage() {
   const [proxyEvents, setProxyEvents] = useState<ProxyEvent[]>([]);
   const [proxyLoading, setProxyLoading] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<Record<string, "attending" | "not_attending">>({});
+  const [showSkillLegend, setShowSkillLegend] = useState(false);
 
   // 編集用フォームの状態
   const [formData, setFormData] = useState({
@@ -463,18 +465,32 @@ export default function MemberDetailPage() {
                 <div className="text-sm font-medium text-gray-500 mb-2">管理者専用情報</div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    スキルレベル (1-10)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      スキルレベル ({SKILL_LEVEL_MIN}-{SKILL_LEVEL_MAX})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowSkillLegend(true)}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      定義を見る
+                    </button>
+                  </div>
                   <input
                     type="number"
-                    min="1"
-                    max="10"
+                    min={SKILL_LEVEL_MIN}
+                    max={SKILL_LEVEL_MAX}
                     value={formData.skillLevel}
                     onChange={(e) => setFormData({ ...formData, skillLevel: e.target.value })}
-                    placeholder="1-10"
+                    placeholder={`${SKILL_LEVEL_MIN}-${SKILL_LEVEL_MAX}`}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                  {formData.skillLevel !== "" && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatSkillLevel(parseInt(formData.skillLevel, 10))}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -707,6 +723,39 @@ export default function MemberDetailPage() {
           </CardContent>
         </Card>
       </main>
+
+      <Modal
+        isOpen={showSkillLegend}
+        onClose={() => setShowSkillLegend(false)}
+        title="スキルレベル定義"
+      >
+        <p className="text-xs text-gray-500 mb-3">
+          管理者専用。区民大会レベルを基準とし、4部出場 = Lv.1（最低ライン）。
+          公式戦は社会人都大会・県大会など。オープン戦は4部スタートが多い。
+        </p>
+        <div className="overflow-x-auto -mx-4 px-4">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="text-left p-2 border-b font-medium">Lv</th>
+                <th className="text-left p-2 border-b font-medium">区民大会</th>
+                <th className="text-left p-2 border-b font-medium">公式戦</th>
+                <th className="text-left p-2 border-b font-medium">オープン戦</th>
+              </tr>
+            </thead>
+            <tbody>
+              {SKILL_LEVELS.map((s) => (
+                <tr key={s.level} className="border-b border-gray-100">
+                  <td className="p-2 font-medium">{s.level}</td>
+                  <td className="p-2 text-gray-700">{s.district}</td>
+                  <td className="p-2 text-gray-700">{s.official}</td>
+                  <td className="p-2 text-gray-700">{s.open}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Modal>
     </div>
   );
 }

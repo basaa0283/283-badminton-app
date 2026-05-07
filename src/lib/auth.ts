@@ -6,7 +6,6 @@ import { prisma } from "./prisma";
 const isDevelopment = process.env.NODE_ENV === "development";
 
 export const authOptions: NextAuthOptions = {
-  useSecureCookies: false,
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   providers: [
     // 開発環境のみ: テストユーザーでログイン
@@ -72,19 +71,25 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === "line" && profile) {
         const lineProfile = profile as { sub: string; name: string; picture?: string };
-        const existingUser = await prisma.user.findUnique({ where: { id: user.id } });
-        await prisma.user.upsert({
-          where: { id: user.id },
-          create: {
-            id: user.id,
-            lineId: lineProfile.sub,
-            nickname: lineProfile.name || "名無し",
-          },
-          update: {
-            lineId: lineProfile.sub,
-            nickname: existingUser?.nickname === "名無し" ? lineProfile.name : (existingUser?.nickname ?? lineProfile.name),
-          },
-        });
+        try {
+          const existingUser = await prisma.user.findUnique({ where: { id: user.id } });
+          if (!existingUser) {
+            // adapter.createUser/linkAccount が完了している前提なので通常ここには来ない
+            console.warn(`[signIn] User not found by id=${user.id}; skipping LINE info update`);
+            return true;
+          }
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              lineId: lineProfile.sub,
+              nickname: existingUser.nickname === "名無し" ? lineProfile.name : existingUser.nickname,
+              profileImageUrl: lineProfile.picture ?? existingUser.profileImageUrl ?? null,
+            },
+          });
+        } catch (error) {
+          // 失敗してもログインは通す（lineId などは次回ログイン時に再試行）
+          console.error("[signIn] Failed to update LINE info:", error);
+        }
       }
       return true;
     },
@@ -125,60 +130,5 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
-  },
-  cookies: {
-    sessionToken: {
-      name: "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
-        secure: false,
-      },
-    },
-    callbackUrl: {
-      name: "next-auth.callback-url",
-      options: {
-        sameSite: "lax" as const,
-        path: "/",
-        secure: false,
-      },
-    },
-    csrfToken: {
-      name: "next-auth.csrf-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
-        secure: false,
-      },
-    },
-    state: {
-      name: "next-auth.state",
-      options: {
-        httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
-        secure: false,
-      },
-    },
-    pkceCodeVerifier: {
-      name: "next-auth.pkce.code_verifier",
-      options: {
-        httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
-        secure: false,
-      },
-    },
-    nonce: {
-      name: "next-auth.nonce",
-      options: {
-        httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
-        secure: false,
-      },
-    },
   },
 };

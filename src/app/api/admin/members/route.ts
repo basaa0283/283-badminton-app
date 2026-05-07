@@ -12,7 +12,7 @@ const createProvisionalMemberSchema = z.object({
   gender: z.enum(["male", "female"]).optional().nullable(),
   age: z.number().int().min(0).max(150).optional().nullable(),
   comment: z.string().max(500).optional().nullable(),
-  skillLevel: z.number().int().min(1).max(10).optional().nullable(),
+  skillLevel: z.number().int().min(0).max(10).optional().nullable(),
   adminNote: z.string().max(1000).optional().nullable(),
 });
 
