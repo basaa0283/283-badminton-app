@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -16,6 +16,7 @@ function InviteCompleteContent() {
 
   const [state, setState] = useState<State>("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const completionStartedRef = useRef(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -28,6 +29,9 @@ function InviteCompleteContent() {
       setState("error");
       return;
     }
+    // useEffect が status 変化等で再実行されたときに二重コールしない
+    if (completionStartedRef.current) return;
+    completionStartedRef.current = true;
 
     completeInvitation();
   }, [status, token]);
