@@ -26,9 +26,6 @@ export async function GET() {
     }
 
     const users = await prisma.user.findMany({
-      where: {
-        role: { not: "guest" }, // ゲストは一覧に表示しない
-      },
       orderBy: { lastActiveAt: { sort: "desc", nulls: "last" } },
       select: {
         id: true,

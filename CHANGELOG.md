@@ -3,6 +3,23 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [1.3.0] - 2026-05-07
+
+### Added
+
+- フッターのバージョン表示に環境 suffix を追加（DEV: `+dev`, ローカル: `+local`, PROD: なし）
+- 管理画面のメンバー一覧でゲスト権限のアカウントも表示（自己登録ユーザーを把握可能に）
+
+### Fixed
+
+- 管理者が自分自身を編集しようとした際、`role` を変更していなくても「自分自身の権限は変更できません」エラーで保存できなかった問題を修正
+- 代理出欠登録で、対象メンバーが既に参加/不参加を回答していても「参加」「不参加」ボタンが未選択状態で表示され、現在の回答が分からなかった問題を修正
+- 招待リンク完了処理（`/invite/complete`）が二重実行され、2回目で「招待リンクが見つかりません」エラーが表示されていた問題を修正
+
+### Changed
+
+- LIFF（LINE in-app browser）統合を削除（無限ループ等の不具合を解消）。今後の再挑戦は #21 で追跡
+
 ## [1.2.0] - 2026-05-06
 
 ### Added
@@ -110,6 +127,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[1.3.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/basaa0283/283-badminton-app/compare/v1.0.1...v1.0.2

@@ -151,8 +151,20 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
-    // 自分自身の権限は変更できない（権限変更の場合のみ）
-    if (parsed.data.role && userId === session.user.id) {
+    const existing = await prisma.user.findUnique({ where: { id: userId } });
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: { code: "NOT_FOUND", message: "メンバーが見つかりません" } },
+        { status: 404 }
+      );
+    }
+
+    // 自分自身の権限は変更できない（実際に変更があった場合のみブロック）
+    if (
+      parsed.data.role &&
+      parsed.data.role !== existing.role &&
+      userId === session.user.id
+    ) {
       return NextResponse.json(
         { success: false, error: { code: "FORBIDDEN", message: "自分自身の権限は変更できません" } },
         { status: 403 }
@@ -160,18 +172,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     // admin権限への変更は admin のみ可能
-    if (parsed.data.role === "admin" && role !== "admin") {
+    if (parsed.data.role === "admin" && existing.role !== "admin" && role !== "admin") {
       return NextResponse.json(
         { success: false, error: { code: "FORBIDDEN", message: "管理者権限の付与は管理者のみ可能です" } },
         { status: 403 }
-      );
-    }
-
-    const existing = await prisma.user.findUnique({ where: { id: userId } });
-    if (!existing) {
-      return NextResponse.json(
-        { success: false, error: { code: "NOT_FOUND", message: "メンバーが見つかりません" } },
-        { status: 404 }
       );
     }
 

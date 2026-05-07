@@ -4,6 +4,14 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { version } from "../../package.json";
 
+// 環境を区別するためのバージョン suffix（DEV/local向け）
+function getEnvSuffix(): string {
+  const url = process.env.NEXTAUTH_URL || "";
+  if (url.startsWith("http://localhost")) return "+local";
+  if (url.includes("dev-")) return "+dev";
+  return "";
+}
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -31,7 +39,7 @@ export default function RootLayout({
       >
         <Providers>{children}</Providers>
         <footer className="text-center text-xs text-gray-400 py-4">
-          v{version}
+          v{version}{getEnvSuffix()}
         </footer>
       </body>
     </html>
