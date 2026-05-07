@@ -35,15 +35,48 @@ export default function LoginPage() {
     }
   }, [status, session, router]);
 
+  const [autoSignInTried, setAutoSignInTried] = useState(false);
+
   useEffect(() => {
     // LIFF環境でログイン済みなら、ID Token を取得して LIFF 経由のサインイン
-    if (isInitialized && isInClient() && isLiffLoggedIn && profile && status !== "authenticated") {
-      const idToken = liff?.getIDToken?.();
-      if (idToken) {
-        signIn("liff", { idToken, callbackUrl: "/" });
-      }
+    // 失敗時の無限リダイレクトループを防ぐため、1セッションで1回だけ実行
+    if (
+      autoSignInTried ||
+      !isInitialized ||
+      !isInClient() ||
+      !isLiffLoggedIn ||
+      !profile ||
+      status === "authenticated" ||
+      status === "loading"
+    ) {
+      return;
     }
-  }, [isInitialized, isLiffLoggedIn, profile, status, isInClient]);
+    let idToken: string | null = null;
+    try {
+      idToken = liff?.getIDToken?.() ?? null;
+    } catch {
+      // not logged in
+    }
+    if (!idToken) return;
+
+    setAutoSignInTried(true);
+    addDebug("auto-signin: calling signIn(liff)");
+    (async () => {
+      try {
+        const result = await signIn("liff", {
+          idToken,
+          callbackUrl: "/",
+          redirect: false,
+        });
+        addDebug(`auto-signin result: error=${result?.error ?? "none"}, url=${result?.url ?? "none"}`);
+        if (result?.url && !result?.error) {
+          window.location.href = result.url;
+        }
+      } catch (err) {
+        addDebug(`auto-signin threw: ${String(err)}`);
+      }
+    })();
+  }, [autoSignInTried, isInitialized, isLiffLoggedIn, profile, status, isInClient]);
 
   // LIFF環境で強制的に再認証する（getIDToken が null/失敗時の復旧）
   const forceLiffRelogin = () => {
