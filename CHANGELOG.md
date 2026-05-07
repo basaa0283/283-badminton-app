@@ -22,6 +22,12 @@
   - 未回答状態は両ボタン未選択・送信ボタン disabled に
 - LINE OAuth signIn コールバックが重複ユーザーを作成しうる問題を修正
   - `upsert` を `update`-only に変更し、想定外のIDで新規作成しないよう防御
+- iOS Safari で LINE ログインが「State cookie was missing」エラーで完走できない問題を修正
+  - カスタムCookie設定を削除しNextAuthデフォルト（`__Secure-`プレフィックス・`maxAge` 付き永続Cookie）に切替
+
+### Notes
+
+- **iOS Safari プライベートモードではOAuth系ログイン全般が動作しません**（Safari の Cookie 制限による仕様）。通常モードでご利用ください。
 
 ## [1.1.0] - 2026-05-06
 
