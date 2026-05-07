@@ -2,6 +2,7 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { useLiff } from "@/hooks/useLiff";
+import { liff } from "@/lib/liff";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -32,17 +33,30 @@ export default function LoginPage() {
   }, [status, session, router]);
 
   useEffect(() => {
-    // LIFF内でログイン済みの場合、NextAuthでサインイン
-    if (isInitialized && isLiffLoggedIn && profile && status !== "authenticated") {
-      signIn("line", { callbackUrl: "/" });
+    // LIFF環境でログイン済みなら、ID Token を取得して LIFF 経由のサインイン
+    if (isInitialized && isInClient() && isLiffLoggedIn && profile && status !== "authenticated") {
+      const idToken = liff?.getIDToken?.();
+      if (idToken) {
+        signIn("liff", { idToken, callbackUrl: "/" });
+      }
     }
-  }, [isInitialized, isLiffLoggedIn, profile, status]);
+  }, [isInitialized, isLiffLoggedIn, profile, status, isInClient]);
 
   const handleLogin = async () => {
-    // LIFF環境の場合はLIFFログイン、それ以外はNextAuth
+    // LIFF環境（LINE内ブラウザ + LIFF SDK初期化済み）なら LIFF ログイン
     if (isInitialized && isInClient()) {
-      liffLogin();
+      if (!isLiffLoggedIn) {
+        liffLogin();
+      } else {
+        const idToken = liff?.getIDToken?.();
+        if (idToken) {
+          await signIn("liff", { idToken, callbackUrl: "/" });
+        } else {
+          liffLogin();
+        }
+      }
     } else {
+      // 通常ブラウザは LINE OAuth
       await signIn("line", { callbackUrl: "/" });
     }
   };
