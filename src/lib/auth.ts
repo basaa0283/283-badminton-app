@@ -66,31 +66,38 @@ export const authOptions: NextAuthOptions = {
         data: { nickname: user.name || "名無し" },
       });
     },
+    // adapter 操作完了後に走るため、user.id は DB上の CUID。
+    // signIn callback の user.id は profile.id (= LINE User ID) で DB の id と一致しないため、
+    // ここで lineId / 画像 / nickname の同期をする。
+    async signIn({ user, account, profile }) {
+      if (account?.provider !== "line" || !profile || !user?.id) return;
+      const lineProfile = profile as { sub: string; name?: string; picture?: string };
+      try {
+        const existing = await prisma.user.findUnique({ where: { id: user.id } });
+        if (!existing) {
+          console.warn(`[events.signIn] User not found by id=${user.id}; skipping LINE info update`);
+          return;
+        }
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            lineId: lineProfile.sub,
+            nickname:
+              existing.nickname === "名無し"
+                ? (lineProfile.name ?? existing.nickname)
+                : existing.nickname,
+            profileImageUrl: lineProfile.picture ?? existing.profileImageUrl ?? null,
+          },
+        });
+      } catch (error) {
+        // ログインは止めない。次回ログイン時に再試行されるので致命的ではない。
+        console.error("[events.signIn] Failed to update LINE info:", error);
+      }
+    },
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (account?.provider === "line" && profile) {
-        const lineProfile = profile as { sub: string; name: string; picture?: string };
-        try {
-          const existingUser = await prisma.user.findUnique({ where: { id: user.id } });
-          if (!existingUser) {
-            // adapter.createUser/linkAccount が完了している前提なので通常ここには来ない
-            console.warn(`[signIn] User not found by id=${user.id}; skipping LINE info update`);
-            return true;
-          }
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              lineId: lineProfile.sub,
-              nickname: existingUser.nickname === "名無し" ? lineProfile.name : existingUser.nickname,
-              profileImageUrl: lineProfile.picture ?? existingUser.profileImageUrl ?? null,
-            },
-          });
-        } catch (error) {
-          // 失敗してもログインは通す（lineId などは次回ログイン時に再試行）
-          console.error("[signIn] Failed to update LINE info:", error);
-        }
-      }
+    async signIn() {
+      // LINE 情報の同期は events.signIn で行う（user.id が DB の id と一致するため）
       return true;
     },
     async session({ session, token, user }) {
