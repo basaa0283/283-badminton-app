@@ -3,6 +3,15 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [1.3.1] - 2026-05-16
+
+### Fixed
+
+- LINEログイン後に `User.lineId` / `User.profileImageUrl` が DB に同期されない問題を修正
+  - `@auth/prisma-adapter` v2 + NextAuth v4 の組み合わせで `user.id` が DB の CUID と一致しないため、Account 行経由で DB の userId を解決するよう変更
+  - LINE 情報の同期処理を `events.signIn` から `jwt` callback に移動し、確実に走るように
+  - これにより管理画面でメンバーの LINE アイコンが表示されない、LINE 通知が届かないといった不具合を解消
+
 ## [1.3.0] - 2026-05-07
 
 ### Added
@@ -127,6 +136,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[1.3.1]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.0.2...v1.1.0

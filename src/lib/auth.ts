@@ -141,14 +141,6 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async jwt({ token, user, account, profile }) {
-      console.log("[jwt] called", {
-        hasUser: !!user,
-        userId: user?.id,
-        provider: account?.provider,
-        providerAccountId: account?.providerAccountId,
-        hasProfile: !!profile,
-        profileSub: (profile as { sub?: string } | undefined)?.sub,
-      });
       // 初回ログイン時、userオブジェクトが渡される
       if (user) {
         let userId = user.id;
@@ -175,12 +167,6 @@ export const authOptions: NextAuthOptions = {
           const lineProfile = profile as { sub: string; name?: string; picture?: string };
           try {
             const existing = await prisma.user.findUnique({ where: { id: userId } });
-            console.log("[jwt] LINE sync attempt", {
-              userId,
-              existingFound: !!existing,
-              lineSub: lineProfile.sub,
-              linePicture: lineProfile.picture,
-            });
             if (existing) {
               await prisma.user.update({
                 where: { id: userId },
@@ -193,7 +179,6 @@ export const authOptions: NextAuthOptions = {
                   profileImageUrl: lineProfile.picture ?? existing.profileImageUrl ?? null,
                 },
               });
-              console.log("[jwt] LINE sync success", { userId });
             }
           } catch (error) {
             console.error("[jwt] Failed to sync LINE info:", error);
