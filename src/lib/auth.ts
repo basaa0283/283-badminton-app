@@ -61,36 +61,60 @@ export const authOptions: NextAuthOptions = {
   ],
   events: {
     async createUser({ user }) {
+      if (!user?.id) return;
       await prisma.user.update({
         where: { id: user.id },
         data: { nickname: user.name || "名無し" },
       });
     },
+    // NextAuth v4 + @auth/prisma-adapter v2 では user.id が DB の CUID と一致しないことがあるため、
+    // adapter が作成する Account 行を経由して DB ユーザーを引く。
+    async signIn({ user, account, profile }) {
+      if (account?.provider !== "line" || !profile) return;
+      const lineProfile = profile as { sub: string; name?: string; picture?: string };
+      try {
+        let dbUser = null;
+        if (user?.id) {
+          dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        }
+        if (!dbUser) {
+          const accountRow = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: "line",
+                providerAccountId: account.providerAccountId,
+              },
+            },
+            include: { user: true },
+          });
+          dbUser = accountRow?.user ?? null;
+        }
+        if (!dbUser) {
+          console.warn(
+            `[events.signIn] No DB user found; userId=${user?.id} providerAccountId=${account.providerAccountId}`
+          );
+          return;
+        }
+        await prisma.user.update({
+          where: { id: dbUser.id },
+          data: {
+            lineId: lineProfile.sub,
+            nickname:
+              dbUser.nickname === "名無し"
+                ? (lineProfile.name ?? dbUser.nickname)
+                : dbUser.nickname,
+            profileImageUrl: lineProfile.picture ?? dbUser.profileImageUrl ?? null,
+          },
+        });
+      } catch (error) {
+        // ログインは止めない。次回ログイン時に再試行されるので致命的ではない。
+        console.error("[events.signIn] Failed to update LINE info:", error);
+      }
+    },
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (account?.provider === "line" && profile) {
-        const lineProfile = profile as { sub: string; name: string; picture?: string };
-        try {
-          const existingUser = await prisma.user.findUnique({ where: { id: user.id } });
-          if (!existingUser) {
-            // adapter.createUser/linkAccount が完了している前提なので通常ここには来ない
-            console.warn(`[signIn] User not found by id=${user.id}; skipping LINE info update`);
-            return true;
-          }
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              lineId: lineProfile.sub,
-              nickname: existingUser.nickname === "名無し" ? lineProfile.name : existingUser.nickname,
-              profileImageUrl: lineProfile.picture ?? existingUser.profileImageUrl ?? null,
-            },
-          });
-        } catch (error) {
-          // 失敗してもログインは通す（lineId などは次回ログイン時に再試行）
-          console.error("[signIn] Failed to update LINE info:", error);
-        }
-      }
+    async signIn() {
+      // LINE 情報の同期は events.signIn で行う（user.id が DB の id と一致するため）
       return true;
     },
     async session({ session, token, user }) {
@@ -116,11 +140,50 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
       // 初回ログイン時、userオブジェクトが渡される
       if (user) {
-        token.sub = user.id;
-        token.id = user.id;
+        let userId = user.id;
+        // OAuth の user.id は profile.id (= LINE User ID 等) で DB の CUID と一致しないことがある。
+        // Account 行から DB の userId を引いて token に入れる。
+        if (account?.provider && account?.providerAccountId) {
+          const accountRow = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              },
+            },
+          });
+          if (accountRow?.userId) {
+            userId = accountRow.userId;
+          }
+        }
+        token.sub = userId;
+        token.id = userId;
+
+        // LINE 情報同期: events.signIn では fire しないケースがあるため、jwt 内でも実施。
+        if (account?.provider === "line" && profile) {
+          const lineProfile = profile as { sub: string; name?: string; picture?: string };
+          try {
+            const existing = await prisma.user.findUnique({ where: { id: userId } });
+            if (existing) {
+              await prisma.user.update({
+                where: { id: userId },
+                data: {
+                  lineId: lineProfile.sub,
+                  nickname:
+                    existing.nickname === "名無し"
+                      ? (lineProfile.name ?? existing.nickname)
+                      : existing.nickname,
+                  profileImageUrl: lineProfile.picture ?? existing.profileImageUrl ?? null,
+                },
+              });
+            }
+          } catch (error) {
+            console.error("[jwt] Failed to sync LINE info:", error);
+          }
+        }
       }
       return token;
     },
