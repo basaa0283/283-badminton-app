@@ -140,11 +140,27 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       // 初回ログイン時、userオブジェクトが渡される
       if (user) {
-        token.sub = user.id;
-        token.id = user.id;
+        let userId = user.id;
+        // OAuth の user.id は profile.id (= LINE User ID 等) で DB の CUID と一致しないことがある。
+        // Account 行から DB の userId を引いて token に入れる。
+        if (account?.provider && account?.providerAccountId) {
+          const accountRow = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              },
+            },
+          });
+          if (accountRow?.userId) {
+            userId = accountRow.userId;
+          }
+        }
+        token.sub = userId;
+        token.id = userId;
       }
       return token;
     },
