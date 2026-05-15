@@ -140,7 +140,7 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, profile }) {
       // 初回ログイン時、userオブジェクトが渡される
       if (user) {
         let userId = user.id;
@@ -161,6 +161,29 @@ export const authOptions: NextAuthOptions = {
         }
         token.sub = userId;
         token.id = userId;
+
+        // LINE 情報同期: events.signIn では fire しないケースがあるため、jwt 内でも実施。
+        if (account?.provider === "line" && profile) {
+          const lineProfile = profile as { sub: string; name?: string; picture?: string };
+          try {
+            const existing = await prisma.user.findUnique({ where: { id: userId } });
+            if (existing) {
+              await prisma.user.update({
+                where: { id: userId },
+                data: {
+                  lineId: lineProfile.sub,
+                  nickname:
+                    existing.nickname === "名無し"
+                      ? (lineProfile.name ?? existing.nickname)
+                      : existing.nickname,
+                  profileImageUrl: lineProfile.picture ?? existing.profileImageUrl ?? null,
+                },
+              });
+            }
+          } catch (error) {
+            console.error("[jwt] Failed to sync LINE info:", error);
+          }
+        }
       }
       return token;
     },
