@@ -61,6 +61,7 @@ export const authOptions: NextAuthOptions = {
   ],
   events: {
     async createUser({ user }) {
+      if (!user?.id) return;
       await prisma.user.update({
         where: { id: user.id },
         data: { nickname: user.name || "名無し" },
