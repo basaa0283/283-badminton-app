@@ -67,27 +67,43 @@ export const authOptions: NextAuthOptions = {
         data: { nickname: user.name || "名無し" },
       });
     },
-    // adapter 操作完了後に走るため、user.id は DB上の CUID。
-    // signIn callback の user.id は profile.id (= LINE User ID) で DB の id と一致しないため、
-    // ここで lineId / 画像 / nickname の同期をする。
+    // NextAuth v4 + @auth/prisma-adapter v2 では user.id が DB の CUID と一致しないことがあるため、
+    // adapter が作成する Account 行を経由して DB ユーザーを引く。
     async signIn({ user, account, profile }) {
-      if (account?.provider !== "line" || !profile || !user?.id) return;
+      if (account?.provider !== "line" || !profile) return;
       const lineProfile = profile as { sub: string; name?: string; picture?: string };
       try {
-        const existing = await prisma.user.findUnique({ where: { id: user.id } });
-        if (!existing) {
-          console.warn(`[events.signIn] User not found by id=${user.id}; skipping LINE info update`);
+        let dbUser = null;
+        if (user?.id) {
+          dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        }
+        if (!dbUser) {
+          const accountRow = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: "line",
+                providerAccountId: account.providerAccountId,
+              },
+            },
+            include: { user: true },
+          });
+          dbUser = accountRow?.user ?? null;
+        }
+        if (!dbUser) {
+          console.warn(
+            `[events.signIn] No DB user found; userId=${user?.id} providerAccountId=${account.providerAccountId}`
+          );
           return;
         }
         await prisma.user.update({
-          where: { id: user.id },
+          where: { id: dbUser.id },
           data: {
             lineId: lineProfile.sub,
             nickname:
-              existing.nickname === "名無し"
-                ? (lineProfile.name ?? existing.nickname)
-                : existing.nickname,
-            profileImageUrl: lineProfile.picture ?? existing.profileImageUrl ?? null,
+              dbUser.nickname === "名無し"
+                ? (lineProfile.name ?? dbUser.nickname)
+                : dbUser.nickname,
+            profileImageUrl: lineProfile.picture ?? dbUser.profileImageUrl ?? null,
           },
         });
       } catch (error) {
