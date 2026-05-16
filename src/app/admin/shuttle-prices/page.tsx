@@ -234,17 +234,34 @@ export default function ShuttlePricesPage() {
           </Card>
         ) : (
           <div className="space-y-2">
-            {prices.map((p) => {
+            {(() => {
+              const now = new Date();
+              // prices は effectiveFrom DESC ソート済み。 effectiveFrom <= now の最初のものが現在適用中。
+              const currentId = prices.find((p) => new Date(p.effectiveFrom) <= now)?.id;
+              return prices.map((p) => {
               const perPiece = p.casePrice / p.shuttlesPerCase;
+              const isCurrent = p.id === currentId;
               return (
-                <Card key={p.id}>
+                <Card
+                  key={p.id}
+                  className={
+                    isCurrent ? "border-2 border-blue-500 bg-blue-50" : undefined
+                  }
+                >
                   <CardContent className="py-3">
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {format(new Date(p.effectiveFrom), "yyyy/M/d", { locale: ja })} 〜
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900">
+                            {format(new Date(p.effectiveFrom), "yyyy/M/d", { locale: ja })} 〜
+                          </span>
+                          {isCurrent && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-500 text-white rounded-full font-medium">
+                              現在適用中
+                            </span>
+                          )}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 mt-0.5">
                           ケース {p.casePrice.toLocaleString()}円 / 1個あたり {perPiece.toFixed(1)}円 (
                           {p.shuttlesPerCase}個入り)
                         </div>
@@ -260,7 +277,8 @@ export default function ShuttlePricesPage() {
                   </CardContent>
                 </Card>
               );
-            })}
+              });
+            })()}
           </div>
         )}
       </main>
