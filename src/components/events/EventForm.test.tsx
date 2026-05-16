@@ -38,7 +38,7 @@ describe("EventForm", () => {
     expect(screen.getByDisplayValue("毎週恒例")).toBeInTheDocument();
   });
 
-  it("initialData.eventDate が日付と時刻に分解されて反映される", () => {
+  it("initialData.eventDate が日付と時刻に分解されて反映される (30分刻み)", () => {
     render(
       <EventForm
         initialData={{ eventDate: "2026-06-01T19:00", eventEndDate: "2026-06-01T21:00" }}
@@ -46,8 +46,20 @@ describe("EventForm", () => {
       />,
     );
     expect(screen.getByLabelText(/開催日/)).toHaveValue("2026-06-01");
+    // 30分刻み (デフォルト) なので select として表示される
     expect(screen.getByLabelText(/開始時刻/)).toHaveValue("19:00");
     expect(screen.getByLabelText("終了時刻（任意）")).toHaveValue("21:00");
+  });
+
+  it("initialData が30分刻みでない場合は1分単位モードで開く", () => {
+    render(
+      <EventForm
+        initialData={{ eventDate: "2026-06-01T19:15" }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("1分単位で指定する（オフ時は30分刻み）")).toBeChecked();
+    expect(screen.getByLabelText(/開始時刻/)).toHaveValue("19:15");
   });
 
   it("submitLabel が反映される", () => {
@@ -105,8 +117,8 @@ describe("EventForm", () => {
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
     await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
-    await userEvent.type(screen.getByLabelText(/開始時刻/), "10:00");
-    await userEvent.type(screen.getByLabelText("終了時刻（任意）"), "09:00");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
+    await userEvent.selectOptions(screen.getByLabelText("終了時刻（任意）"), "09:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
 
@@ -120,7 +132,7 @@ describe("EventForm", () => {
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
     await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
-    await userEvent.type(screen.getByLabelText(/開始時刻/), "10:00");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
 
@@ -139,8 +151,8 @@ describe("EventForm", () => {
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
     await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
-    await userEvent.type(screen.getByLabelText(/開始時刻/), "10:00");
-    await userEvent.type(screen.getByLabelText("終了時刻（任意）"), "12:00");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
+    await userEvent.selectOptions(screen.getByLabelText("終了時刻（任意）"), "12:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
 
@@ -152,13 +164,32 @@ describe("EventForm", () => {
     );
   });
 
+  it("1分単位モードで native time input が使える", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<EventForm onSubmit={onSubmit} />);
+
+    await userEvent.click(screen.getByLabelText("1分単位で指定する（オフ時は30分刻み）"));
+
+    await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
+    await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
+    await userEvent.type(screen.getByLabelText(/開始時刻/), "10:15");
+
+    await userEvent.click(screen.getByRole("button", { name: "作成" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventDate: "2026-06-01T10:15",
+      }),
+    );
+  });
+
   it("onSubmit がthrowしたらエラー表示", async () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("APIエラー発生"));
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
     await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
-    await userEvent.type(screen.getByLabelText(/開始時刻/), "10:00");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
 
@@ -171,7 +202,7 @@ describe("EventForm", () => {
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
     await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
-    await userEvent.type(screen.getByLabelText(/開始時刻/), "10:00");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
 

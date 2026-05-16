@@ -48,6 +48,13 @@ function combine(day: string, time: string): string {
   return `${day}T${time}`;
 }
 
+// 00:00, 00:30, ..., 23:30
+const HALF_HOUR_OPTIONS: string[] = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${String(h).padStart(2, "0")}:${m}`;
+});
+
 export function EventForm({ initialData, onSubmit, submitLabel = "作成", showNotifyOption = false }: EventFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -157,28 +164,59 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">
             開始時刻 <span className="text-red-500">*</span>
           </label>
-          <input
-            type="time"
-            id="startTime"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            step={fineTimeStep ? 60 : 1800}
-            required
-            className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+          {fineTimeStep ? (
+            <input
+              type="time"
+              id="startTime"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              required
+              className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          ) : (
+            <select
+              id="startTime"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              required
+              className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              <option value="">選択してください</option>
+              {HALF_HOUR_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="min-w-0">
           <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">
             終了時刻（任意）
           </label>
-          <input
-            type="time"
-            id="endTime"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            step={fineTimeStep ? 60 : 1800}
-            className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+          {fineTimeStep ? (
+            <input
+              type="time"
+              id="endTime"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          ) : (
+            <select
+              id="endTime"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              <option value="">指定しない</option>
+              {HALF_HOUR_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <label className="flex items-center gap-2 text-xs text-gray-600">
           <input
