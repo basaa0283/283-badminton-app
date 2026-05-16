@@ -24,13 +24,16 @@ test.describe("出欠登録", () => {
       await page.goto(`/events/${eventId}`);
       await expect(page.getByText(title)).toBeVisible();
 
+      // AttendanceForm に絞る (AdminAttendanceManager の 参加/不参加 ボタンと区別)
+      const attendanceForm = page.locator("form").filter({ hasText: "出欠" });
+
       // 参加を選択して送信
-      await page.getByRole("button", { name: "参加", exact: true }).click();
+      await attendanceForm.getByRole("button", { name: "参加", exact: true }).click();
       await page.getByRole("button", { name: "回答を送信する" }).click();
       await expect(page.getByRole("button", { name: "回答を更新する" })).toBeVisible();
 
       // 不参加に切り替えて更新
-      await page.getByRole("button", { name: "不参加", exact: true }).click();
+      await attendanceForm.getByRole("button", { name: "不参加", exact: true }).click();
       await page.getByRole("button", { name: "回答を更新する" }).click();
 
       // 更新が成功してフォームが再描画される
