@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -35,6 +35,10 @@ export default function ShuttlePricesPage() {
   const [shuttlesPerCase, setShuttlesPerCase] = useState("120");
   const [memo, setMemo] = useState("");
 
+  // 二重実行ガード (state では React の更新タイミング差で防げないケースがある)
+  const submittingRef = useRef(false);
+  const deletingRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
@@ -67,6 +71,8 @@ export default function ShuttlePricesPage() {
   };
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -90,13 +96,20 @@ export default function ShuttlePricesPage() {
       await fetchPrices();
     } finally {
       setSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("この単価を削除しますか？")) return;
-    await fetch(`/api/admin/shuttle-prices/${id}`, { method: "DELETE" });
-    await fetchPrices();
+    if (deletingRef.current === id) return;
+    deletingRef.current = id;
+    try {
+      if (!confirm("この単価を削除しますか？")) return;
+      await fetch(`/api/admin/shuttle-prices/${id}`, { method: "DELETE" });
+      await fetchPrices();
+    } finally {
+      deletingRef.current = null;
+    }
   };
 
   if (status === "loading" || !session) {
