@@ -3,11 +3,17 @@
 > このドキュメントは `scripts/generate-e2e-docs.ts` で自動生成されています。
 > 手動編集せず、`npm run docs:e2e` で再生成してください。
 
-- 生成日時: 2026-05-16T04:59:12.992Z
-- テスト数: 13
-- ファイル数: 8
+- 生成日時: 2026-05-16T05:28:58.556Z
+- テスト数: 17
+- ファイル数: 12
 
 ## ファイル別一覧
+
+### `e2e/admin-edit-others.spec.ts`
+
+#### 管理者による他メンバー編集
+
+- admin が他メンバーの nickname / skillLevel / adminNote を更新できる
 
 ### `e2e/admin-members.spec.ts`
 
@@ -22,11 +28,29 @@
 
 - イベント詳細から参加→不参加に切り替えできる
 
+### `e2e/event-edit.spec.ts`
+
+#### イベント編集 (admin)
+
+- 作成したイベントの title / location / capacity を更新できる
+
 ### `e2e/events.spec.ts`
 
 #### イベント (admin)
 
 - API でイベント作成 → 一覧に表示 → 削除でクリーンアップ
+
+### `e2e/guest-visibility.spec.ts`
+
+#### 管理画面メンバー一覧の guest 表示
+
+- guest 権限のユーザーが GET /api/members に含まれる
+
+### `e2e/invite-double-execution.spec.ts`
+
+#### 招待リンク二重実行防止
+
+- 同じトークンで2回 complete を呼ぶと2回目は NOT_FOUND
 
 ### `e2e/invite.spec.ts`
 
