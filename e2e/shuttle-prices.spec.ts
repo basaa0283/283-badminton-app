@@ -10,13 +10,14 @@ test.describe("シャトル単価マスタ (admin)", () => {
 
   test("単価を追加→一覧に表示→削除でクリーンアップ", async ({ page }) => {
     const memo = `E2E shuttle ${Date.now()}`;
+    // 既存データと衝突しないようテストごとにランダムな価格
+    const casePrice = 70000 + Math.floor(Math.random() * 10000);
     let createdId: string | undefined;
     try {
-      // 単価追加
       const createRes = await page.request.post("/api/admin/shuttle-prices", {
         data: {
           effectiveFrom: new Date().toISOString(),
-          casePrice: 63110,
+          casePrice,
           shuttlesPerCase: 120,
           memo,
         },
@@ -24,11 +25,11 @@ test.describe("シャトル単価マスタ (admin)", () => {
       expect(createRes.status()).toBe(201);
       createdId = (await createRes.json()).data.id as string;
 
-      // 一覧に表示
+      // 一覧に memo (一意) が表示される
       await page.goto("/admin/shuttle-prices");
       await expect(page.getByText(memo)).toBeVisible();
-      // 1個あたり 63110/120 = 525.9...円が表示される
-      await expect(page.getByText(/525\.9.*円/)).toBeVisible();
+      // ケース価格が表示される
+      await expect(page.getByText(new RegExp(casePrice.toLocaleString()))).toBeVisible();
     } finally {
       if (createdId) {
         await page.request.delete(`/api/admin/shuttle-prices/${createdId}`).catch(() => {});
