@@ -107,8 +107,9 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">シャトル本数</label>
+                <label htmlFor="exp-shuttle-count" className="block text-xs text-gray-600 mb-1">シャトル本数</label>
                 <input
+                  id="exp-shuttle-count"
                   type="number"
                   min={0}
                   value={shuttleCount}
@@ -117,8 +118,9 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">シャトル代 (円)</label>
+                <label htmlFor="exp-shuttle-cost" className="block text-xs text-gray-600 mb-1">シャトル代 (円)</label>
                 <input
+                  id="exp-shuttle-cost"
                   type="number"
                   min={0}
                   value={shuttleCost}
@@ -127,8 +129,9 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">体育館代 (円)</label>
+                <label htmlFor="exp-gym-cost" className="block text-xs text-gray-600 mb-1">体育館代 (円)</label>
                 <input
+                  id="exp-gym-cost"
                   type="number"
                   min={0}
                   value={gymCost}
@@ -137,8 +140,9 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">その他経費 (円)</label>
+                <label htmlFor="exp-other-cost" className="block text-xs text-gray-600 mb-1">その他経費 (円)</label>
                 <input
+                  id="exp-other-cost"
                   type="number"
                   min={0}
                   value={otherCost}
@@ -148,8 +152,9 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">その他経費メモ</label>
+              <label htmlFor="exp-other-memo" className="block text-xs text-gray-600 mb-1">その他経費メモ</label>
               <input
+                id="exp-other-memo"
                 type="text"
                 maxLength={500}
                 value={otherMemo}
@@ -159,8 +164,9 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">実集金額 (円)</label>
+              <label htmlFor="exp-actual-revenue" className="block text-xs text-gray-600 mb-1">実集金額 (円)</label>
               <input
+                id="exp-actual-revenue"
                 type="number"
                 min={0}
                 value={actualRevenue}
