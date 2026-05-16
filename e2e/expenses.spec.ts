@@ -62,22 +62,22 @@ test.describe("経費・収支管理 (admin)", () => {
       eventId = (await createRes.json()).data.id as string;
 
       await page.goto(`/events/${eventId}`);
-      await expect(page.getByText("経費・収支 (管理者のみ)")).toBeVisible();
+      // ExpensesCard 内の編集ボタンに絞る
+      const expensesHeading = page.getByText("経費・収支 (管理者のみ)");
+      await expect(expensesHeading).toBeVisible();
+      const expensesCard = page.locator("div.rounded-lg.shadow", { has: expensesHeading });
 
-      // 編集ボタンクリック
-      await page.getByRole("button", { name: "編集" }).click();
+      await expensesCard.getByRole("button", { name: "編集" }).click();
 
-      // 経費入力
       await page.getByLabel("シャトル本数").fill("4");
       await page.getByLabel("シャトル代 (円)").fill("6000");
       await page.getByLabel("体育館代 (円)").fill("3000");
       await page.getByLabel("実集金額 (円)").fill("10000");
 
-      // 保存
       await page.getByRole("button", { name: "保存" }).click();
 
       // 編集モードが閉じ、収支が表示される (10000 - 9000 = 1000)
-      await expect(page.getByRole("button", { name: "編集" })).toBeVisible();
+      await expect(expensesCard.getByRole("button", { name: "編集" })).toBeVisible();
       await expect(page.getByText(/1,000円/)).toBeVisible();
     } finally {
       if (eventId) {
