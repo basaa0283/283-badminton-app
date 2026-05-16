@@ -45,7 +45,9 @@ test.describe("代理出欠登録 (admin)", () => {
       await expect(page.getByText(memberNickname)).toBeVisible();
 
       // 代理出欠セクションを特定（対象イベントタイトル含むカード）
-      const eventCard = page.locator("div", { hasText: eventTitle }).first();
+      // カード div は class="bg-gray-50 rounded-lg p-3 space-y-2"
+      const eventCard = page.locator(".bg-gray-50.rounded-lg.p-3", { hasText: eventTitle });
+      await expect(eventCard).toHaveCount(1);
 
       // 参加ボタンが選択状態 (bg-green-500) になっているはず
       const attendingButton = eventCard.getByRole("button", { name: "参加", exact: true });
