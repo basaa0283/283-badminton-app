@@ -3,11 +3,18 @@
 > このドキュメントは `scripts/generate-e2e-docs.ts` で自動生成されています。
 > 手動編集せず、`npm run docs:e2e` で再生成してください。
 
-- 生成日時: 2026-05-16T07:51:07.962Z
-- テスト数: 22
-- ファイル数: 14
+- 生成日時: 2026-05-16T12:27:38.895Z
+- テスト数: 24
+- ファイル数: 15
 
 ## ファイル別一覧
+
+### `e2e/admin-attendance-manage.spec.ts`
+
+#### 管理者: 過去イベントの出欠/支払管理
+
+- 過去イベントの attendance を attending → not_attending に書き換え、支払情報も保存できる
+- 非管理者は更新APIで 403
 
 ### `e2e/admin-edit-others.spec.ts`
 
