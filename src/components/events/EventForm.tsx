@@ -25,53 +25,85 @@ interface EventFormProps {
   showNotifyOption?: boolean;
 }
 
+// datetime-local 形式 (YYYY-MM-DDTHH:MM) or ISO → 日付/時刻に分割
+function splitDateTime(value?: string): { day: string; time: string } {
+  if (!value) return { day: "", time: "" };
+  // datetime-local 形式ならそのまま分割
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) {
+    const [day, rest] = value.split("T");
+    return { day, time: rest.slice(0, 5) };
+  }
+  // ISO 形式の場合はローカル時刻として展開
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return { day: "", time: "" };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    day: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
+function combine(day: string, time: string): string {
+  if (!day || !time) return "";
+  return `${day}T${time}`;
+}
+
 export function EventForm({ initialData, onSubmit, submitLabel = "作成", showNotifyOption = false }: EventFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<EventFormData>({
-    title: initialData?.title || "",
-    description: initialData?.description || "",
-    eventDate: initialData?.eventDate || "",
-    eventEndDate: initialData?.eventEndDate || "",
-    location: initialData?.location || "",
-    capacity: initialData?.capacity || "",
-    fee: initialData?.fee || "",
-    feeVisible: initialData?.feeVisible || false,
-    deadline: initialData?.deadline || "",
-    deadlineEnabled: initialData?.deadlineEnabled || false,
-    notifyMembers: true,
-  });
+  const initStart = splitDateTime(initialData?.eventDate);
+  const initEnd = splitDateTime(initialData?.eventEndDate);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
-    }));
-  };
+  // 日付は開始時刻のものを正とする (日跨ぎイベントは想定しない)
+  const [eventDay, setEventDay] = useState(initStart.day);
+  const [startTime, setStartTime] = useState(initStart.time);
+  const [endTime, setEndTime] = useState(initEnd.time);
+
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [location, setLocation] = useState(initialData?.location || "");
+  const [capacity, setCapacity] = useState(initialData?.capacity || "");
+  const [fee, setFee] = useState(initialData?.fee || "");
+  const [feeVisible, setFeeVisible] = useState(initialData?.feeVisible || false);
+  const [deadline, setDeadline] = useState(initialData?.deadline || "");
+  const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
+  const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // 終了時刻が開始時刻より前の場合はエラー
-    if (formData.eventEndDate && formData.eventDate) {
-      const startDate = new Date(formData.eventDate);
-      const endDate = new Date(formData.eventEndDate);
-      if (endDate <= startDate) {
-        setError("終了時刻は開始時刻より後に設定してください");
-        setLoading(false);
-        return;
-      }
+    if (!eventDay || !startTime) {
+      setError("開催日と開始時刻は必須です");
+      setLoading(false);
+      return;
     }
 
+    if (endTime && endTime <= startTime) {
+      setError("終了時刻は開始時刻より後に設定してください");
+      setLoading(false);
+      return;
+    }
+
+    const data: EventFormData = {
+      title,
+      description,
+      eventDate: combine(eventDay, startTime),
+      eventEndDate: endTime ? combine(eventDay, endTime) : "",
+      location,
+      capacity,
+      fee,
+      feeVisible,
+      deadline,
+      deadlineEnabled,
+      notifyMembers,
+    };
+
     try {
-      await onSubmit(formData);
+      await onSubmit(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
@@ -92,9 +124,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         <input
           type="text"
           id="title"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           required
           maxLength={100}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -103,32 +134,45 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       </div>
 
       <div>
-        <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 mb-1">
-          開催日時 <span className="text-red-500">*</span>
+        <label htmlFor="eventDay" className="block text-sm font-medium text-gray-700 mb-1">
+          開催日 <span className="text-red-500">*</span>
         </label>
         <input
-          type="datetime-local"
-          id="eventDate"
-          name="eventDate"
-          value={formData.eventDate}
-          onChange={handleChange}
+          type="date"
+          id="eventDay"
+          value={eventDay}
+          onChange={(e) => setEventDay(e.target.value)}
           required
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
 
-      <div>
-        <label htmlFor="eventEndDate" className="block text-sm font-medium text-gray-700 mb-1">
-          終了時刻（任意）
-        </label>
-        <input
-          type="datetime-local"
-          id="eventEndDate"
-          name="eventEndDate"
-          value={formData.eventEndDate}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">
+            開始時刻 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="time"
+            id="startTime"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">
+            終了時刻（任意）
+          </label>
+          <input
+            type="time"
+            id="endTime"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
       </div>
 
       <div>
@@ -138,9 +182,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         <input
           type="text"
           id="location"
-          name="location"
-          value={formData.location}
-          onChange={handleChange}
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
           maxLength={200}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="例: ○○体育館"
@@ -153,9 +196,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         </label>
         <textarea
           id="description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           rows={3}
           maxLength={1000}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -170,9 +212,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         <input
           type="number"
           id="capacity"
-          name="capacity"
-          value={formData.capacity}
-          onChange={handleChange}
+          value={capacity}
+          onChange={(e) => setCapacity(e.target.value)}
           min={1}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="例: 20"
@@ -184,9 +225,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           <input
             type="checkbox"
             id="feeVisible"
-            name="feeVisible"
-            checked={formData.feeVisible}
-            onChange={handleChange}
+            checked={feeVisible}
+            onChange={(e) => setFeeVisible(e.target.checked)}
             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
           <label htmlFor="feeVisible" className="text-sm font-medium text-gray-700">
@@ -194,7 +234,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           </label>
         </div>
 
-        {formData.feeVisible && (
+        {feeVisible && (
           <div>
             <label htmlFor="fee" className="block text-sm font-medium text-gray-700 mb-1">
               参加費（円）
@@ -202,9 +242,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
             <input
               type="number"
               id="fee"
-              name="fee"
-              value={formData.fee}
-              onChange={handleChange}
+              value={fee}
+              onChange={(e) => setFee(e.target.value)}
               min={0}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="例: 500"
@@ -218,9 +257,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           <input
             type="checkbox"
             id="deadlineEnabled"
-            name="deadlineEnabled"
-            checked={formData.deadlineEnabled}
-            onChange={handleChange}
+            checked={deadlineEnabled}
+            onChange={(e) => setDeadlineEnabled(e.target.checked)}
             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
           <label htmlFor="deadlineEnabled" className="text-sm font-medium text-gray-700">
@@ -228,7 +266,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           </label>
         </div>
 
-        {formData.deadlineEnabled && (
+        {deadlineEnabled && (
           <div>
             <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">
               締め切り日時
@@ -236,9 +274,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
             <input
               type="datetime-local"
               id="deadline"
-              name="deadline"
-              value={formData.deadline}
-              onChange={handleChange}
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -250,9 +287,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           <input
             type="checkbox"
             id="notifyMembers"
-            name="notifyMembers"
-            checked={formData.notifyMembers}
-            onChange={handleChange}
+            checked={notifyMembers}
+            onChange={(e) => setNotifyMembers(e.target.checked)}
             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
           <label htmlFor="notifyMembers" className="text-sm font-medium text-gray-700">
