@@ -144,7 +144,7 @@ export function AdminAttendanceManager({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">参加者管理 (管理者)</h2>
+          <h2 className="font-semibold text-gray-900">代理出欠管理</h2>
           {!addingMember && (
             <Button size="sm" variant="secondary" onClick={() => setAddingMember(true)}>
               + 出席者追加
