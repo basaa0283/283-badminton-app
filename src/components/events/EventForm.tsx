@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
@@ -83,6 +83,17 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
   const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
 
+  // 過去イベントから場所の候補を取得
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  useEffect(() => {
+    fetch("/api/events/locations")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setLocationSuggestions(json.data);
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -149,13 +160,16 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         <label htmlFor="eventDay" className="block text-sm font-medium text-gray-700 mb-1">
           開催日 <span className="text-red-500">*</span>
         </label>
+        {/* iOS Safari の date 入力は -webkit-min-logical-width を持ち、min-w-0 だけだと縮まないので
+            インラインスタイルで明示的にゼロにする */}
         <input
           type="date"
           id="eventDay"
           value={eventDay}
           onChange={(e) => setEventDay(e.target.value)}
           required
-          className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          style={{ WebkitMinLogicalWidth: 0, maxWidth: "100%" }}
+          className="block w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
         />
       </div>
 
@@ -239,9 +253,32 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           maxLength={200}
+          list="location-suggestions"
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="例: ○○体育館"
         />
+        {locationSuggestions.length > 0 && (
+          <>
+            <datalist id="location-suggestions">
+              {locationSuggestions.map((loc) => (
+                <option key={loc} value={loc} />
+              ))}
+            </datalist>
+            <div className="mt-2 flex flex-wrap gap-1">
+              <span className="text-xs text-gray-500 self-center">最近使用:</span>
+              {locationSuggestions.slice(0, 5).map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => setLocation(loc)}
+                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700"
+                >
+                  {loc}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div>
