@@ -142,6 +142,12 @@ model Attendance {
   status      String   // attending / not_attending / waitlist
   comment     String?  @db.NVarChar(500) // コメント
   position    Int?     // キャンセル待ち順（waitlistの場合）
+
+  // 参加費 (admin が attending メンバーごとに記録)
+  paymentStatus String? // paid / unpaid (null = 未確認)
+  paymentAmount Int?    // null なら event.fee と同額
+  paymentNote   String? @db.NVarChar(500)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

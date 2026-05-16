@@ -9,6 +9,7 @@ import { ja } from "date-fns/locale";
 import { Header } from "@/components/layout/Header";
 import { AttendanceForm } from "@/components/events/AttendanceForm";
 import { AttendeeList } from "@/components/events/AttendeeList";
+import { AdminAttendanceManager } from "@/components/events/AdminAttendanceManager";
 import { ExpensesCard } from "@/components/events/ExpensesCard";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -49,6 +50,9 @@ interface EventDetail {
       profileImageUrl: string | null;
       gender: string | null;
     };
+    paymentStatus?: string | null;
+    paymentAmount?: number | null;
+    paymentNote?: string | null;
   }> | null;
   expenses: {
     shuttleCount: number | null;
@@ -338,6 +342,15 @@ export default function EventDetailPage() {
               </p>
             </CardContent>
           </Card>
+        )}
+
+        {canViewExpenses && event.attendees && (
+          <AdminAttendanceManager
+            eventId={event.id}
+            attendees={event.attendees}
+            eventFee={event.fee}
+            onUpdated={() => fetchEvent()}
+          />
         )}
 
         {canViewExpenses && event.expenses && (

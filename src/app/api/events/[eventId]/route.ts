@@ -134,6 +134,10 @@ export async function GET(request: NextRequest, { params }: Params) {
               position: a.position,
               createdAt: a.createdAt,
               user: a.user,
+              // 支払情報は admin のみ
+              paymentStatus: canViewExpenses ? a.paymentStatus : undefined,
+              paymentAmount: canViewExpenses ? a.paymentAmount : undefined,
+              paymentNote: canViewExpenses ? a.paymentNote : undefined,
             }))
           : null,
       },
