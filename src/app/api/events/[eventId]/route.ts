@@ -62,12 +62,23 @@ export async function GET(request: NextRequest, { params }: Params) {
     const canViewExpenses = permissions.canAccessAdmin(role);
 
     // 経費入力支援: イベント開催日に適用されるシャトル単価
-    const applicablePrice = canViewExpenses
-      ? await prisma.shuttlePrice.findFirst({
+    // ShuttlePrice テーブルが未マイグレーションでもエラーで API 全体を死なせない。
+    let applicablePrice: {
+      id: string;
+      effectiveFrom: Date;
+      casePrice: number;
+      shuttlesPerCase: number;
+    } | null = null;
+    if (canViewExpenses) {
+      try {
+        applicablePrice = await prisma.shuttlePrice.findFirst({
           where: { effectiveFrom: { lte: event.eventDate } },
           orderBy: { effectiveFrom: "desc" },
-        })
-      : null;
+        });
+      } catch (err) {
+        console.warn("[event GET] failed to query ShuttlePrice (table may not exist yet):", err);
+      }
+    }
 
     return NextResponse.json({
       success: true,
