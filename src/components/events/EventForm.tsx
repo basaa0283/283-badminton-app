@@ -79,8 +79,14 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const initStart = splitDateTime(initialData?.eventDate);
   const initEnd = splitDateTime(initialData?.eventEndDate);
 
+  // 新規作成時は今日をデフォルトに、編集時は既存値を尊重
+  const today = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+
   // 日付は開始時刻のものを正とする (日跨ぎイベントは想定しない)
-  const [eventDay, setEventDay] = useState(initStart.day);
+  const [eventDay, setEventDay] = useState(initStart.day || today);
   const [startTime, setStartTime] = useState(initStart.time);
   const [endTime, setEndTime] = useState(initEnd.time);
   // 既存データが 30分刻みでない場合は最初から細かいモードに
