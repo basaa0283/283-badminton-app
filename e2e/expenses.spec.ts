@@ -69,7 +69,7 @@ test.describe("経費・収支管理 (admin)", () => {
 
       await expensesCard.getByRole("button", { name: "編集" }).click();
 
-      await page.getByLabel("シャトル本数").fill("4");
+      await page.getByLabel("シャトル個数").fill("4");
       await page.getByLabel("シャトル代 (円)").fill("6000");
       await page.getByLabel("体育館代 (円)").fill("3000");
       await page.getByLabel("実集金額 (円)").fill("10000");

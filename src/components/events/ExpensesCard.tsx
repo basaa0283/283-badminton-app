@@ -11,6 +11,12 @@ interface Expenses {
   otherCost: number | null;
   otherMemo: string | null;
   actualRevenue: number | null;
+  applicableShuttlePrice: {
+    effectiveFrom: string;
+    casePrice: number;
+    shuttlesPerCase: number;
+    pricePerPiece: number;
+  } | null;
 }
 
 interface ExpensesCardProps {
@@ -105,15 +111,33 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
 
         {editing ? (
           <div className="space-y-3">
+            {expenses.applicableShuttlePrice && (
+              <div className="bg-blue-50 text-blue-700 text-xs px-3 py-2 rounded-lg">
+                適用シャトル単価: 1個あたり {expenses.applicableShuttlePrice.pricePerPiece.toFixed(1)}円
+                (ケース {expenses.applicableShuttlePrice.casePrice.toLocaleString()}円 ÷
+                {expenses.applicableShuttlePrice.shuttlesPerCase}個)。個数入力でシャトル代が自動算出されます。
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="exp-shuttle-count" className="block text-xs text-gray-600 mb-1">シャトル本数</label>
+                <label htmlFor="exp-shuttle-count" className="block text-xs text-gray-600 mb-1">シャトル個数</label>
                 <input
                   id="exp-shuttle-count"
                   type="number"
                   min={0}
                   value={shuttleCount}
-                  onChange={(e) => setShuttleCount(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setShuttleCount(v);
+                    // 適用単価がある場合は自動でシャトル代を算出
+                    if (expenses.applicableShuttlePrice && v !== "") {
+                      const n = Number(v);
+                      if (Number.isFinite(n)) {
+                        const cost = Math.round(n * expenses.applicableShuttlePrice.pricePerPiece);
+                        setShuttleCost(String(cost));
+                      }
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>
@@ -189,7 +213,7 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
             <div className="flex justify-between">
               <dt className="text-gray-600">シャトル</dt>
               <dd className="text-gray-900">
-                {expenses.shuttleCount !== null && `${expenses.shuttleCount}本`}
+                {expenses.shuttleCount !== null && `${expenses.shuttleCount}個`}
                 {expenses.shuttleCount !== null && expenses.shuttleCost !== null && " / "}
                 {format(expenses.shuttleCost)}
               </dd>

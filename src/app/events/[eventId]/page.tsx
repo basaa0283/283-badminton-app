@@ -57,6 +57,12 @@ interface EventDetail {
     otherCost: number | null;
     otherMemo: string | null;
     actualRevenue: number | null;
+    applicableShuttlePrice: {
+      effectiveFrom: string;
+      casePrice: number;
+      shuttlesPerCase: number;
+      pricePerPiece: number;
+    } | null;
   } | null;
 }
 

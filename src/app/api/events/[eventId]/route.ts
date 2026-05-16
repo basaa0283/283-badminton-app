@@ -61,6 +61,14 @@ export async function GET(request: NextRequest, { params }: Params) {
     // 経費・収支は管理者のみ閲覧可能
     const canViewExpenses = permissions.canAccessAdmin(role);
 
+    // 経費入力支援: イベント開催日に適用されるシャトル単価
+    const applicablePrice = canViewExpenses
+      ? await prisma.shuttlePrice.findFirst({
+          where: { effectiveFrom: { lte: event.eventDate } },
+          orderBy: { effectiveFrom: "desc" },
+        })
+      : null;
+
     return NextResponse.json({
       success: true,
       data: {
@@ -88,6 +96,15 @@ export async function GET(request: NextRequest, { params }: Params) {
               otherCost: event.otherCost,
               otherMemo: event.otherMemo,
               actualRevenue: event.actualRevenue,
+              applicableShuttlePrice: applicablePrice
+                ? {
+                    id: applicablePrice.id,
+                    effectiveFrom: applicablePrice.effectiveFrom,
+                    casePrice: applicablePrice.casePrice,
+                    shuttlesPerCase: applicablePrice.shuttlesPerCase,
+                    pricePerPiece: applicablePrice.casePrice / applicablePrice.shuttlesPerCase,
+                  }
+                : null,
             }
           : null,
         myAttendance: myAttendance

@@ -87,6 +87,20 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// シャトル単価 (期間ごと)
+// 1ケース = 10本 × 12個 = 120個 (shuttlesPerCase で変更可)
+// イベント開催日 >= effectiveFrom の最大日付のレコードが適用される。
+model ShuttlePrice {
+  id              String   @id @default(cuid())
+  effectiveFrom   DateTime // 適用開始日
+  casePrice       Int      // ケース価格 (円)
+  shuttlesPerCase Int      @default(120) // ケース内のシャトル個数
+  memo            String?  @db.NVarChar(500)
+  createdAt       DateTime @default(now())
+
+  @@index([effectiveFrom])
+}
+
 // イベント
 model Event {
   id              String    @id @default(cuid())
