@@ -60,14 +60,16 @@ export default function Home() {
             <div className="text-sm text-gray-500">出欠を確認・登録</div>
           </Link>
 
-          <Link
-            href="/members"
-            className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
-          >
-            <div className="text-2xl mb-2">👥</div>
-            <div className="font-medium">メンバー</div>
-            <div className="text-sm text-gray-500">メンバー一覧</div>
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/members"
+              className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+            >
+              <div className="text-2xl mb-2">👥</div>
+              <div className="font-medium">メンバー</div>
+              <div className="text-sm text-gray-500">メンバー一覧</div>
+            </Link>
+          )}
 
           <Link
             href="/profile"
