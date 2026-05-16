@@ -49,11 +49,8 @@ jobs:
       - name: Generate Prisma Client (SQL Server schema)
         run: npx prisma generate --schema=prisma/schema.sqlserver.prisma
 
-      - name: Push schema to DEV DB
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx prisma db push --schema=prisma/schema.sqlserver.prisma --accept-data-loss
-
+      # 注意: schema 変更を伴う PR では deploy-dev (npm start で prisma db push が走る)
+      # 完了後に E2E を手動再実行する必要がある。
       - name: Run Playwright tests
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
