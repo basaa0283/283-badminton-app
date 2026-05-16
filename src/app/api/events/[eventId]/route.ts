@@ -80,6 +80,20 @@ export async function GET(request: NextRequest, { params }: Params) {
       }
     }
 
+    // 実集金額は、attending かつ paymentStatus=paid なメンバーの (paymentAmount ?? event.fee) の合計から自動算出
+    let computedActualRevenue: number | null = null;
+    if (canViewExpenses) {
+      const paidAttendances = event.attendances.filter(
+        (a) => a.status === "attending" && a.paymentStatus === "paid"
+      );
+      if (paidAttendances.length > 0) {
+        computedActualRevenue = paidAttendances.reduce(
+          (sum, a) => sum + (a.paymentAmount ?? event.fee ?? 0),
+          0
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -106,7 +120,9 @@ export async function GET(request: NextRequest, { params }: Params) {
               gymCost: event.gymCost,
               otherCost: event.otherCost,
               otherMemo: event.otherMemo,
-              actualRevenue: event.actualRevenue,
+              // 実集金額 = 参加者の支払い済み合計 (自動算出)。
+              // 支払い済みがゼロの間は DB に保存されている値 (旧 UI 経由の手入力分) を見せる。
+              actualRevenue: computedActualRevenue ?? event.actualRevenue,
               applicableShuttlePrice: applicablePrice
                 ? {
                     id: applicablePrice.id,

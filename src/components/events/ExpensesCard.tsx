@@ -45,7 +45,7 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
   const [gymCost, setGymCost] = useState(expenses.gymCost?.toString() ?? "");
   const [otherCost, setOtherCost] = useState(expenses.otherCost?.toString() ?? "");
   const [otherMemo, setOtherMemo] = useState(expenses.otherMemo ?? "");
-  const [actualRevenue, setActualRevenue] = useState(expenses.actualRevenue?.toString() ?? "");
+  // 実集金額は参加者の支払い済み合計から自動算出するため、ここでは編集不可。表示のみ。
 
   const totalCost =
     (expenses.shuttleCost ?? 0) + (expenses.gymCost ?? 0) + (expenses.otherCost ?? 0);
@@ -64,7 +64,6 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
           gymCost: num(gymCost),
           otherCost: num(otherCost),
           otherMemo: otherMemo.trim() || null,
-          actualRevenue: num(actualRevenue),
         }),
       });
       const data = await res.json();
@@ -87,7 +86,6 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
     setGymCost(expenses.gymCost?.toString() ?? "");
     setOtherCost(expenses.otherCost?.toString() ?? "");
     setOtherMemo(expenses.otherMemo ?? "");
-    setActualRevenue(expenses.actualRevenue?.toString() ?? "");
     setError(null);
     setEditing(false);
   };
@@ -187,17 +185,9 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
                 placeholder="例: 飲み物代"
               />
             </div>
-            <div>
-              <label htmlFor="exp-actual-revenue" className="block text-xs text-gray-600 mb-1">実集金額 (円)</label>
-              <input
-                id="exp-actual-revenue"
-                type="number"
-                min={0}
-                value={actualRevenue}
-                onChange={(e) => setActualRevenue(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                placeholder="参加者から受け取った合計"
-              />
+            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
+              実集金額は「参加者管理」で受取済みにしたメンバーの合計から自動算出されます。
+              現在の集金額: <span className="font-medium text-gray-900">{format(expenses.actualRevenue)}</span>
             </div>
             <div className="flex gap-2 pt-2">
               <Button variant="secondary" className="flex-1 text-sm" onClick={handleCancel} disabled={saving}>
