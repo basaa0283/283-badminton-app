@@ -303,8 +303,9 @@ export default function EventDetailPage() {
           </CardContent>
         </Card>
 
+        <div className="space-y-4">
         {!isPast && (
-          <Card className="mb-4">
+          <Card>
             <CardHeader>
               <h2 className="font-semibold text-gray-900">出欠登録</h2>
             </CardHeader>
@@ -360,6 +361,7 @@ export default function EventDetailPage() {
             onUpdated={() => fetchEvent()}
           />
         )}
+        </div>
       </main>
 
       <ConfirmModal

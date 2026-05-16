@@ -39,7 +39,7 @@ export const updateProfileSchema = z.object({
   firstName: z.string().max(50).optional().nullable(),
   lastName: z.string().max(50).optional().nullable(),
   gender: z.enum(["male", "female"]).optional().nullable(),
-  age: z.number().int().min(0).max(150).optional().nullable(),
+  birthdate: z.string().datetime({ message: "有効な生年月日を入力してください" }).optional().nullable(),
   ageVisible: z.boolean().default(true),
   comment: z.string().max(500).optional().nullable(),
 });
@@ -55,7 +55,7 @@ export const adminUpdateMemberSchema = z.object({
   firstName: z.string().max(50).optional().nullable(),
   lastName: z.string().max(50).optional().nullable(),
   gender: z.enum(["male", "female"]).optional().nullable(),
-  age: z.number().int().min(0).max(150).optional().nullable(),
+  birthdate: z.string().datetime({ message: "有効な生年月日を入力してください" }).optional().nullable(),
   ageVisible: z.boolean().optional(),
   comment: z.string().max(500).optional().nullable(),
   role: z.enum(["admin", "subadmin", "member", "visitor", "guest"]).optional(),

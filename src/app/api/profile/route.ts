@@ -3,6 +3,25 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { updateProfileSchema } from "@/lib/validations";
+import { computeAge } from "@/lib/age";
+
+const PROFILE_SELECT = {
+  id: true,
+  nickname: true,
+  firstName: true,
+  lastName: true,
+  gender: true,
+  birthdate: true,
+  ageVisible: true,
+  profileImageUrl: true,
+  comment: true,
+  role: true,
+  createdAt: true,
+} as const;
+
+function withAge<T extends { birthdate: Date | null }>(user: T) {
+  return { ...user, age: computeAge(user.birthdate) };
+}
 
 // GET /api/profile - 自分のプロフィール取得
 export async function GET() {
@@ -17,19 +36,7 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: {
-        id: true,
-        nickname: true,
-        firstName: true,
-        lastName: true,
-        gender: true,
-        age: true,
-        ageVisible: true,
-        profileImageUrl: true,
-        comment: true,
-        role: true,
-        createdAt: true,
-      },
+      select: PROFILE_SELECT,
     });
 
     if (!user) {
@@ -39,7 +46,7 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ success: true, data: user });
+    return NextResponse.json({ success: true, data: withAge(user) });
   } catch (error) {
     console.error("Profile GET error:", error);
     return NextResponse.json(
@@ -83,25 +90,14 @@ export async function PUT(request: NextRequest) {
         firstName: parsed.data.firstName,
         lastName: parsed.data.lastName,
         gender: parsed.data.gender,
-        age: parsed.data.age,
+        birthdate: parsed.data.birthdate ? new Date(parsed.data.birthdate) : null,
         ageVisible: parsed.data.ageVisible,
         comment: parsed.data.comment,
       },
-      select: {
-        id: true,
-        nickname: true,
-        firstName: true,
-        lastName: true,
-        gender: true,
-        age: true,
-        ageVisible: true,
-        profileImageUrl: true,
-        comment: true,
-        role: true,
-      },
+      select: PROFILE_SELECT,
     });
 
-    return NextResponse.json({ success: true, data: user });
+    return NextResponse.json({ success: true, data: withAge(user) });
   } catch (error) {
     console.error("Profile PUT error:", error);
     return NextResponse.json(

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { computeAge } from "@/lib/age";
 import { adminUpdateMemberSchema } from "@/lib/validations";
 
 interface Params {
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         profileImageUrl: true,
         role: true,
         gender: true,
-        age: true,
+        birthdate: true,
         ageVisible: true,
         comment: true,
         lastActiveAt: true,
@@ -83,7 +84,8 @@ export async function GET(request: NextRequest, { params }: Params) {
       profileImageUrl: user.profileImageUrl,
       role: user.role,
       gender: user.gender,
-      age: user.ageVisible ? user.age : null,
+      birthdate: user.ageVisible ? user.birthdate : null,
+      age: user.ageVisible ? computeAge(user.birthdate) : null,
       ageVisible: user.ageVisible,
       comment: user.comment,
       lastActiveAt: user.lastActiveAt,
@@ -98,8 +100,9 @@ export async function GET(request: NextRequest, { params }: Params) {
       responseData.lastName = user.lastName;
       responseData.skillLevel = user.skillLevel;
       responseData.adminNote = user.adminNote;
-      // 管理者には年齢を常に表示
-      responseData.age = user.age;
+      // 管理者には生年月日・年齢を常に表示
+      responseData.birthdate = user.birthdate;
+      responseData.age = computeAge(user.birthdate);
     }
 
     return NextResponse.json({
@@ -185,7 +188,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.firstName !== undefined) updateData.firstName = parsed.data.firstName;
     if (parsed.data.lastName !== undefined) updateData.lastName = parsed.data.lastName;
     if (parsed.data.gender !== undefined) updateData.gender = parsed.data.gender;
-    if (parsed.data.age !== undefined) updateData.age = parsed.data.age;
+    if (parsed.data.birthdate !== undefined) {
+      updateData.birthdate = parsed.data.birthdate ? new Date(parsed.data.birthdate) : null;
+    }
     if (parsed.data.ageVisible !== undefined) updateData.ageVisible = parsed.data.ageVisible;
     if (parsed.data.comment !== undefined) updateData.comment = parsed.data.comment;
     if (parsed.data.role !== undefined) updateData.role = parsed.data.role;
@@ -203,7 +208,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         profileImageUrl: true,
         role: true,
         gender: true,
-        age: true,
+        birthdate: true,
         ageVisible: true,
         comment: true,
         skillLevel: true,
@@ -211,7 +216,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
       },
     });
 
-    return NextResponse.json({ success: true, data: user });
+    return NextResponse.json({
+      success: true,
+      data: { ...user, age: computeAge(user.birthdate) },
+    });
   } catch (error) {
     console.error("Member PUT error:", error);
     return NextResponse.json(

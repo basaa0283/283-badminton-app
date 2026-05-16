@@ -95,13 +95,19 @@ describe("updateProfileSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("age が範囲外（負の値）で失敗する", () => {
-    const result = updateProfileSchema.safeParse({ nickname: "テスト", age: -1 });
-    expect(result.success).toBe(false);
+  it("birthdate が ISO 文字列なら通る", () => {
+    const result = updateProfileSchema.safeParse({
+      nickname: "テスト",
+      birthdate: "1990-05-17T00:00:00.000Z",
+    });
+    expect(result.success).toBe(true);
   });
 
-  it("age が範囲外（151）で失敗する", () => {
-    const result = updateProfileSchema.safeParse({ nickname: "テスト", age: 151 });
+  it("birthdate が不正な日時文字列ならエラー", () => {
+    const result = updateProfileSchema.safeParse({
+      nickname: "テスト",
+      birthdate: "not-a-date",
+    });
     expect(result.success).toBe(false);
   });
 
