@@ -13,6 +13,13 @@ export const createEventSchema = z.object({
   deadline: z.string().datetime().optional().nullable(),
   deadlineEnabled: z.boolean().default(false),
   notifyMembers: z.boolean().default(true),
+  // 経費・収支 (管理者用)
+  shuttleCount: z.number().int().nonnegative("シャトル本数は0以上で入力してください").optional().nullable(),
+  shuttleCost: z.number().int().nonnegative("シャトル代は0以上で入力してください").optional().nullable(),
+  gymCost: z.number().int().nonnegative("体育館代は0以上で入力してください").optional().nullable(),
+  otherCost: z.number().int().nonnegative("その他経費は0以上で入力してください").optional().nullable(),
+  otherMemo: z.string().max(500, "メモは500文字以内で入力してください").optional().nullable(),
+  actualRevenue: z.number().int().nonnegative("実集金額は0以上で入力してください").optional().nullable(),
 });
 
 // イベント更新スキーマ

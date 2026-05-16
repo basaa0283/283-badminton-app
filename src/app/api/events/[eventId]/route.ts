@@ -58,6 +58,8 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     // 参加者リストは member 以上のみ閲覧可能
     const canViewAttendees = permissions.canViewAttendeeList(role);
+    // 経費・収支は管理者のみ閲覧可能
+    const canViewExpenses = permissions.canAccessAdmin(role);
 
     return NextResponse.json({
       success: true,
@@ -78,6 +80,16 @@ export async function GET(request: NextRequest, { params }: Params) {
         createdAt: event.createdAt,
         attendingCount,
         waitlistCount,
+        expenses: canViewExpenses
+          ? {
+              shuttleCount: event.shuttleCount,
+              shuttleCost: event.shuttleCost,
+              gymCost: event.gymCost,
+              otherCost: event.otherCost,
+              otherMemo: event.otherMemo,
+              actualRevenue: event.actualRevenue,
+            }
+          : null,
         myAttendance: myAttendance
           ? {
               id: myAttendance.id,
@@ -164,6 +176,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.deadline !== undefined)
       updateData.deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
     if (parsed.data.deadlineEnabled !== undefined) updateData.deadlineEnabled = parsed.data.deadlineEnabled;
+    if (parsed.data.shuttleCount !== undefined) updateData.shuttleCount = parsed.data.shuttleCount;
+    if (parsed.data.shuttleCost !== undefined) updateData.shuttleCost = parsed.data.shuttleCost;
+    if (parsed.data.gymCost !== undefined) updateData.gymCost = parsed.data.gymCost;
+    if (parsed.data.otherCost !== undefined) updateData.otherCost = parsed.data.otherCost;
+    if (parsed.data.otherMemo !== undefined) updateData.otherMemo = parsed.data.otherMemo;
+    if (parsed.data.actualRevenue !== undefined) updateData.actualRevenue = parsed.data.actualRevenue;
 
     const event = await prisma.event.update({
       where: { id: eventId },

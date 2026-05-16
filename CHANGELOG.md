@@ -3,6 +3,23 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [1.4.0] - 2026-05-16
+
+### Added
+
+- 会計機能 Phase 1: イベントごとの経費・収支管理を追加 (#24)
+  - イベント詳細ページに「経費・収支」セクションを追加（管理者のみ表示）
+  - 入力項目: シャトル本数 / シャトル代 / 体育館代 / その他経費 + メモ / 実集金額
+  - 収支 = 実集金額 − 経費合計 を自動算出
+  - 管理画面に「経費レポート」ページを新設、過去イベントの収支一覧と合計を表示
+- E2E テスト基盤の整備
+  - Playwright 導入、スモーク〜主要動線まで 22 ケース追加
+  - iOS Safari (WebKit) / Android Chrome ビューポートでの動作確認も自動化
+  - `dev/release` への push、`master` 向け PR で GitHub Actions が自動実行
+  - 過去のリグレッション (v1.3.0 / v1.3.1) も検出対象に
+- 自動生成されるテストケース一覧 (`docs/E2E_TEST_CASES.md`)
+- リリース後検証チェックリスト (`docs/RELEASE_VERIFICATION.md`)
+
 ## [1.3.1] - 2026-05-16
 
 ### Fixed
@@ -136,6 +153,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[1.4.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.1.0...v1.2.0

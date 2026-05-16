@@ -100,6 +100,15 @@ model Event {
   feeVisible      Boolean   @default(false) // 参加費を表示するか
   deadline        DateTime? // 締め切り日時
   deadlineEnabled Boolean   @default(false) // 締め切りを有効にするか
+
+  // 経費・収支 (管理者用、イベント実施後に入力)
+  shuttleCount    Int?      // 使用シャトル本数
+  shuttleCost     Int?      // シャトル代合計
+  gymCost         Int?      // 体育館代
+  otherCost       Int?      // その他経費合計
+  otherMemo       String?   @db.NVarChar(500) // その他経費の内訳メモ
+  actualRevenue   Int?      // 実際の集金額 (後日記録)
+
   createdById     String    // 作成者
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

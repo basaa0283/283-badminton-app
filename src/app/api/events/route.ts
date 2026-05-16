@@ -147,6 +147,12 @@ export async function POST(request: NextRequest) {
         feeVisible: parsed.data.feeVisible,
         deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
         deadlineEnabled: parsed.data.deadlineEnabled,
+        shuttleCount: parsed.data.shuttleCount ?? null,
+        shuttleCost: parsed.data.shuttleCost ?? null,
+        gymCost: parsed.data.gymCost ?? null,
+        otherCost: parsed.data.otherCost ?? null,
+        otherMemo: parsed.data.otherMemo ?? null,
+        actualRevenue: parsed.data.actualRevenue ?? null,
         createdById: session.user.id,
       },
     });

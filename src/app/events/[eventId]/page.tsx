@@ -9,6 +9,7 @@ import { ja } from "date-fns/locale";
 import { Header } from "@/components/layout/Header";
 import { AttendanceForm } from "@/components/events/AttendanceForm";
 import { AttendeeList } from "@/components/events/AttendeeList";
+import { ExpensesCard } from "@/components/events/ExpensesCard";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/Modal";
@@ -49,6 +50,14 @@ interface EventDetail {
       gender: string | null;
     };
   }> | null;
+  expenses: {
+    shuttleCount: number | null;
+    shuttleCost: number | null;
+    gymCost: number | null;
+    otherCost: number | null;
+    otherMemo: string | null;
+    actualRevenue: number | null;
+  } | null;
 }
 
 export default function EventDetailPage() {
@@ -142,6 +151,7 @@ export default function EventDetailPage() {
   const canEdit = permissions.canEditEvent(role);
   const canDelete = permissions.canDeleteEvent(role);
   const canViewAttendees = permissions.canViewAttendeeList(role);
+  const canViewExpenses = permissions.canAccessAdmin(role);
   const eventDate = new Date(event.eventDate);
   const isDeadlinePassed =
     event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date();
@@ -322,6 +332,14 @@ export default function EventDetailPage() {
               </p>
             </CardContent>
           </Card>
+        )}
+
+        {canViewExpenses && event.expenses && (
+          <ExpensesCard
+            eventId={event.id}
+            expenses={event.expenses}
+            onUpdated={() => fetchEvent()}
+          />
         )}
       </main>
 
