@@ -7,12 +7,12 @@ test.describe("smoke", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("dev-login で管理者ログインしてトップに遷移する", async ({ page, request }) => {
+  test("dev-login で管理者ログインしてトップに遷移する", async ({ page }) => {
     const userId = adminUserId();
     test.skip(!userId, "E2E_ADMIN_USER_ID が未設定のためスキップ");
 
-    await loginAs(page, request, userId!);
+    await loginAs(page, userId!);
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole("heading", { name: "283バドミントン" })).toBeVisible();
+    await expect(page.locator('a[href="/events"]')).toBeVisible();
   });
 });

@@ -2,14 +2,14 @@ import { test, expect } from "@playwright/test";
 import { adminUserId, loginAs } from "./helpers/auth";
 
 test.describe("主要ページのナビゲーション (admin)", () => {
-  test.beforeEach(async ({ page, request }) => {
+  test.beforeEach(async ({ page }) => {
     const userId = adminUserId();
     test.skip(!userId, "E2E_ADMIN_USER_ID が未設定のためスキップ");
-    await loginAs(page, request, userId!);
+    await loginAs(page, userId!);
   });
 
   test("トップから各ページに遷移できる", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: "283バドミントン" })).toBeVisible();
+    await expect(page.locator('a[href="/events"]')).toBeVisible();
 
     await page.locator('a[href="/events"]').click();
     await expect(page).toHaveURL(/\/events/);

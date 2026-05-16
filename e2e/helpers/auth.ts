@@ -1,18 +1,16 @@
-import type { Page, APIRequestContext } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 /**
  * dev-login プロバイダで指定ユーザーとしてログインしセッションを確立する。
  * 戻り値の `page` は / 直下にいる。
+ *
+ * 注意: page.request を使う (page.context() と cookie 共有)。
  */
-export async function loginAs(
-  page: Page,
-  request: APIRequestContext,
-  userId: string
-): Promise<void> {
-  const csrfRes = await request.get("/api/auth/csrf");
+export async function loginAs(page: Page, userId: string): Promise<void> {
+  const csrfRes = await page.request.get("/api/auth/csrf");
   const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
 
-  await request.post("/api/auth/callback/dev-login", {
+  await page.request.post("/api/auth/callback/dev-login", {
     form: {
       csrfToken,
       userId,
