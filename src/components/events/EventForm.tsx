@@ -55,6 +55,22 @@ const HALF_HOUR_OPTIONS: string[] = Array.from({ length: 48 }, (_, i) => {
   return `${String(h).padStart(2, "0")}:${m}`;
 });
 
+// 年月日のオプション (現在年 ± 2)
+const NOW = new Date();
+const YEAR_OPTIONS: number[] = Array.from({ length: 5 }, (_, i) => NOW.getFullYear() - 1 + i);
+const MONTH_OPTIONS: number[] = Array.from({ length: 12 }, (_, i) => i + 1);
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+function splitDay(day: string): { y: string; m: string; d: string } {
+  if (!day) return { y: "", m: "", d: "" };
+  const [y, m, d] = day.split("-");
+  return { y: y ?? "", m: m ?? "", d: d ?? "" };
+}
+
 export function EventForm({ initialData, onSubmit, submitLabel = "作成", showNotifyOption = false }: EventFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -157,17 +173,82 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       </div>
 
       <div className="min-w-0">
-        <label htmlFor="eventDay" className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
           開催日 <span className="text-red-500">*</span>
         </label>
-        <input
-          type="date"
-          id="eventDay"
-          value={eventDay}
-          onChange={(e) => setEventDay(e.target.value)}
-          required
-          className="block w-full max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-        />
+        {/* iOS Safari の native date 入力ははみ出しやすいため、3つの select で年/月/日を分割選択。 */}
+        <div className="grid grid-cols-3 gap-2">
+          <select
+            aria-label="年"
+            value={splitDay(eventDay).y}
+            onChange={(e) => {
+              const { m, d } = splitDay(eventDay);
+              const y = e.target.value;
+              if (y && m && d) {
+                const maxD = daysInMonth(Number(y), Number(m));
+                const newD = Math.min(Number(d), maxD);
+                setEventDay(`${y}-${m}-${pad2(newD)}`);
+              } else {
+                setEventDay(y ? `${y}-${m || "01"}-${d || "01"}` : "");
+              }
+            }}
+            required
+            className="block w-full min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+          >
+            <option value="">年</option>
+            {YEAR_OPTIONS.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="月"
+            value={splitDay(eventDay).m}
+            onChange={(e) => {
+              const { y, d } = splitDay(eventDay);
+              const m = e.target.value;
+              if (y && m) {
+                const maxD = daysInMonth(Number(y), Number(m));
+                const newD = d ? Math.min(Number(d), maxD) : 1;
+                setEventDay(`${y}-${pad2(Number(m))}-${pad2(newD)}`);
+              } else {
+                setEventDay(m ? `${y || NOW.getFullYear()}-${pad2(Number(m))}-${d || "01"}` : "");
+              }
+            }}
+            required
+            className="block w-full min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+          >
+            <option value="">月</option>
+            {MONTH_OPTIONS.map((m) => (
+              <option key={m} value={pad2(m)}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="日"
+            value={splitDay(eventDay).d}
+            onChange={(e) => {
+              const { y, m } = splitDay(eventDay);
+              const d = e.target.value;
+              setEventDay(d ? `${y || NOW.getFullYear()}-${m || "01"}-${pad2(Number(d))}` : "");
+            }}
+            required
+            className="block w-full min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+          >
+            <option value="">日</option>
+            {(() => {
+              const { y, m } = splitDay(eventDay);
+              const max = y && m ? daysInMonth(Number(y), Number(m)) : 31;
+              return Array.from({ length: max }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={pad2(d)}>
+                  {d}
+                </option>
+              ));
+            })()}
+          </select>
+        </div>
       </div>
 
       <div className="space-y-3 min-w-0">

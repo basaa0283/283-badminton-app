@@ -17,7 +17,10 @@ describe("EventForm", () => {
   it("必須フィールド（title, 開催日, 開始時刻）が表示される", () => {
     render(<EventForm onSubmit={vi.fn()} />);
     expect(screen.getByLabelText(/タイトル/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/開催日/)).toBeInTheDocument();
+    // 開催日は年/月/日 の3 select
+    expect(screen.getByLabelText("年")).toBeInTheDocument();
+    expect(screen.getByLabelText("月")).toBeInTheDocument();
+    expect(screen.getByLabelText("日")).toBeInTheDocument();
     expect(screen.getByLabelText(/開始時刻/)).toBeInTheDocument();
     expect(screen.getByLabelText("終了時刻（任意）")).toBeInTheDocument();
   });
@@ -45,8 +48,9 @@ describe("EventForm", () => {
         onSubmit={vi.fn()}
       />,
     );
-    expect(screen.getByLabelText(/開催日/)).toHaveValue("2026-06-01");
-    // 30分刻み (デフォルト) なので select として表示される
+    expect(screen.getByLabelText("年")).toHaveValue("2026");
+    expect(screen.getByLabelText("月")).toHaveValue("06");
+    expect(screen.getByLabelText("日")).toHaveValue("01");
     expect(screen.getByLabelText(/開始時刻/)).toHaveValue("19:00");
     expect(screen.getByLabelText("終了時刻（任意）")).toHaveValue("21:00");
   });
@@ -116,7 +120,9 @@ describe("EventForm", () => {
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
     await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
     await userEvent.selectOptions(screen.getByLabelText("終了時刻（任意）"), "09:00");
 
@@ -131,7 +137,9 @@ describe("EventForm", () => {
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
     await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
@@ -150,7 +158,9 @@ describe("EventForm", () => {
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
     await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
     await userEvent.selectOptions(screen.getByLabelText("終了時刻（任意）"), "12:00");
 
@@ -171,7 +181,9 @@ describe("EventForm", () => {
     await userEvent.click(screen.getByLabelText("1分単位で指定する（オフ時は30分刻み）"));
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
     await userEvent.type(screen.getByLabelText(/開始時刻/), "10:15");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
@@ -188,7 +200,9 @@ describe("EventForm", () => {
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
     await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
@@ -201,7 +215,9 @@ describe("EventForm", () => {
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(screen.getByLabelText(/開催日/), "2026-06-01");
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
     await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
