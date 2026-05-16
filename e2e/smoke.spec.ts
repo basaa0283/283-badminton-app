@@ -13,6 +13,6 @@ test.describe("smoke", () => {
 
     await loginAs(page, userId!);
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.locator('a[href="/events"]')).toBeVisible();
+    await expect(page.locator('a[href="/events"]').first()).toBeVisible();
   });
 });

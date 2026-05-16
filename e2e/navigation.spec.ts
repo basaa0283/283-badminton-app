@@ -9,22 +9,23 @@ test.describe("主要ページのナビゲーション (admin)", () => {
   });
 
   test("トップから各ページに遷移できる", async ({ page }) => {
-    await expect(page.locator('a[href="/events"]')).toBeVisible();
+    // home now includes header nav + card with same href, so target the first match
+    await expect(page.locator('a[href="/events"]').first()).toBeVisible();
 
-    await page.locator('a[href="/events"]').click();
+    await page.locator('a[href="/events"]').first().click();
     await expect(page).toHaveURL(/\/events/);
     await expect(page.getByRole("heading", { name: "イベント" })).toBeVisible();
 
     await page.goto("/");
-    await page.locator('a[href="/members"]').click();
+    await page.locator('a[href="/members"]').first().click();
     await expect(page).toHaveURL(/\/members/);
 
     await page.goto("/");
-    await page.locator('a[href="/profile"]').click();
+    await page.locator('a[href="/profile"]').first().click();
     await expect(page).toHaveURL(/\/profile/);
 
     await page.goto("/");
-    await page.locator('a[href="/admin"]').click();
+    await page.locator('a[href="/admin"]').first().click();
     await expect(page).toHaveURL(/\/admin/);
   });
 
