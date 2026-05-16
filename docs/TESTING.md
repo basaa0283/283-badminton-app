@@ -123,7 +123,7 @@ npm run test:e2e:ui      # Playwright UIモードでデバッグ
 
 | Secret | 用途 |
 |---|---|
-| `DATABASE_URL_DEV` | DEV の Azure SQL Database 接続文字列 |
+| `DATABASE_URL` | DEV の Azure SQL Database 接続文字列 (deploy-dev.yml と共用) |
 | `NEXTAUTH_SECRET` | NextAuth セッション署名鍵 (DEV と同じもの) |
 | `E2E_ADMIN_USER_ID` | dev-login テストで使う管理者の DB ID |
 
