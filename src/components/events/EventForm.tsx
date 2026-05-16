@@ -160,16 +160,13 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         <label htmlFor="eventDay" className="block text-sm font-medium text-gray-700 mb-1">
           開催日 <span className="text-red-500">*</span>
         </label>
-        {/* iOS Safari の date 入力は -webkit-min-logical-width を持ち、min-w-0 だけだと縮まないので
-            インラインスタイルで明示的にゼロにする */}
         <input
           type="date"
           id="eventDay"
           value={eventDay}
           onChange={(e) => setEventDay(e.target.value)}
           required
-          style={{ WebkitMinLogicalWidth: 0, maxWidth: "100%" }}
-          className="block w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+          className="block w-full max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
         />
       </div>
 
