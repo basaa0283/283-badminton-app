@@ -11,20 +11,20 @@ test.describe("主要ページのナビゲーション (admin)", () => {
   test("トップから各ページに遷移できる", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "283バドミントン" })).toBeVisible();
 
-    await page.getByRole("link", { name: /イベント一覧/ }).click();
+    await page.locator('a[href="/events"]').click();
     await expect(page).toHaveURL(/\/events/);
     await expect(page.getByRole("heading", { name: "イベント" })).toBeVisible();
 
     await page.goto("/");
-    await page.getByRole("link", { name: /メンバー/ }).click();
+    await page.locator('a[href="/members"]').click();
     await expect(page).toHaveURL(/\/members/);
 
     await page.goto("/");
-    await page.getByRole("link", { name: /プロフィール/ }).click();
+    await page.locator('a[href="/profile"]').click();
     await expect(page).toHaveURL(/\/profile/);
 
     await page.goto("/");
-    await page.getByRole("link", { name: /管理/ }).first().click();
+    await page.locator('a[href="/admin"]').click();
     await expect(page).toHaveURL(/\/admin/);
   });
 
