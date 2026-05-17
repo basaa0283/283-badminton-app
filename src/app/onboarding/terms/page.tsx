@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -13,8 +13,24 @@ import { CURRENT_TERMS_VERSION } from "@/lib/legal";
  *
  * 未同意ユーザーがアプリ機能にアクセスする前に必ず通る。
  * 同意済みでも規約バージョンが上がれば再度ここに飛ばされる (Providers の guard 参照)。
+ *
+ * useSearchParams を使うため Suspense で包んでいる (Next.js 15+ の要請)。
  */
 export default function OnboardingTermsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="text-gray-500">読み込み中...</div>
+        </div>
+      }
+    >
+      <OnboardingTermsContent />
+    </Suspense>
+  );
+}
+
+function OnboardingTermsContent() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
