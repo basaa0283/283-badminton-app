@@ -72,6 +72,8 @@ export async function GET(request: NextRequest) {
         category: event.category
           ? { id: event.category.id, name: event.category.name, color: event.category.color }
           : null,
+        cancelledAt: event.cancelledAt,
+        cancelReason: event.cancelReason,
         createdBy: event.createdBy.nickname,
         attendingCount,
         waitlistCount,

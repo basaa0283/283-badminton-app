@@ -154,6 +154,10 @@ model Event {
   categoryId      String?
   category        EventCategory? @relation(fields: [categoryId], references: [id])
 
+  // 中止フラグ (削除と区別。中止理由を後から見られるよう履歴として残す)
+  cancelledAt     DateTime?
+  cancelReason    String?
+
   // 経費・収支 (管理者用、イベント実施後に入力)
   shuttleCount    Int?      // 使用シャトル本数
   shuttleCost     Int?      // シャトル代合計

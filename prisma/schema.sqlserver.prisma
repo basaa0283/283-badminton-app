@@ -153,6 +153,10 @@ model Event {
   categoryId      String?
   category        EventCategory? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  // 中止フラグ
+  cancelledAt     DateTime?
+  cancelReason    String?  @db.NVarChar(500)
+
   // 経費・収支 (管理者用、イベント実施後に入力)
   shuttleCount    Int?      // 使用シャトル本数
   shuttleCost     Int?      // シャトル代合計

@@ -38,7 +38,7 @@ describe("Header", () => {
     expect(screen.getByText("ツバサ")).toBeInTheDocument();
     expect(screen.getByText("一般")).toBeInTheDocument();
     expect(screen.getByText("イベント一覧")).toBeInTheDocument();
-    expect(screen.getByText("プロフィール")).toBeInTheDocument();
+    // プロフィールはタブから外し、アバターメニュー内に移動した
     expect(screen.queryByText("管理")).not.toBeInTheDocument();
     expect(screen.queryByText("メンバー")).not.toBeInTheDocument();
   });

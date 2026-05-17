@@ -43,14 +43,15 @@ export async function GET() {
       },
     });
 
+    // admin 限定エンドポイントなので、ageVisible に関わらず管理者には全情報を返す。
     const members = users.map((user) => ({
       id: user.id,
       nickname: user.nickname,
       profileImageUrl: user.profileImageUrl,
       role: user.role,
       gender: user.gender,
-      birthdate: user.ageVisible ? user.birthdate : null,
-      age: user.ageVisible ? computeAge(user.birthdate) : null,
+      birthdate: user.birthdate,
+      age: computeAge(user.birthdate),
       ageVisible: user.ageVisible,
       comment: user.comment,
       lastActiveAt: user.lastActiveAt,
