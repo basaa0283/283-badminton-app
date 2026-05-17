@@ -1,0 +1,143 @@
+# PROD パイプライン
+#
+# トリガー: master への push (= PR マージ)
+# 流れ:   test → deploy-prod → release (タグ + GitHub Release) → notify
+#
+# E2E は本番では実行しない (テストデータが本番DBを汚染するため)。
+# 「dev/release で同等の commit が全 green になっている」ことを運用前提とする。
+# CHANGELOG.md と package.json のバージョン更新も dev/release 段階で済ませる
+# (CLAUDE.md のリリースルール参照)。
+
+name: PROD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22.x'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Generate Prisma Client (SQLite schema for unit tests)
+        run: npx prisma generate
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      AZURE_WEBAPP_NAME: prod-283-badminton-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Prisma for SQL Server
+        run: |
+          cp prisma/schema.sqlserver.prisma prisma/schema.prisma
+          npx prisma generate
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL_PROD }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET_PROD }}
+          LINE_CHANNEL_ID: ${{ secrets.LINE_CHANNEL_ID }}
+          LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
+
+      - name: Deploy to Azure Web App (PROD)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
+          package: .
+
+  release:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from package.json
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        id: tag_check
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/v${{ steps.version.outputs.version }}$"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create tag and release
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+
+  notify:
+    needs: release
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify PROD release complete
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "[283-badminton-app] 本番リリース完了 (test + deploy + release 全通過)"
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: 283-badminton-app CI <${{ secrets.GMAIL_USER }}>
+          body: |
+            PROD パイプライン (test → deploy → release) が全て成功しました。
+            本番動作確認をお願いします。
+
+            Commit: ${{ github.sha }}
+            Message: ${{ github.event.head_commit.message }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            PROD URL: https://prod-283-badminton-app-gsacfjcnezadeugd.japanwest-01.azurewebsites.net/

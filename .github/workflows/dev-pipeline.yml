@@ -1,0 +1,161 @@
+# DEV パイプライン
+#
+# トリガー: dev/release への push
+# 流れ:   test → deploy-dev → e2e → notify
+#
+# notify (メール) は全ジョブが green の時のみ発火する。
+# = メールが届いた = DEV 動作確認を始めて OK。
+#
+# 注意:
+#   - DEV の Azure SQL Database は deploy と e2e が共用するため、
+#     pipeline 全体に concurrency をかけて逐次化する。
+#     (push が連続しても1パイプラインずつ実行)
+#   - e2e はテストデータ残骸が DEV DB に混入する可能性があるため、
+#     手動動作確認とは時間をずらすこと (このパイプラインの設計目的)
+
+name: DEV Pipeline
+
+on:
+  push:
+    branches:
+      - dev/release
+  workflow_dispatch:
+
+concurrency:
+  group: dev-pipeline
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22.x'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Generate Prisma Client (SQLite schema for unit tests)
+        run: npx prisma generate
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      AZURE_WEBAPP_NAME: dev-283-badminton-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Prisma for SQL Server
+        run: |
+          cp prisma/schema.sqlserver.prisma prisma/schema.prisma
+          npx prisma generate
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          LINE_CHANNEL_ID: ${{ secrets.LINE_CHANNEL_ID }}
+          LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
+
+      - name: Deploy to Azure Web App (DEV)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .
+
+  e2e:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Generate Prisma Client (SQL Server schema)
+        run: npx prisma generate --schema=prisma/schema.sqlserver.prisma
+
+      - name: Run Playwright tests
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: http://localhost:3100
+          E2E_ADMIN_USER_ID: ${{ secrets.E2E_ADMIN_USER_ID }}
+          E2E_PORT: "3100"
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  notify:
+    needs: e2e
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify DEV ready for QA
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "[283-badminton-app] DEV 動作確認OK (test + deploy + E2E 全通過)"
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: 283-badminton-app CI <${{ secrets.GMAIL_USER }}>
+          body: |
+            DEV パイプライン (test → deploy → e2e) が全て成功しました。
+            動作確認を始めて大丈夫です。
+
+            Commit: ${{ github.sha }}
+            Message: ${{ github.event.head_commit.message }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            DEV URL: https://dev-283-badminton-app-dae7h5bjbddcdnd3.japaneast-01.azurewebsites.net/
