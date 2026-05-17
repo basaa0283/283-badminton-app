@@ -4,8 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 
-const SETTING_KEYS = ["notifyReminderEnabled", "notifyWaitlistEnabled"] as const;
-type SettingKey = (typeof SETTING_KEYS)[number];
+const BOOLEAN_KEYS = ["notifyReminderEnabled", "notifyWaitlistEnabled"] as const;
+const STRING_KEYS = ["contactEmail"] as const;
+type BooleanKey = (typeof BOOLEAN_KEYS)[number];
+type StringKey = (typeof STRING_KEYS)[number];
 
 // GET /api/admin/settings
 export async function GET(_request: NextRequest) {
@@ -18,17 +20,21 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ success: false, error: { code: "FORBIDDEN" } }, { status: 403 });
     }
 
+    const allKeys = [...BOOLEAN_KEYS, ...STRING_KEYS];
     const settings = await prisma.systemSetting.findMany({
-      where: { key: { in: [...SETTING_KEYS] } },
+      where: { key: { in: allKeys } },
     });
     const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
 
-    return NextResponse.json({
-      success: true,
-      data: Object.fromEntries(
-        SETTING_KEYS.map((key) => [key, map[key] !== "false"])
-      ),
-    });
+    const data: Record<string, boolean | string> = {};
+    for (const key of BOOLEAN_KEYS) {
+      data[key] = map[key] !== "false";
+    }
+    for (const key of STRING_KEYS) {
+      data[key] = map[key] ?? "";
+    }
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
@@ -50,12 +56,22 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
 
-    for (const key of SETTING_KEYS) {
+    for (const key of BOOLEAN_KEYS) {
       if (typeof body[key] === "boolean") {
         await prisma.systemSetting.upsert({
           where: { key },
           update: { value: String(body[key]) },
           create: { key, value: String(body[key]) },
+        });
+      }
+    }
+    for (const key of STRING_KEYS) {
+      if (typeof body[key] === "string") {
+        const value = body[key] as string;
+        await prisma.systemSetting.upsert({
+          where: { key },
+          update: { value },
+          create: { key, value },
         });
       }
     }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { version } from "../../package.json";
 
 // 環境を区別するためのバージョン suffix（DEV/local向け）
@@ -23,8 +24,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "283バドミントン 出欠管理",
-  description: "バドミントンサークルの出欠管理アプリ",
+  title: "２８ばど 出欠管理",
+  description: "バドミントンサークル「２８ばど」の出欠管理アプリ",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "２８ばど",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+  themeColor: "#3B82F6",
 };
 
 export default function RootLayout({
@@ -35,12 +47,12 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        <Providers>{children}</Providers>
-        <footer className="text-center text-xs text-gray-400 py-4">
-          v{version}{getEnvSuffix()}
-        </footer>
+        <Providers>
+          <div className="flex-1">{children}</div>
+          <SiteFooter version={version} envSuffix={getEnvSuffix()} />
+        </Providers>
       </body>
     </html>
   );

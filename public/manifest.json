@@ -1,0 +1,24 @@
+{
+  "name": "２８ばど 出欠管理",
+  "short_name": "２８ばど",
+  "description": "バドミントンサークル「２８ばど」の出欠管理アプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F3F4F6",
+  "theme_color": "#3B82F6",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

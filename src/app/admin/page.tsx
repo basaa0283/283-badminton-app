@@ -8,12 +8,13 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/Card";
 import { permissions, UserRole } from "@/lib/permissions";
 
-type NotifySettings = {
+type AppSettings = {
   notifyReminderEnabled: boolean;
   notifyWaitlistEnabled: boolean;
+  contactEmail: string;
 };
 
-type SettingKey = keyof NotifySettings;
+type SettingKey = "notifyReminderEnabled" | "notifyWaitlistEnabled";
 
 const NOTIFY_ITEMS: { key: SettingKey; label: string; description: string }[] = [
   { key: "notifyReminderEnabled", label: "リマインダー通知", description: "イベント24時間前・2時間前に参加者へ通知" },
@@ -41,8 +42,11 @@ function Toggle({ enabled, disabled, onToggle }: { enabled: boolean; disabled: b
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [settings, setSettings] = useState<NotifySettings | null>(null);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [toggling, setToggling] = useState<SettingKey | null>(null);
+  const [contactEmailInput, setContactEmailInput] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactSaved, setContactSaved] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -59,9 +63,37 @@ export default function AdminPage() {
     if (session) {
       fetch("/api/admin/settings")
         .then((r) => r.json())
-        .then((json) => { if (json.success) setSettings(json.data); });
+        .then((json) => {
+          if (json.success) {
+            setSettings(json.data);
+            setContactEmailInput(json.data.contactEmail || "");
+          }
+        });
     }
   }, [session]);
+
+  const handleSaveContact = async () => {
+    if (savingContact) return;
+    setSavingContact(true);
+    setContactSaved(false);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactEmail: contactEmailInput.trim() }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettings((prev) =>
+          prev ? { ...prev, contactEmail: contactEmailInput.trim() } : prev
+        );
+        setContactSaved(true);
+        setTimeout(() => setContactSaved(false), 2000);
+      }
+    } finally {
+      setSavingContact(false);
+    }
+  };
 
   const handleToggle = async (key: SettingKey) => {
     if (!settings || toggling) return;
@@ -181,6 +213,29 @@ export default function AdminPage() {
               />
             </div>
           ))}
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-700">お問い合わせ先</h2>
+            <p className="text-xs text-gray-500 mt-0.5">フッターの「お問い合わせ」リンクの宛先メールアドレス。空欄なら非表示。</p>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-2">
+            <input
+              type="email"
+              value={contactEmailInput}
+              onChange={(e) => setContactEmailInput(e.target.value)}
+              placeholder="例: admin@example.com"
+              className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <button
+              onClick={handleSaveContact}
+              disabled={savingContact || settings === null}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
+            >
+              {savingContact ? "保存中..." : contactSaved ? "保存しました" : "保存"}
+            </button>
+          </div>
         </div>
       </main>
     </div>

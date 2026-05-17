@@ -3,10 +3,18 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
-## [1.5.0] - 2026-05-17
+## [1.5.0-beta] - 2026-05-17
 
 ### Added
 
+- ベータリリース向けの整備
+  - バージョン名に `-beta` suffix を追加 (フッター・ログイン画面に表示)
+  - フッターにお問い合わせ / プライバシーポリシー / 利用規約のリンク
+  - `/privacy` / `/terms` ページを新設（サークル内部利用前提の簡潔テンプレ）
+  - 管理画面に「お問い合わせ先メールアドレス」設定 (フッターの mailto: リンク先)
+  - サークル名を「２８ばど」（全角）に統一
+  - PWA `manifest.json` と SVG アプリアイコンを追加（iOS ホーム画面追加対応）
+  - ログイン画面のデザインを更新（ロゴ風アイコン + キャッチコピー）
 - お知らせ機能
   - `Announcement` モデル + admin の CRUD (`/admin/announcements`)
   - ホーム上部に**直近30日以内**の最大3件をバナー表示 + 全件閲覧用 `/announcements` ページ
@@ -197,7 +205,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
-[1.5.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.4.0...v1.5.0
+[1.5.0-beta]: https://github.com/basaa0283/283-badminton-app/compare/v1.4.0...v1.5.0-beta
 [1.4.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.2.0...v1.3.0
