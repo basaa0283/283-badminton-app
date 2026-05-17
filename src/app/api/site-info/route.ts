@@ -1,23 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/site-info - 公開用のサイト情報 (お問い合わせ先・公式LINEなど)
+// GET /api/site-info - 公開用のサイト情報 (公式LINEなど)
 // 認証不要。ログイン前のフッターやゲストの CTA からも参照する。
+//
+// contactEmail はかつてここで返していたが、管理者通知用 (非公開) に位置付けが
+// 変わったため公開しない (見せると admin の連絡先が漏れる)。
 export async function GET() {
-  let contactEmail = "";
   let officialLineUrl = "";
   try {
-    const rows = await prisma.systemSetting.findMany({
-      where: { key: { in: ["contactEmail", "officialLineUrl"] } },
+    const row = await prisma.systemSetting.findUnique({
+      where: { key: "officialLineUrl" },
     });
-    const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
-    contactEmail = map.contactEmail ?? "";
-    officialLineUrl = map.officialLineUrl ?? "";
+    officialLineUrl = row?.value ?? "";
   } catch {
     // テーブル未マイグレーション等のエラーは握り潰す (空文字でフォールバック)
   }
   return NextResponse.json({
     success: true,
-    data: { contactEmail, officialLineUrl },
+    data: { officialLineUrl },
   });
 }

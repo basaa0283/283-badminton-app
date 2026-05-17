@@ -245,8 +245,11 @@ export default function AdminPage() {
 
         <div className="mt-6 bg-white rounded-lg shadow">
           <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-700">お問い合わせ先</h2>
-            <p className="text-xs text-gray-500 mt-0.5">フッターの「お問い合わせ」リンクの宛先メールアドレス。空欄なら非表示。</p>
+            <h2 className="text-sm font-semibold text-gray-700">管理者通知メール (非公開)</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              参加リクエスト等の通知をこのアドレス宛に送信します。エンドユーザーには公開しません。
+              空欄ならメール通知は行いません (バナー通知のみ)。
+            </p>
           </div>
           <div className="px-4 py-3 flex items-center gap-2">
             <input
