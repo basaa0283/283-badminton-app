@@ -33,6 +33,10 @@ model User {
   skillLevel      Int?      // スキルレベル: 1-10
   adminNote       String?   @db.NVarChar(2000) // 管理者メモ
 
+  // 利用規約・プライバシーポリシーへの同意
+  termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
+  termsAcceptedVersion String?   @db.NVarChar(50) // 同意した規約バージョン (例: "2026-05-17")
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

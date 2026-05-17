@@ -136,11 +136,13 @@ export const authOptions: NextAuthOptions = {
           lineId: dbUser.lineId,
           nickname: dbUser.nickname,
           role: dbUser.role,
+          termsAcceptedVersion: dbUser.termsAcceptedVersion,
         } as typeof session.user & {
           id: string;
           lineId: string | null;
           nickname: string;
           role: string;
+          termsAcceptedVersion: string | null;
         };
       } catch (error) {
         // DB一時障害等。null系で fallthrough して session を返す。
