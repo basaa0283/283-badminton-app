@@ -53,8 +53,8 @@ describe("permissions", () => {
     it.each([
       ["admin", true],
       ["subadmin", true],
-      ["member", true],
-      ["visitor", true],
+      ["member", false],
+      ["visitor", false],
       ["guest", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canViewMemberList(role)).toBe(expected);

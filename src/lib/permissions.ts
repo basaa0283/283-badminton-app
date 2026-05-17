@@ -21,8 +21,9 @@ export const permissions = {
   canViewAttendeeList: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
   canViewAttendeeDetails: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
 
-  // メンバー権限。ゲストはメンバー一覧も見せない (個人情報保護)。
-  canViewMemberList: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.visitor,
+  // メンバー権限。一般のメンバー間でも他人の情報は見せない方針。閲覧は subadmin 以上。
+  // (canAccessAdmin と同じだが、概念分離のため別関数として残す)
+  canViewMemberList: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.subadmin,
   canViewMemberDetails: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
   canEditMemberRole: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.subadmin,
 
