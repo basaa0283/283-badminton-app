@@ -69,8 +69,8 @@ describe("Header", () => {
       },
     });
     const { container } = render(<Header />);
-    const img = container.querySelector("img");
-    expect(img).toHaveAttribute("src", "https://example.com/avatar.png");
+    const avatar = container.querySelector('img[src="https://example.com/avatar.png"]');
+    expect(avatar).not.toBeNull();
   });
 
   it("アバターメニューを開いてログアウトボタンクリックで signOut が呼ばれる", async () => {

@@ -33,10 +33,14 @@ export const metadata: Metadata = {
     title: "２８ばど",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
     apple: "/apple-touch-icon.png",
   },
-  themeColor: "#3B82F6",
+  themeColor: "#1d6dca",
 };
 
 export default function RootLayout({

@@ -40,16 +40,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100 px-4 py-8">
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-        <div className="flex justify-center mb-4">
-          <div className="w-20 h-20 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-md">
-            <div className="text-center leading-none">
-              <div className="text-2xl font-black">２８</div>
-              <div className="text-xs font-bold mt-1">ばど</div>
-            </div>
-          </div>
+        <div className="flex justify-center mb-3">
+          <img src="/logo.png" alt="２８ばど" className="w-28 h-28 object-contain" />
         </div>
         <h1 className="text-2xl font-bold text-center mb-1 text-gray-900">
-          ２８ばど 出欠管理
+          出欠管理アプリ
         </h1>
         <p className="text-gray-500 text-center text-sm mb-6">
           サークルの練習・イベントの出欠を簡単に
