@@ -22,7 +22,6 @@ test.describe("経費・収支管理 (admin)", () => {
       const putRes = await page.request.put(`/api/events/${eventId}`, {
         data: {
           shuttleCount: 3,
-          shuttleCost: 4500,
           gymCost: 5000,
           otherCost: 800,
           otherMemo: "飲み物代",
@@ -34,7 +33,7 @@ test.describe("経費・収支管理 (admin)", () => {
       const fetched = (await getRes.json()).data;
       expect(fetched.expenses).toBeTruthy();
       expect(fetched.expenses.shuttleCount).toBe(3);
-      expect(fetched.expenses.shuttleCost).toBe(4500);
+      // shuttleCost は適用単価から自動算出。単価未登録 (このテスト範囲外) なら null。
       expect(fetched.expenses.gymCost).toBe(5000);
       expect(fetched.expenses.otherCost).toBe(800);
       expect(fetched.expenses.otherMemo).toBe("飲み物代");

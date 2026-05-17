@@ -41,7 +41,7 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
   const [error, setError] = useState<string | null>(null);
 
   const [shuttleCount, setShuttleCount] = useState(expenses.shuttleCount?.toString() ?? "");
-  const [shuttleCost, setShuttleCost] = useState(expenses.shuttleCost?.toString() ?? "");
+  // シャトル代は個数 × 適用単価で API 側で再計算するため、保存値は固定で送らない。
   const [gymCost, setGymCost] = useState(expenses.gymCost?.toString() ?? "");
   const [otherCost, setOtherCost] = useState(expenses.otherCost?.toString() ?? "");
   const [otherMemo, setOtherMemo] = useState(expenses.otherMemo ?? "");
@@ -60,7 +60,8 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shuttleCount: num(shuttleCount),
-          shuttleCost: num(shuttleCost),
+          // shuttleCost は送らない (API 側で個数 × 適用単価から再計算)
+          shuttleCost: null,
           gymCost: num(gymCost),
           otherCost: num(otherCost),
           otherMemo: otherMemo.trim() || null,
@@ -82,7 +83,7 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
 
   const handleCancel = () => {
     setShuttleCount(expenses.shuttleCount?.toString() ?? "");
-    setShuttleCost(expenses.shuttleCost?.toString() ?? "");
+    // shuttleCost はキャンセル時に初期化不要 (state を持たない)
     setGymCost(expenses.gymCost?.toString() ?? "");
     setOtherCost(expenses.otherCost?.toString() ?? "");
     setOtherMemo(expenses.otherMemo ?? "");
@@ -124,31 +125,21 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
                   type="number"
                   min={0}
                   value={shuttleCount}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setShuttleCount(v);
-                    // 適用単価がある場合は自動でシャトル代を算出
-                    if (expenses.applicableShuttlePrice && v !== "") {
-                      const n = Number(v);
-                      if (Number.isFinite(n)) {
-                        const cost = Math.round(n * expenses.applicableShuttlePrice.pricePerPiece);
-                        setShuttleCost(String(cost));
-                      }
-                    }
-                  }}
+                  onChange={(e) => setShuttleCount(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>
               <div>
-                <label htmlFor="exp-shuttle-cost" className="block text-xs text-gray-600 mb-1">シャトル代 (円)</label>
-                <input
-                  id="exp-shuttle-cost"
-                  type="number"
-                  min={0}
-                  value={shuttleCost}
-                  onChange={(e) => setShuttleCost(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
+                <label className="block text-xs text-gray-600 mb-1">シャトル代 (自動算出)</label>
+                <div className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-700">
+                  {(() => {
+                    const n = Number(shuttleCount);
+                    if (!shuttleCount || !Number.isFinite(n) || n < 0) return "—";
+                    if (!expenses.applicableShuttlePrice) return "単価未登録";
+                    const cost = Math.round(n * expenses.applicableShuttlePrice.pricePerPiece);
+                    return `${cost.toLocaleString()}円`;
+                  })()}
+                </div>
               </div>
               <div>
                 <label htmlFor="exp-gym-cost" className="block text-xs text-gray-600 mb-1">体育館代 (円)</label>

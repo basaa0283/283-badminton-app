@@ -122,7 +122,15 @@ export async function GET(request: NextRequest, { params }: Params) {
         expenses: canViewExpenses
           ? {
               shuttleCount: event.shuttleCount,
-              shuttleCost: event.shuttleCost,
+              // 個数 × イベント日時点の適用単価から自動算出。
+              // 単価未登録なら null。
+              shuttleCost:
+                event.shuttleCount !== null && applicablePrice
+                  ? Math.round(
+                      event.shuttleCount *
+                        (applicablePrice.casePrice / applicablePrice.shuttlesPerCase)
+                    )
+                  : null,
               gymCost: event.gymCost,
               otherCost: event.otherCost,
               otherMemo: event.otherMemo,
