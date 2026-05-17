@@ -22,7 +22,6 @@ test.describe("ゲストロール (閲覧専用)", () => {
     // WebKit ではスキップする。
     test.skip(browserName === "webkit", "WebKit のセッション切替不安定のためスキップ");
 
-    let visibleCategoryId: string | undefined;
     let visibleEventId: string | undefined;
     let hiddenEventId: string | undefined;
     let guestUserId: string | undefined;
@@ -31,30 +30,20 @@ test.describe("ゲストロール (閲覧専用)", () => {
       // ----- セットアップ (admin として) -----
       await loginAs(page, admin!);
 
-      // 公開カテゴリ
-      const catRes = await page.request.post("/api/admin/event-categories", {
-        data: {
-          name: `E2E vis ${Date.now()}`,
-          color: "#3B82F6",
-          visibleToGuest: true,
-        },
-      });
-      visibleCategoryId = (await catRes.json()).data.id as string;
-
       const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-      // ゲストに見えるはずのイベント (公開カテゴリ)
+      // ゲストに見えるはずのイベント (visibleToGuest=true)
       const visEvRes = await page.request.post("/api/events", {
         data: {
           title: `E2E guest visible ${Date.now()}`,
           eventDate: futureDate,
-          categoryId: visibleCategoryId,
+          visibleToGuest: true,
           notifyMembers: false,
         },
       });
       visibleEventId = (await visEvRes.json()).data.id as string;
 
-      // ゲストには隠すべきイベント (カテゴリなし)
+      // ゲストには隠すべきイベント (デフォルト visibleToGuest=false)
       const hidEvRes = await page.request.post("/api/events", {
         data: {
           title: `E2E guest hidden ${Date.now()}`,
@@ -121,11 +110,6 @@ test.describe("ゲストロール (閲覧専用)", () => {
       }
       if (hiddenEventId) {
         await page.request.delete(`/api/events/${hiddenEventId}`).catch(() => {});
-      }
-      if (visibleCategoryId) {
-        await page.request
-          .delete(`/api/admin/event-categories/${visibleCategoryId}`)
-          .catch(() => {});
       }
       if (guestUserId) {
         await page.request.delete(`/api/admin/members/${guestUserId}`).catch(() => {});

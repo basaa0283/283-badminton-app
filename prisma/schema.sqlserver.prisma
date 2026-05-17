@@ -147,7 +147,6 @@ model EventCategory {
   name            String   @unique
   color           String?  // 例: "#3B82F6"
   order           Int      @default(0)
-  visibleToGuest  Boolean  @default(false) // ゲスト (閲覧専用ロール) に公開するか
   createdAt       DateTime @default(now())
 
   events    Event[]
@@ -172,6 +171,9 @@ model Event {
   // イベント種別 (タグ)
   categoryId      String?
   category        EventCategory? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // ゲスト (閲覧専用ロール) に公開するか
+  visibleToGuest  Boolean   @default(false)
 
   // 中止フラグ
   cancelledAt     DateTime?

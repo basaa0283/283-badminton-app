@@ -27,12 +27,12 @@ export async function GET(request: NextRequest) {
       ? { eventDate: { gte: now } }
       : { eventDate: { gte: startOfPrevMonth, lt: now } };
 
-    // ゲスト (閲覧専用ロール) と pending (承認待ち) は visibleToGuest=true のカテゴリのみ。
+    // ゲスト (閲覧専用ロール) と pending (承認待ち) は visibleToGuest=true なイベントのみ。
     // pending は本来 /onboarding/pending に redirect されるが、API 直叩きに対する防衛線。
     const role = session.user.role as UserRole;
     const restrictToGuestVisible = role === "guest" || role === "pending";
     const where = restrictToGuestVisible
-      ? { ...dateWhere, category: { visibleToGuest: true } }
+      ? { ...dateWhere, visibleToGuest: true }
       : dateWhere;
 
     const [events, total] = await Promise.all([
@@ -164,6 +164,7 @@ export async function POST(request: NextRequest) {
         deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
         deadlineEnabled: parsed.data.deadlineEnabled,
         categoryId: parsed.data.categoryId ?? null,
+        visibleToGuest: parsed.data.visibleToGuest ?? false,
         shuttleCount: parsed.data.shuttleCount ?? null,
         shuttleCost: parsed.data.shuttleCost ?? null,
         gymCost: parsed.data.gymCost ?? null,

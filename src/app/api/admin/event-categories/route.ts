@@ -13,7 +13,6 @@ const createSchema = z.object({
     .optional()
     .nullable(),
   order: z.number().int().optional(),
-  visibleToGuest: z.boolean().optional(),
 });
 
 // GET /api/admin/event-categories - admin 用 (管理ページが使う)
@@ -61,7 +60,6 @@ export async function POST(request: NextRequest) {
         name: parsed.data.name,
         color: parsed.data.color ?? null,
         order,
-        visibleToGuest: parsed.data.visibleToGuest ?? false,
       },
     });
     return NextResponse.json({ success: true, data: created }, { status: 201 });

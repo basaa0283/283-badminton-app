@@ -148,7 +148,6 @@ model EventCategory {
   name            String   @unique
   color           String?  // 例: "#3B82F6" (Tailwind blue-500)
   order           Int      @default(0) // 表示順 (小さい順)
-  visibleToGuest  Boolean  @default(false) // ゲスト (閲覧専用ロール) に公開するか
   createdAt       DateTime @default(now())
 
   events    Event[]
@@ -173,6 +172,9 @@ model Event {
   // イベント種別 (タグ)
   categoryId      String?
   category        EventCategory? @relation(fields: [categoryId], references: [id])
+
+  // ゲスト (閲覧専用ロール) に公開するか。デフォルトは非公開。
+  visibleToGuest  Boolean   @default(false)
 
   // 中止フラグ (削除と区別。中止理由を後から見られるよう履歴として残す)
   cancelledAt     DateTime?

@@ -53,9 +53,9 @@ export async function GET(request: NextRequest, { params }: Params) {
       );
     }
 
-    // ゲスト (閲覧専用ロール) と pending (承認待ち) は visibleToGuest=true のみアクセス可。
+    // ゲスト (閲覧専用ロール) と pending (承認待ち) は visibleToGuest=true なイベントのみアクセス可。
     // それ以外は存在を隠す (404 で返す)。
-    if ((role === "guest" || role === "pending") && !event.category?.visibleToGuest) {
+    if ((role === "guest" || role === "pending") && !event.visibleToGuest) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
         { status: 404 }
@@ -121,6 +121,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         category: event.category
           ? { id: event.category.id, name: event.category.name, color: event.category.color }
           : null,
+        visibleToGuest: event.visibleToGuest,
         cancelledAt: event.cancelledAt,
         cancelReason: event.cancelReason,
         createdBy: event.createdBy.nickname,
@@ -248,6 +249,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       updateData.deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
     if (parsed.data.deadlineEnabled !== undefined) updateData.deadlineEnabled = parsed.data.deadlineEnabled;
     if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
+    if (parsed.data.visibleToGuest !== undefined) updateData.visibleToGuest = parsed.data.visibleToGuest;
     if (parsed.data.shuttleCount !== undefined) updateData.shuttleCount = parsed.data.shuttleCount;
     if (parsed.data.shuttleCost !== undefined) updateData.shuttleCost = parsed.data.shuttleCost;
     if (parsed.data.gymCost !== undefined) updateData.gymCost = parsed.data.gymCost;
