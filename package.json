@@ -1,6 +1,6 @@
 {
   "name": "283-badminton-app",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
@@ -11,6 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "docs:e2e": "npx tsx scripts/generate-e2e-docs.ts",
     "db:seed": "npx tsx prisma/seed.ts"
   },
   "prisma": {
@@ -30,6 +33,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

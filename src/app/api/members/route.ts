@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { computeAge } from "@/lib/age";
 
 // GET /api/members - メンバー一覧取得（管理者権限のみ）
 export async function GET() {
@@ -33,7 +34,7 @@ export async function GET() {
         profileImageUrl: true,
         role: true,
         gender: true,
-        age: true,
+        birthdate: true,
         ageVisible: true,
         comment: true,
         lastActiveAt: true,
@@ -48,7 +49,8 @@ export async function GET() {
       profileImageUrl: user.profileImageUrl,
       role: user.role,
       gender: user.gender,
-      age: user.ageVisible ? user.age : null,
+      birthdate: user.ageVisible ? user.birthdate : null,
+      age: user.ageVisible ? computeAge(user.birthdate) : null,
       ageVisible: user.ageVisible,
       comment: user.comment,
       lastActiveAt: user.lastActiveAt,

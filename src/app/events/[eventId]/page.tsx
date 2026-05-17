@@ -9,6 +9,8 @@ import { ja } from "date-fns/locale";
 import { Header } from "@/components/layout/Header";
 import { AttendanceForm } from "@/components/events/AttendanceForm";
 import { AttendeeList } from "@/components/events/AttendeeList";
+import { AdminAttendanceManager } from "@/components/events/AdminAttendanceManager";
+import { ExpensesCard } from "@/components/events/ExpensesCard";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/Modal";
@@ -26,6 +28,7 @@ interface EventDetail {
   feeVisible: boolean;
   deadline: string | null;
   deadlineEnabled: boolean;
+  category: { id: string; name: string; color: string | null } | null;
   createdBy: string;
   createdById: string;
   attendingCount: number;
@@ -48,7 +51,24 @@ interface EventDetail {
       profileImageUrl: string | null;
       gender: string | null;
     };
+    paymentStatus?: string | null;
+    paymentAmount?: number | null;
+    paymentNote?: string | null;
   }> | null;
+  expenses: {
+    shuttleCount: number | null;
+    shuttleCost: number | null;
+    gymCost: number | null;
+    otherCost: number | null;
+    otherMemo: string | null;
+    actualRevenue: number | null;
+    applicableShuttlePrice: {
+      effectiveFrom: string;
+      casePrice: number;
+      shuttlesPerCase: number;
+      pricePerPiece: number;
+    } | null;
+  } | null;
 }
 
 export default function EventDetailPage() {
@@ -142,6 +162,7 @@ export default function EventDetailPage() {
   const canEdit = permissions.canEditEvent(role);
   const canDelete = permissions.canDeleteEvent(role);
   const canViewAttendees = permissions.canViewAttendeeList(role);
+  const canViewExpenses = permissions.canAccessAdmin(role);
   const eventDate = new Date(event.eventDate);
   const isDeadlinePassed =
     event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date();
@@ -161,7 +182,17 @@ export default function EventDetailPage() {
         <Card className="mb-4">
           <CardHeader>
             <div className="flex items-start justify-between">
-              <h1 className="text-xl font-bold text-gray-900">{event.title}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-gray-900">{event.title}</h1>
+                {event.category && (
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
+                    style={{ backgroundColor: event.category.color ?? "#6B7280" }}
+                  >
+                    {event.category.name}
+                  </span>
+                )}
+              </div>
               {canEdit && (
                 <div className="flex gap-2">
                   <Link href={`/events/${eventId}/edit`}>
@@ -283,8 +314,9 @@ export default function EventDetailPage() {
           </CardContent>
         </Card>
 
+        <div className="space-y-4">
         {!isPast && (
-          <Card className="mb-4">
+          <Card>
             <CardHeader>
               <h2 className="font-semibold text-gray-900">出欠登録</h2>
             </CardHeader>
@@ -323,6 +355,24 @@ export default function EventDetailPage() {
             </CardContent>
           </Card>
         )}
+
+        {canViewExpenses && event.attendees && (
+          <AdminAttendanceManager
+            eventId={event.id}
+            attendees={event.attendees}
+            eventFee={event.fee}
+            onUpdated={() => fetchEvent()}
+          />
+        )}
+
+        {canViewExpenses && event.expenses && (
+          <ExpensesCard
+            eventId={event.id}
+            expenses={event.expenses}
+            onUpdated={() => fetchEvent()}
+          />
+        )}
+        </div>
       </main>
 
       <ConfirmModal

@@ -29,6 +29,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         createdBy: {
           select: { nickname: true },
         },
+        category: true,
         attendances: {
           include: {
             user: {
@@ -58,6 +59,41 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     // 参加者リストは member 以上のみ閲覧可能
     const canViewAttendees = permissions.canViewAttendeeList(role);
+    // 経費・収支は管理者のみ閲覧可能
+    const canViewExpenses = permissions.canAccessAdmin(role);
+
+    // 経費入力支援: イベント開催日に適用されるシャトル単価
+    // ShuttlePrice テーブルが未マイグレーションでもエラーで API 全体を死なせない。
+    let applicablePrice: {
+      id: string;
+      effectiveFrom: Date;
+      casePrice: number;
+      shuttlesPerCase: number;
+    } | null = null;
+    if (canViewExpenses) {
+      try {
+        applicablePrice = await prisma.shuttlePrice.findFirst({
+          where: { effectiveFrom: { lte: event.eventDate } },
+          orderBy: { effectiveFrom: "desc" },
+        });
+      } catch (err) {
+        console.warn("[event GET] failed to query ShuttlePrice (table may not exist yet):", err);
+      }
+    }
+
+    // 実集金額は、attending かつ paymentStatus=paid なメンバーの (paymentAmount ?? event.fee) の合計から自動算出
+    let computedActualRevenue: number | null = null;
+    if (canViewExpenses) {
+      const paidAttendances = event.attendances.filter(
+        (a) => a.status === "attending" && a.paymentStatus === "paid"
+      );
+      if (paidAttendances.length > 0) {
+        computedActualRevenue = paidAttendances.reduce(
+          (sum, a) => sum + (a.paymentAmount ?? event.fee ?? 0),
+          0
+        );
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -73,11 +109,35 @@ export async function GET(request: NextRequest, { params }: Params) {
         feeVisible: event.feeVisible,
         deadline: event.deadline,
         deadlineEnabled: event.deadlineEnabled,
+        category: event.category
+          ? { id: event.category.id, name: event.category.name, color: event.category.color }
+          : null,
         createdBy: event.createdBy.nickname,
         createdById: event.createdById,
         createdAt: event.createdAt,
         attendingCount,
         waitlistCount,
+        expenses: canViewExpenses
+          ? {
+              shuttleCount: event.shuttleCount,
+              shuttleCost: event.shuttleCost,
+              gymCost: event.gymCost,
+              otherCost: event.otherCost,
+              otherMemo: event.otherMemo,
+              // 実集金額 = 参加者の支払い済み合計 (自動算出)。
+              // 支払い済みがゼロの間は DB に保存されている値 (旧 UI 経由の手入力分) を見せる。
+              actualRevenue: computedActualRevenue ?? event.actualRevenue,
+              applicableShuttlePrice: applicablePrice
+                ? {
+                    id: applicablePrice.id,
+                    effectiveFrom: applicablePrice.effectiveFrom,
+                    casePrice: applicablePrice.casePrice,
+                    shuttlesPerCase: applicablePrice.shuttlesPerCase,
+                    pricePerPiece: applicablePrice.casePrice / applicablePrice.shuttlesPerCase,
+                  }
+                : null,
+            }
+          : null,
         myAttendance: myAttendance
           ? {
               id: myAttendance.id,
@@ -94,6 +154,10 @@ export async function GET(request: NextRequest, { params }: Params) {
               position: a.position,
               createdAt: a.createdAt,
               user: a.user,
+              // 支払情報は admin のみ
+              paymentStatus: canViewExpenses ? a.paymentStatus : undefined,
+              paymentAmount: canViewExpenses ? a.paymentAmount : undefined,
+              paymentNote: canViewExpenses ? a.paymentNote : undefined,
             }))
           : null,
       },
@@ -164,6 +228,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.deadline !== undefined)
       updateData.deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
     if (parsed.data.deadlineEnabled !== undefined) updateData.deadlineEnabled = parsed.data.deadlineEnabled;
+    if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
+    if (parsed.data.shuttleCount !== undefined) updateData.shuttleCount = parsed.data.shuttleCount;
+    if (parsed.data.shuttleCost !== undefined) updateData.shuttleCost = parsed.data.shuttleCost;
+    if (parsed.data.gymCost !== undefined) updateData.gymCost = parsed.data.gymCost;
+    if (parsed.data.otherCost !== undefined) updateData.otherCost = parsed.data.otherCost;
+    if (parsed.data.otherMemo !== undefined) updateData.otherMemo = parsed.data.otherMemo;
+    if (parsed.data.actualRevenue !== undefined) updateData.actualRevenue = parsed.data.actualRevenue;
 
     const event = await prisma.event.update({
       where: { id: eventId },

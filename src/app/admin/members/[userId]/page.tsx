@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { BirthdateInput } from "@/components/ui/BirthdateInput";
 import { permissions, UserRole, getRoleName } from "@/lib/permissions";
 import { formatSkillLevel, SKILL_LEVELS, SKILL_LEVEL_MIN, SKILL_LEVEL_MAX } from "@/lib/skill-level";
 
@@ -20,6 +21,7 @@ interface MemberDetail {
   profileImageUrl: string | null;
   role: string;
   gender: string | null;
+  birthdate: string | null;
   age: number | null;
   ageVisible: boolean;
   comment: string | null;
@@ -29,6 +31,13 @@ interface MemberDetail {
   createdAt: string;
   attendanceCount: number;
   pastAttendanceCount: number;
+}
+
+function isoToDay(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 const ROLES: UserRole[] = ["admin", "subadmin", "member", "visitor", "guest"];
@@ -94,7 +103,7 @@ export default function MemberDetailPage() {
     firstName: "",
     lastName: "",
     gender: "",
-    age: "",
+    birthdate: "",
     ageVisible: true,
     comment: "",
     role: "" as UserRole | "",
@@ -135,7 +144,7 @@ export default function MemberDetailPage() {
           firstName: data.data.firstName || "",
           lastName: data.data.lastName || "",
           gender: data.data.gender || "",
-          age: data.data.age?.toString() || "",
+          birthdate: isoToDay(data.data.birthdate),
           ageVisible: data.data.ageVisible ?? true,
           comment: data.data.comment || "",
           role: data.data.role || "",
@@ -259,7 +268,9 @@ export default function MemberDetailPage() {
           firstName: formData.firstName || null,
           lastName: formData.lastName || null,
           gender: formData.gender || null,
-          age: formData.age ? parseInt(formData.age) : null,
+          birthdate: formData.birthdate
+            ? new Date(`${formData.birthdate}T00:00:00`).toISOString()
+            : null,
           ageVisible: formData.ageVisible,
           comment: formData.comment || null,
           role: formData.role || undefined,
@@ -396,7 +407,7 @@ export default function MemberDetailPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
+                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">性別</label>
                     <select
                       value={formData.gender}
@@ -410,15 +421,17 @@ export default function MemberDetailPage() {
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">年齢</label>
-                    <input
-                      type="number"
-                      value={formData.age}
-                      onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">生年月日</label>
+                  <BirthdateInput
+                    value={formData.birthdate}
+                    onChange={(v) => setFormData({ ...formData, birthdate: v })}
+                  />
+                  {member?.age !== null && member?.age !== undefined && (
+                    <p className="mt-1 text-xs text-gray-500">現在 {member.age} 歳</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -430,7 +443,7 @@ export default function MemberDetailPage() {
                     className="rounded"
                   />
                   <label htmlFor="ageVisible" className="text-sm text-gray-700">
-                    年齢を公開する
+                    生年月日・年齢を他のメンバーに公開する
                   </label>
                 </div>
 

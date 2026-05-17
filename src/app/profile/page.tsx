@@ -7,6 +7,7 @@ import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
+import { BirthdateInput } from "@/components/ui/BirthdateInput";
 
 interface Profile {
   id: string;
@@ -14,11 +15,19 @@ interface Profile {
   firstName: string | null;
   lastName: string | null;
   gender: string | null;
+  birthdate: string | null;
   age: number | null;
   ageVisible: boolean;
   profileImageUrl: string | null;
   comment: string | null;
   role: string;
+}
+
+function isoToDay(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default function ProfilePage() {
@@ -35,7 +44,7 @@ export default function ProfilePage() {
     firstName: "",
     lastName: "",
     gender: "",
-    age: "",
+    birthdate: "",
     ageVisible: true,
     comment: "",
   });
@@ -63,7 +72,7 @@ export default function ProfilePage() {
           firstName: data.data.firstName || "",
           lastName: data.data.lastName || "",
           gender: data.data.gender || "",
-          age: data.data.age?.toString() || "",
+          birthdate: isoToDay(data.data.birthdate),
           ageVisible: data.data.ageVisible ?? true,
           comment: data.data.comment || "",
         });
@@ -100,7 +109,9 @@ export default function ProfilePage() {
           firstName: formData.firstName || null,
           lastName: formData.lastName || null,
           gender: formData.gender || null,
-          age: formData.age ? parseInt(formData.age) : null,
+          birthdate: formData.birthdate
+            ? new Date(`${formData.birthdate}T00:00:00`).toISOString()
+            : null,
           ageVisible: formData.ageVisible,
           comment: formData.comment || null,
         }),
@@ -239,31 +250,26 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">
-                  年齢
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  生年月日
                 </label>
-                <div className="flex items-center gap-4">
+                <BirthdateInput
+                  value={formData.birthdate}
+                  onChange={(v) => setFormData((prev) => ({ ...prev, birthdate: v }))}
+                />
+                {profile?.age !== null && profile?.age !== undefined && (
+                  <p className="mt-1 text-xs text-gray-500">現在 {profile.age} 歳</p>
+                )}
+                <label className="flex items-center gap-2 text-sm text-gray-600 mt-2">
                   <input
-                    type="number"
-                    id="age"
-                    name="age"
-                    value={formData.age}
+                    type="checkbox"
+                    name="ageVisible"
+                    checked={formData.ageVisible}
                     onChange={handleChange}
-                    min={0}
-                    max={150}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <label className="flex items-center gap-2 text-sm text-gray-600">
-                    <input
-                      type="checkbox"
-                      name="ageVisible"
-                      checked={formData.ageVisible}
-                      onChange={handleChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    年齢を公開する
-                  </label>
-                </div>
+                  生年月日・年齢を他のメンバーに公開する
+                </label>
               </div>
 
               <div>

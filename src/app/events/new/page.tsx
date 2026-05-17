@@ -47,6 +47,7 @@ export default function NewEventPage() {
     deadline: string;
     deadlineEnabled: boolean;
     notifyMembers: boolean;
+    categoryId: string;
   }) => {
     const res = await fetch("/api/events", {
       method: "POST",
@@ -63,6 +64,7 @@ export default function NewEventPage() {
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : undefined,
         deadlineEnabled: formData.deadlineEnabled,
         notifyMembers: formData.notifyMembers,
+        categoryId: formData.categoryId || null,
       }),
     });
 

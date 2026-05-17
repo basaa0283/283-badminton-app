@@ -22,8 +22,8 @@ model User {
   firstName       String?   // 名（非公開）
   lastName        String?   // 姓（非公開）
   gender          String?   // 性別: male / female
-  age             Int?      // 年齢
-  ageVisible      Boolean   @default(true) // 年齢を公開するか
+  birthdate       DateTime? // 生年月日
+  ageVisible      Boolean   @default(true) // 生年月日・年齢を公開するか
   profileImageUrl String?   // プロフィール画像URL（後方互換性）
   comment         String?   // その他コメント
   role            String    @default("guest") // admin / subadmin / member / visitor / guest
@@ -87,6 +87,33 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// シャトル単価 (期間ごと)
+// 1ケース = 10本 × 12個 = 120個 (shuttlesPerCase で変更可)
+// イベント開催日 >= effectiveFrom の最大日付のレコードが適用される。
+model ShuttlePrice {
+  id              String   @id @default(cuid())
+  effectiveFrom   DateTime // 適用開始日
+  casePrice       Int      // ケース価格 (円)
+  shuttlesPerCase Int      @default(120) // ケース内のシャトル個数
+  memo            String?
+  createdAt       DateTime @default(now())
+
+  @@index([effectiveFrom])
+}
+
+// イベント種別 (タグ)
+model EventCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?  // 例: "#3B82F6" (Tailwind blue-500)
+  order     Int      @default(0) // 表示順 (小さい順)
+  createdAt DateTime @default(now())
+
+  events    Event[]
+
+  @@index([order])
+}
+
 // イベント
 model Event {
   id              String    @id @default(cuid())
@@ -100,6 +127,19 @@ model Event {
   feeVisible      Boolean   @default(false) // 参加費を表示するか
   deadline        DateTime? // 締め切り日時
   deadlineEnabled Boolean   @default(false) // 締め切りを有効にするか
+
+  // イベント種別 (タグ)
+  categoryId      String?
+  category        EventCategory? @relation(fields: [categoryId], references: [id])
+
+  // 経費・収支 (管理者用、イベント実施後に入力)
+  shuttleCount    Int?      // 使用シャトル本数
+  shuttleCost     Int?      // シャトル代合計
+  gymCost         Int?      // 体育館代
+  otherCost       Int?      // その他経費合計
+  otherMemo       String?   // その他経費の内訳メモ
+  actualRevenue   Int?      // 実際の集金額 (後日記録)
+
   createdById     String    // 作成者
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -119,6 +159,12 @@ model Attendance {
   status      String   // attending / not_attending / waitlist
   comment     String?  // コメント
   position    Int?     // キャンセル待ち順（waitlistの場合）
+
+  // 参加費 (admin が attending メンバーごとに記録)
+  paymentStatus String? // paid / unpaid (null = 未確認)
+  paymentAmount Int?    // null なら event.fee と同額。違う額を受け取った場合のみ手入力
+  paymentNote   String? // メモ (任意)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

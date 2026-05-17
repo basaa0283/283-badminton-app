@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* iOS Safari の date/time 入力は -webkit-min-logical-width で固有の最小幅を持つので、
+   フォーム幅に追従できるようゼロに固定する。 */
+input[type="date"],
+input[type="time"] {
+  -webkit-min-logical-width: 0;
+  min-width: 0;
+}

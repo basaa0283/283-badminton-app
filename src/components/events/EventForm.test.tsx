@@ -14,10 +14,15 @@ beforeEach(() => {
 });
 
 describe("EventForm", () => {
-  it("必須フィールド（title, eventDate）が表示される", () => {
+  it("必須フィールド（title, 開催日, 開始時刻）が表示される", () => {
     render(<EventForm onSubmit={vi.fn()} />);
     expect(screen.getByLabelText(/タイトル/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/開催日時/)).toBeInTheDocument();
+    // 開催日は年/月/日 の3 select
+    expect(screen.getByLabelText("年")).toBeInTheDocument();
+    expect(screen.getByLabelText("月")).toBeInTheDocument();
+    expect(screen.getByLabelText("日")).toBeInTheDocument();
+    expect(screen.getByLabelText(/開始時刻/)).toBeInTheDocument();
+    expect(screen.getByLabelText("終了時刻（任意）")).toBeInTheDocument();
   });
 
   it("初期値が反映される", () => {
@@ -34,6 +39,31 @@ describe("EventForm", () => {
     expect(screen.getByDisplayValue("練習会")).toBeInTheDocument();
     expect(screen.getByDisplayValue("体育館")).toBeInTheDocument();
     expect(screen.getByDisplayValue("毎週恒例")).toBeInTheDocument();
+  });
+
+  it("initialData.eventDate が日付と時刻に分解されて反映される (30分刻み)", () => {
+    render(
+      <EventForm
+        initialData={{ eventDate: "2026-06-01T19:00", eventEndDate: "2026-06-01T21:00" }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("年")).toHaveValue("2026");
+    expect(screen.getByLabelText("月")).toHaveValue("06");
+    expect(screen.getByLabelText("日")).toHaveValue("01");
+    expect(screen.getByLabelText(/開始時刻/)).toHaveValue("19:00");
+    expect(screen.getByLabelText("終了時刻（任意）")).toHaveValue("21:00");
+  });
+
+  it("initialData が30分刻みでない場合は1分単位モードで開く", () => {
+    render(
+      <EventForm
+        initialData={{ eventDate: "2026-06-01T19:15" }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("1分単位で指定する（オフ時は30分刻み）")).toBeChecked();
+    expect(screen.getByLabelText(/開始時刻/)).toHaveValue("19:15");
   });
 
   it("submitLabel が反映される", () => {
@@ -80,19 +110,21 @@ describe("EventForm", () => {
     expect(screen.queryByLabelText("作成時にメンバーへLINE通知を送る")).not.toBeInTheDocument();
   });
 
+  it("通知チェックボックスはデフォルトで OFF", () => {
+    render(<EventForm onSubmit={vi.fn()} showNotifyOption />);
+    expect(screen.getByLabelText("作成時にメンバーへLINE通知を送る")).not.toBeChecked();
+  });
+
   it("終了時刻 ≤ 開始時刻 で バリデーションエラー", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(
-      screen.getByLabelText(/開催日時/),
-      "2026-06-01T10:00",
-    );
-    await userEvent.type(
-      screen.getByLabelText("終了時刻（任意）"),
-      "2026-06-01T09:00",
-    );
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
+    await userEvent.selectOptions(screen.getByLabelText("終了時刻（任意）"), "09:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
 
@@ -100,15 +132,15 @@ describe("EventForm", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("正常な入力で onSubmit が呼ばれる", async () => {
+  it("正常な入力で onSubmit が呼ばれ、eventDate は date+time の結合", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(
-      screen.getByLabelText(/開催日時/),
-      "2026-06-01T10:00",
-    );
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
 
@@ -116,6 +148,49 @@ describe("EventForm", () => {
       expect.objectContaining({
         title: "練習",
         eventDate: "2026-06-01T10:00",
+        eventEndDate: "",
+      }),
+    );
+  });
+
+  it("終了時刻も指定すれば eventEndDate に同じ日付で結合される", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<EventForm onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
+    await userEvent.selectOptions(screen.getByLabelText("終了時刻（任意）"), "12:00");
+
+    await userEvent.click(screen.getByRole("button", { name: "作成" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventDate: "2026-06-01T10:00",
+        eventEndDate: "2026-06-01T12:00",
+      }),
+    );
+  });
+
+  it("1分単位モードで native time input が使える", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<EventForm onSubmit={onSubmit} />);
+
+    await userEvent.click(screen.getByLabelText("1分単位で指定する（オフ時は30分刻み）"));
+
+    await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
+    await userEvent.type(screen.getByLabelText(/開始時刻/), "10:15");
+
+    await userEvent.click(screen.getByRole("button", { name: "作成" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventDate: "2026-06-01T10:15",
       }),
     );
   });
@@ -125,10 +200,10 @@ describe("EventForm", () => {
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(
-      screen.getByLabelText(/開催日時/),
-      "2026-06-01T10:00",
-    );
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
 
@@ -140,18 +215,13 @@ describe("EventForm", () => {
     render(<EventForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByLabelText(/タイトル/), "練習");
-    await userEvent.type(
-      screen.getByLabelText(/開催日時/),
-      "2026-06-01T10:00",
-    );
+    await userEvent.selectOptions(screen.getByLabelText("年"), "2026");
+    await userEvent.selectOptions(screen.getByLabelText("月"), "06");
+    await userEvent.selectOptions(screen.getByLabelText("日"), "01");
+    await userEvent.selectOptions(screen.getByLabelText(/開始時刻/), "10:00");
 
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
 
     expect(await screen.findByText("エラーが発生しました")).toBeInTheDocument();
-  });
-
-  it("通知チェックボックスはデフォルトでON", () => {
-    render(<EventForm onSubmit={vi.fn()} showNotifyOption />);
-    expect(screen.getByLabelText("作成時にメンバーへLINE通知を送る")).toBeChecked();
   });
 });

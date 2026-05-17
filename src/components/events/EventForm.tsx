@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
@@ -16,6 +16,13 @@ interface EventFormData {
   deadline: string;
   deadlineEnabled: boolean;
   notifyMembers: boolean;
+  categoryId: string;
+}
+
+interface EventCategory {
+  id: string;
+  name: string;
+  color: string | null;
 }
 
 interface EventFormProps {
@@ -25,53 +32,142 @@ interface EventFormProps {
   showNotifyOption?: boolean;
 }
 
+// datetime-local 形式 (YYYY-MM-DDTHH:MM) or ISO → 日付/時刻に分割
+function splitDateTime(value?: string): { day: string; time: string } {
+  if (!value) return { day: "", time: "" };
+  // datetime-local 形式ならそのまま分割
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) {
+    const [day, rest] = value.split("T");
+    return { day, time: rest.slice(0, 5) };
+  }
+  // ISO 形式の場合はローカル時刻として展開
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return { day: "", time: "" };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    day: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
+function combine(day: string, time: string): string {
+  if (!day || !time) return "";
+  return `${day}T${time}`;
+}
+
+// 00:00, 00:30, ..., 23:30
+const HALF_HOUR_OPTIONS: string[] = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${String(h).padStart(2, "0")}:${m}`;
+});
+
+// 年月日のオプション (現在年 ± 2)
+const NOW = new Date();
+const YEAR_OPTIONS: number[] = Array.from({ length: 5 }, (_, i) => NOW.getFullYear() - 1 + i);
+const MONTH_OPTIONS: number[] = Array.from({ length: 12 }, (_, i) => i + 1);
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+function splitDay(day: string): { y: string; m: string; d: string } {
+  if (!day) return { y: "", m: "", d: "" };
+  const [y, m, d] = day.split("-");
+  return { y: y ?? "", m: m ?? "", d: d ?? "" };
+}
+
 export function EventForm({ initialData, onSubmit, submitLabel = "作成", showNotifyOption = false }: EventFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<EventFormData>({
-    title: initialData?.title || "",
-    description: initialData?.description || "",
-    eventDate: initialData?.eventDate || "",
-    eventEndDate: initialData?.eventEndDate || "",
-    location: initialData?.location || "",
-    capacity: initialData?.capacity || "",
-    fee: initialData?.fee || "",
-    feeVisible: initialData?.feeVisible || false,
-    deadline: initialData?.deadline || "",
-    deadlineEnabled: initialData?.deadlineEnabled || false,
-    notifyMembers: true,
-  });
+  const initStart = splitDateTime(initialData?.eventDate);
+  const initEnd = splitDateTime(initialData?.eventEndDate);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
-    }));
-  };
+  // 新規作成時は今日をデフォルトに、編集時は既存値を尊重
+  const today = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+
+  // 日付は開始時刻のものを正とする (日跨ぎイベントは想定しない)
+  const [eventDay, setEventDay] = useState(initStart.day || today);
+  const [startTime, setStartTime] = useState(initStart.time);
+  const [endTime, setEndTime] = useState(initEnd.time);
+  // 既存データが 30分刻みでない場合は最初から細かいモードに
+  const isFineInitial =
+    (initStart.time && !/(00|30)$/.test(initStart.time)) ||
+    (initEnd.time && !/(00|30)$/.test(initEnd.time));
+  const [fineTimeStep, setFineTimeStep] = useState<boolean>(!!isFineInitial);
+
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [location, setLocation] = useState(initialData?.location || "");
+  const [capacity, setCapacity] = useState(initialData?.capacity || "");
+  const [fee, setFee] = useState(initialData?.fee || "");
+  const [feeVisible, setFeeVisible] = useState(initialData?.feeVisible || false);
+  const [deadline, setDeadline] = useState(initialData?.deadline || "");
+  const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
+  const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
+  const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
+  const [categories, setCategories] = useState<EventCategory[]>([]);
+
+  useEffect(() => {
+    fetch("/api/event-categories")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setCategories(json.data);
+      })
+      .catch(() => {});
+  }, []);
+
+  // 過去イベントから場所の候補を取得
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  useEffect(() => {
+    fetch("/api/events/locations")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setLocationSuggestions(json.data);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // 終了時刻が開始時刻より前の場合はエラー
-    if (formData.eventEndDate && formData.eventDate) {
-      const startDate = new Date(formData.eventDate);
-      const endDate = new Date(formData.eventEndDate);
-      if (endDate <= startDate) {
-        setError("終了時刻は開始時刻より後に設定してください");
-        setLoading(false);
-        return;
-      }
+    if (!eventDay || !startTime) {
+      setError("開催日と開始時刻は必須です");
+      setLoading(false);
+      return;
     }
 
+    if (endTime && endTime <= startTime) {
+      setError("終了時刻は開始時刻より後に設定してください");
+      setLoading(false);
+      return;
+    }
+
+    const data: EventFormData = {
+      title,
+      description,
+      eventDate: combine(eventDay, startTime),
+      eventEndDate: endTime ? combine(eventDay, endTime) : "",
+      location,
+      capacity,
+      fee,
+      feeVisible,
+      deadline,
+      deadlineEnabled,
+      notifyMembers,
+      categoryId,
+    };
+
     try {
-      await onSubmit(formData);
+      await onSubmit(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
@@ -92,9 +188,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         <input
           type="text"
           id="title"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           required
           maxLength={100}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -103,32 +198,171 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       </div>
 
       <div>
-        <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 mb-1">
-          開催日時 <span className="text-red-500">*</span>
+        <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-1">
+          種別
         </label>
-        <input
-          type="datetime-local"
-          id="eventDate"
-          name="eventDate"
-          value={formData.eventDate}
-          onChange={handleChange}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
+        <select
+          id="categoryId"
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+        >
+          <option value="">未指定</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div>
-        <label htmlFor="eventEndDate" className="block text-sm font-medium text-gray-700 mb-1">
-          終了時刻（任意）
+      <div className="min-w-0">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          開催日 <span className="text-red-500">*</span>
         </label>
-        <input
-          type="datetime-local"
-          id="eventEndDate"
-          name="eventEndDate"
-          value={formData.eventEndDate}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
+        {/* iOS Safari の native date 入力ははみ出しやすいため、3つの select で年/月/日を分割選択。 */}
+        <div className="grid grid-cols-3 gap-2">
+          <select
+            aria-label="年"
+            value={splitDay(eventDay).y}
+            onChange={(e) => {
+              const { m, d } = splitDay(eventDay);
+              const y = e.target.value;
+              if (y && m && d) {
+                const maxD = daysInMonth(Number(y), Number(m));
+                const newD = Math.min(Number(d), maxD);
+                setEventDay(`${y}-${m}-${pad2(newD)}`);
+              } else {
+                setEventDay(y ? `${y}-${m || "01"}-${d || "01"}` : "");
+              }
+            }}
+            required
+            className="block w-full min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+          >
+            <option value="">年</option>
+            {YEAR_OPTIONS.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="月"
+            value={splitDay(eventDay).m}
+            onChange={(e) => {
+              const { y, d } = splitDay(eventDay);
+              const m = e.target.value;
+              if (y && m) {
+                const maxD = daysInMonth(Number(y), Number(m));
+                const newD = d ? Math.min(Number(d), maxD) : 1;
+                setEventDay(`${y}-${pad2(Number(m))}-${pad2(newD)}`);
+              } else {
+                setEventDay(m ? `${y || NOW.getFullYear()}-${pad2(Number(m))}-${d || "01"}` : "");
+              }
+            }}
+            required
+            className="block w-full min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+          >
+            <option value="">月</option>
+            {MONTH_OPTIONS.map((m) => (
+              <option key={m} value={pad2(m)}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="日"
+            value={splitDay(eventDay).d}
+            onChange={(e) => {
+              const { y, m } = splitDay(eventDay);
+              const d = e.target.value;
+              setEventDay(d ? `${y || NOW.getFullYear()}-${m || "01"}-${pad2(Number(d))}` : "");
+            }}
+            required
+            className="block w-full min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+          >
+            <option value="">日</option>
+            {(() => {
+              const { y, m } = splitDay(eventDay);
+              const max = y && m ? daysInMonth(Number(y), Number(m)) : 31;
+              return Array.from({ length: max }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={pad2(d)}>
+                  {d}
+                </option>
+              ));
+            })()}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-3 min-w-0">
+        <div className="min-w-0">
+          <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">
+            開始時刻 <span className="text-red-500">*</span>
+          </label>
+          {fineTimeStep ? (
+            <input
+              type="time"
+              id="startTime"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              required
+              className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          ) : (
+            <select
+              id="startTime"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              required
+              className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              <option value="">選択してください</option>
+              {HALF_HOUR_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div className="min-w-0">
+          <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">
+            終了時刻（任意）
+          </label>
+          {fineTimeStep ? (
+            <input
+              type="time"
+              id="endTime"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          ) : (
+            <select
+              id="endTime"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              <option value="">指定しない</option>
+              {HALF_HOUR_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            checked={fineTimeStep}
+            onChange={(e) => setFineTimeStep(e.target.checked)}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          1分単位で指定する（オフ時は30分刻み）
+        </label>
       </div>
 
       <div>
@@ -138,13 +372,35 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         <input
           type="text"
           id="location"
-          name="location"
-          value={formData.location}
-          onChange={handleChange}
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
           maxLength={200}
+          list="location-suggestions"
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="例: ○○体育館"
         />
+        {locationSuggestions.length > 0 && (
+          <>
+            <datalist id="location-suggestions">
+              {locationSuggestions.map((loc) => (
+                <option key={loc} value={loc} />
+              ))}
+            </datalist>
+            <div className="mt-2 flex flex-wrap gap-1">
+              <span className="text-xs text-gray-500 self-center">最近使用:</span>
+              {locationSuggestions.slice(0, 5).map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => setLocation(loc)}
+                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700"
+                >
+                  {loc}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div>
@@ -153,9 +409,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         </label>
         <textarea
           id="description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           rows={3}
           maxLength={1000}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -170,9 +425,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         <input
           type="number"
           id="capacity"
-          name="capacity"
-          value={formData.capacity}
-          onChange={handleChange}
+          value={capacity}
+          onChange={(e) => setCapacity(e.target.value)}
           min={1}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="例: 20"
@@ -184,9 +438,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           <input
             type="checkbox"
             id="feeVisible"
-            name="feeVisible"
-            checked={formData.feeVisible}
-            onChange={handleChange}
+            checked={feeVisible}
+            onChange={(e) => setFeeVisible(e.target.checked)}
             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
           <label htmlFor="feeVisible" className="text-sm font-medium text-gray-700">
@@ -194,7 +447,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           </label>
         </div>
 
-        {formData.feeVisible && (
+        {feeVisible && (
           <div>
             <label htmlFor="fee" className="block text-sm font-medium text-gray-700 mb-1">
               参加費（円）
@@ -202,9 +455,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
             <input
               type="number"
               id="fee"
-              name="fee"
-              value={formData.fee}
-              onChange={handleChange}
+              value={fee}
+              onChange={(e) => setFee(e.target.value)}
               min={0}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="例: 500"
@@ -218,9 +470,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           <input
             type="checkbox"
             id="deadlineEnabled"
-            name="deadlineEnabled"
-            checked={formData.deadlineEnabled}
-            onChange={handleChange}
+            checked={deadlineEnabled}
+            onChange={(e) => setDeadlineEnabled(e.target.checked)}
             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
           <label htmlFor="deadlineEnabled" className="text-sm font-medium text-gray-700">
@@ -228,7 +479,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           </label>
         </div>
 
-        {formData.deadlineEnabled && (
+        {deadlineEnabled && (
           <div>
             <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">
               締め切り日時
@@ -236,9 +487,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
             <input
               type="datetime-local"
               id="deadline"
-              name="deadline"
-              value={formData.deadline}
-              onChange={handleChange}
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -250,9 +500,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           <input
             type="checkbox"
             id="notifyMembers"
-            name="notifyMembers"
-            checked={formData.notifyMembers}
-            onChange={handleChange}
+            checked={notifyMembers}
+            onChange={(e) => setNotifyMembers(e.target.checked)}
             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
           <label htmlFor="notifyMembers" className="text-sm font-medium text-gray-700">

@@ -1,9 +1,10 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
+import { Header } from "@/components/layout/Header";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -31,21 +32,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* ヘッダー */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">283バドミントン</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{session.user.nickname}</span>
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              ログアウト
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* メインコンテンツ */}
       <main className="max-w-4xl mx-auto px-4 py-6">
@@ -60,14 +47,16 @@ export default function Home() {
             <div className="text-sm text-gray-500">出欠を確認・登録</div>
           </Link>
 
-          <Link
-            href="/members"
-            className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
-          >
-            <div className="text-2xl mb-2">👥</div>
-            <div className="font-medium">メンバー</div>
-            <div className="text-sm text-gray-500">メンバー一覧</div>
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/members"
+              className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+            >
+              <div className="text-2xl mb-2">👥</div>
+              <div className="font-medium">メンバー</div>
+              <div className="text-sm text-gray-500">メンバー一覧</div>
+            </Link>
+          )}
 
           <Link
             href="/profile"

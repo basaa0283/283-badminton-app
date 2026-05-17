@@ -48,3 +48,25 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
           package: .
+
+      # デプロイ成功時のみメール通知。失敗はGitHub標準の通知に任せる。
+      - name: Notify deploy success
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "[283-badminton-app] PROD deploy 成功"
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: 283-badminton-app CI <${{ secrets.GMAIL_USER }}>
+          body: |
+            PROD 環境へのデプロイが完了しました。動作確認を始めてください。
+
+            Commit: ${{ github.sha }}
+            Message: ${{ github.event.head_commit.message }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            PROD URL: https://prod-283-badminton-app-gsacfjcnezadeugd.japanwest-01.azurewebsites.net/

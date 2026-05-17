@@ -64,6 +64,9 @@ export default function MembersPage() {
     );
   }
 
+  const role = session.user.role as UserRole;
+  const isAdmin = permissions.canAccessAdmin(role);
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
@@ -80,7 +83,11 @@ export default function MembersPage() {
         ) : (
           <div>
             {members.map((member) => (
-              <MemberCard key={member.id} member={member} />
+              <MemberCard
+                key={member.id}
+                member={member}
+                onClick={isAdmin ? () => router.push(`/admin/members/${member.id}`) : undefined}
+              />
             ))}
           </div>
         )}

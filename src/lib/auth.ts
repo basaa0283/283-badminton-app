@@ -117,26 +117,34 @@ export const authOptions: NextAuthOptions = {
       // LINE 情報の同期は events.signIn で行う（user.id が DB の id と一致するため）
       return true;
     },
-    async session({ session, token, user }) {
+    async session({ session, token }) {
       // JWT戦略の場合はtoken.subを使用
-      if (token?.sub) {
+      if (!token?.sub) return session;
+      try {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
         });
-        if (dbUser) {
-          session.user = {
-            ...session.user,
-            id: dbUser.id,
-            lineId: dbUser.lineId,
-            nickname: dbUser.nickname,
-            role: dbUser.role,
-          } as typeof session.user & {
-            id: string;
-            lineId: string | null;
-            nickname: string;
-            role: string;
-          };
+        if (!dbUser) {
+          // JWT が指すユーザーがDBに存在しない (例: 削除された、別環境のCookieが残っている)。
+          // session.user に id を入れないことで、保護されたページが unauthenticated 相当として扱える。
+          // クライアントはこの状態を検知して signOut → 再ログインに導くこと。
+          return session;
         }
+        session.user = {
+          ...session.user,
+          id: dbUser.id,
+          lineId: dbUser.lineId,
+          nickname: dbUser.nickname,
+          role: dbUser.role,
+        } as typeof session.user & {
+          id: string;
+          lineId: string | null;
+          nickname: string;
+          role: string;
+        };
+      } catch (error) {
+        // DB一時障害等。null系で fallthrough して session を返す。
+        console.error("[session] DB lookup failed:", error);
       }
       return session;
     },

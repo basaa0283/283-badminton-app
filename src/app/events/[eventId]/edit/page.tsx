@@ -21,6 +21,7 @@ interface EventData {
   feeVisible: boolean;
   deadline: string | null;
   deadlineEnabled: boolean;
+  category: { id: string; name: string; color: string | null } | null;
 }
 
 export default function EditEventPage() {
@@ -98,6 +99,7 @@ export default function EditEventPage() {
     feeVisible: boolean;
     deadline: string;
     deadlineEnabled: boolean;
+    categoryId: string;
   }) => {
     const res = await fetch(`/api/events/${eventId}`, {
       method: "PUT",
@@ -113,6 +115,7 @@ export default function EditEventPage() {
         feeVisible: formData.feeVisible,
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
         deadlineEnabled: formData.deadlineEnabled,
+        categoryId: formData.categoryId || null,
       }),
     });
 
@@ -153,6 +156,7 @@ export default function EditEventPage() {
                 feeVisible: event.feeVisible,
                 deadline: event.deadline ? formatDateForInput(event.deadline) : "",
                 deadlineEnabled: event.deadlineEnabled,
+                categoryId: event.category?.id || "",
               }}
               onSubmit={handleSubmit}
               submitLabel="更新する"

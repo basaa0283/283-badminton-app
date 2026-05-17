@@ -17,6 +17,7 @@ interface EventCardProps {
     waitlistCount: number;
     deadline: Date | string | null;
     deadlineEnabled: boolean;
+    category?: { id: string; name: string; color: string | null } | null;
     myAttendance?: {
       status: string;
       position: number | null;
@@ -35,7 +36,17 @@ export function EventCard({ event }: EventCardProps) {
       <Card hover className="mb-3">
         <CardContent>
           <div className="flex justify-between items-start mb-2">
-            <h3 className="font-semibold text-gray-900 line-clamp-1">{event.title}</h3>
+            <div className="flex items-center gap-2 min-w-0 flex-wrap">
+              <h3 className="font-semibold text-gray-900 line-clamp-1">{event.title}</h3>
+              {event.category && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-medium text-white shrink-0"
+                  style={{ backgroundColor: event.category.color ?? "#6B7280" }}
+                >
+                  {event.category.name}
+                </span>
+              )}
+            </div>
             {event.myAttendance && (
               <AttendanceStatusBadge status={event.myAttendance.status} />
             )}

@@ -3,16 +3,25 @@ import { z } from "zod";
 // イベント作成スキーマ
 export const createEventSchema = z.object({
   title: z.string().min(1, "タイトルは必須です").max(100, "タイトルは100文字以内で入力してください"),
-  description: z.string().max(1000, "説明は1000文字以内で入力してください").optional(),
+  description: z.string().max(1000, "説明は1000文字以内で入力してください").optional().nullable(),
   eventDate: z.string().datetime({ message: "有効な日時を入力してください" }),
   eventEndDate: z.string().datetime().optional().nullable(),
-  location: z.string().max(200, "場所は200文字以内で入力してください").optional(),
+  location: z.string().max(200, "場所は200文字以内で入力してください").optional().nullable(),
   capacity: z.number().int().positive("定員は1以上で入力してください").optional().nullable(),
   fee: z.number().int().nonnegative("参加費は0以上で入力してください").optional().nullable(),
   feeVisible: z.boolean().default(false),
   deadline: z.string().datetime().optional().nullable(),
   deadlineEnabled: z.boolean().default(false),
   notifyMembers: z.boolean().default(true),
+  // 種別タグ
+  categoryId: z.string().optional().nullable(),
+  // 経費・収支 (管理者用)
+  shuttleCount: z.number().int().nonnegative("シャトル本数は0以上で入力してください").optional().nullable(),
+  shuttleCost: z.number().int().nonnegative("シャトル代は0以上で入力してください").optional().nullable(),
+  gymCost: z.number().int().nonnegative("体育館代は0以上で入力してください").optional().nullable(),
+  otherCost: z.number().int().nonnegative("その他経費は0以上で入力してください").optional().nullable(),
+  otherMemo: z.string().max(500, "メモは500文字以内で入力してください").optional().nullable(),
+  actualRevenue: z.number().int().nonnegative("実集金額は0以上で入力してください").optional().nullable(),
 });
 
 // イベント更新スキーマ
@@ -32,7 +41,7 @@ export const updateProfileSchema = z.object({
   firstName: z.string().max(50).optional().nullable(),
   lastName: z.string().max(50).optional().nullable(),
   gender: z.enum(["male", "female"]).optional().nullable(),
-  age: z.number().int().min(0).max(150).optional().nullable(),
+  birthdate: z.string().datetime({ message: "有効な生年月日を入力してください" }).optional().nullable(),
   ageVisible: z.boolean().default(true),
   comment: z.string().max(500).optional().nullable(),
 });
@@ -48,7 +57,7 @@ export const adminUpdateMemberSchema = z.object({
   firstName: z.string().max(50).optional().nullable(),
   lastName: z.string().max(50).optional().nullable(),
   gender: z.enum(["male", "female"]).optional().nullable(),
-  age: z.number().int().min(0).max(150).optional().nullable(),
+  birthdate: z.string().datetime({ message: "有効な生年月日を入力してください" }).optional().nullable(),
   ageVisible: z.boolean().optional(),
   comment: z.string().max(500).optional().nullable(),
   role: z.enum(["admin", "subadmin", "member", "visitor", "guest"]).optional(),

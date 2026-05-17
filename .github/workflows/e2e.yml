@@ -1,0 +1,69 @@
+# E2E (Playwright) リグレッションテスト
+#
+# 実行タイミング:
+#   - dev/release への直push (DEVデプロイと並行)
+#   - master 向け PR (本番リリース前ゲート)
+#
+# 注意:
+#   - 共用DBである DEV の Azure SQL Database に接続するため、並行実行不可
+#     (concurrency.group で逐次化)
+#   - secrets:
+#       DATABASE_URL          … DEV の SQL Server 接続文字列 (deploy-dev.yml と共用)
+#       NEXTAUTH_SECRET       … NextAuth のセッション署名鍵
+#       E2E_ADMIN_USER_ID     … dev-login で使う管理者ユーザーID
+name: E2E
+
+on:
+  push:
+    branches:
+      - dev/release
+  pull_request:
+    branches:
+      - master
+
+concurrency:
+  group: e2e-dev-db
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Generate Prisma Client (SQL Server schema)
+        run: npx prisma generate --schema=prisma/schema.sqlserver.prisma
+
+      # 注意: schema 変更を伴う PR では deploy-dev (npm start で prisma db push が走る)
+      # 完了後に E2E を手動再実行する必要がある。
+      - name: Run Playwright tests
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: http://localhost:3100
+          E2E_ADMIN_USER_ID: ${{ secrets.E2E_ADMIN_USER_ID }}
+          E2E_PORT: "3100"
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
