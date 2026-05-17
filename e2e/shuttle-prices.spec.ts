@@ -48,7 +48,12 @@ test.describe("シャトル単価マスタ (admin)", () => {
     try {
       // 単価設定: 1個あたり 100円 (1200円のケース)
       const priceRes = await page.request.post("/api/admin/shuttle-prices", {
-        data: { effectiveFrom, casePrice: 1200, shuttlesPerCase: 12 },
+        data: {
+          effectiveFrom,
+          casePrice: 1200,
+          shuttlesPerCase: 12,
+          memo: `E2E auto-calc ${Date.now()}`,
+        },
       });
       priceId = (await priceRes.json()).data.id as string;
 
