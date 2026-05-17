@@ -5,21 +5,22 @@ import { prisma } from "@/lib/prisma";
 import { UserRole } from "@/lib/permissions";
 import { isVisibleTo } from "@/lib/announcement";
 
-// GET /api/announcements - 認証ユーザー向け公開中お知らせ
-// 自 role が audience に含まれる + publishedAt <= now のもののみ
+// GET /api/announcements - 自分の role に届いている公開中お知らせ + 既読状態
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED" } }, { status: 401 });
   }
   const role = session.user.role as UserRole;
+  const userId = session.user.id;
 
   const all = await prisma.announcement.findMany({
     where: { publishedAt: { lte: new Date() } },
     orderBy: { publishedAt: "desc" },
-    take: 50,
+    take: 100,
     include: {
       createdBy: { select: { nickname: true } },
+      reads: { where: { userId }, select: { readAt: true } },
     },
   });
 
@@ -35,6 +36,7 @@ export async function GET() {
       severity: a.severity,
       publishedAt: a.publishedAt,
       createdBy: a.createdBy?.nickname ?? null,
+      read: a.reads.length > 0,
     }));
 
   return NextResponse.json({ success: true, data: visible });

@@ -12,6 +12,7 @@ interface Announcement {
   body: string;
   severity: string;
   publishedAt: string;
+  read: boolean;
 }
 
 export function AnnouncementBanner() {
@@ -26,7 +27,11 @@ export function AnnouncementBanner() {
         const fresh = (json.data as Announcement[]).filter(
           (a) => new Date(a.publishedAt).getTime() >= cutoff
         );
-        setItems(fresh.slice(0, 3));
+        // 重要 (important) は常に表示。通常 (info) は未読のみ。
+        const display = fresh.filter(
+          (a) => a.severity === "important" || !a.read
+        );
+        setItems(display.slice(0, 3));
       })
       .catch(() => {});
   }, []);
@@ -54,13 +59,11 @@ export function AnnouncementBanner() {
           </Link>
         );
       })}
-      {items.length > 0 && (
-        <div className="text-right">
-          <Link href="/announcements" className="text-xs text-blue-600 hover:underline">
-            すべてのお知らせを見る →
-          </Link>
-        </div>
-      )}
+      <div className="text-right">
+        <Link href="/announcements" className="text-xs text-blue-600 hover:underline">
+          すべてのお知らせを見る →
+        </Link>
+      </div>
     </div>
   );
 }

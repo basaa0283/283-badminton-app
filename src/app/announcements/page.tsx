@@ -17,6 +17,7 @@ interface Announcement {
   severity: string;
   publishedAt: string;
   createdBy: string | null;
+  read: boolean;
 }
 
 export default function AnnouncementsPage() {
@@ -30,14 +31,24 @@ export default function AnnouncementsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (status === "authenticated") {
-      fetch("/api/announcements")
-        .then((r) => r.json())
-        .then((json) => {
-          if (json.success) setItems(json.data);
-        })
-        .finally(() => setLoading(false));
-    }
+    if (status !== "authenticated") return;
+    fetch("/api/announcements")
+      .then((r) => r.json())
+      .then((json) => {
+        if (!json.success) return;
+        const data = json.data as Announcement[];
+        setItems(data);
+        // 未読を全てまとめて既読化
+        const unreadIds = data.filter((a) => !a.read).map((a) => a.id);
+        if (unreadIds.length > 0) {
+          fetch("/api/announcements/read", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: unreadIds }),
+          }).catch(() => {});
+        }
+      })
+      .finally(() => setLoading(false));
   }, [status]);
 
   if (status === "loading") {
@@ -71,10 +82,15 @@ export default function AnnouncementsPage() {
               return (
                 <Card key={a.id} className={`${style.bg} ${style.border} border`}>
                   <CardContent className="py-4">
-                    <div id={a.id} className="flex items-center gap-2 mb-2 text-xs">
+                    <div id={a.id} className="flex items-center gap-2 mb-2 text-xs flex-wrap">
                       <span className={`px-2 py-0.5 rounded-full font-bold ${style.text} bg-white/60`}>
                         {style.label}
                       </span>
+                      {!a.read && (
+                        <span className="px-2 py-0.5 rounded-full font-bold text-white bg-blue-500">
+                          未読
+                        </span>
+                      )}
                       <span className="text-gray-500">
                         {format(new Date(a.publishedAt), "yyyy/M/d HH:mm", { locale: ja })}
                       </span>

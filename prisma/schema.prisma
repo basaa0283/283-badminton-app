@@ -49,6 +49,7 @@ model User {
   invitationToken InvitationToken?
 
   announcements   Announcement[] @relation("AnnouncementCreator")
+  announcementReads AnnouncementRead[]
 }
 
 // NextAuth Account
@@ -119,8 +120,22 @@ model Announcement {
   updatedAt       DateTime @updatedAt
 
   createdBy User? @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  reads     AnnouncementRead[]
 
   @@index([publishedAt])
+}
+
+// お知らせ既読マーカー (ユーザー × お知らせ)
+model AnnouncementRead {
+  userId         String
+  announcementId String
+  readAt         DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@id([userId, announcementId])
+  @@index([userId])
 }
 
 // イベント種別 (タグ)

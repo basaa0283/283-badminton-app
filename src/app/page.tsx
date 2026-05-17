@@ -82,24 +82,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* 権限表示 */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500">
-            あなたの権限: <span className="font-medium text-gray-700">{getRoleName(session.user.role)}</span>
-          </div>
-        </div>
       </main>
     </div>
   );
-}
-
-function getRoleName(role: string): string {
-  const roles: Record<string, string> = {
-    admin: "管理者",
-    subadmin: "副管理者",
-    member: "一般",
-    visitor: "ビジター",
-    guest: "ゲスト",
-  };
-  return roles[role] || role;
 }
