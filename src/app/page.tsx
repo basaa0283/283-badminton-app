@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
+import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -36,6 +37,8 @@ export default function Home() {
 
       {/* メインコンテンツ */}
       <main className="max-w-4xl mx-auto px-4 py-6">
+        <AnnouncementBanner />
+
         {/* クイックアクション */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <Link

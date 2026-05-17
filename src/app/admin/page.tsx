@@ -152,6 +152,16 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </Link>
+
+          <Link href="/admin/announcements">
+            <Card hover>
+              <CardContent className="py-6">
+                <div className="text-3xl mb-2">📢</div>
+                <h2 className="font-semibold text-gray-900">お知らせ管理</h2>
+                <p className="text-sm text-gray-500 mt-1">アプリ内のお知らせ投稿</p>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className="mt-6 bg-white rounded-lg shadow divide-y divide-gray-100">

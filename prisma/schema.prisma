@@ -47,6 +47,8 @@ model User {
   sessions        Session[]
 
   invitationToken InvitationToken?
+
+  announcements   Announcement[] @relation("AnnouncementCreator")
 }
 
 // NextAuth Account
@@ -99,6 +101,23 @@ model ShuttlePrice {
   createdAt       DateTime @default(now())
 
   @@index([effectiveFrom])
+}
+
+// お知らせ
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  audience    String   @default("all") // all / admin / member
+  severity    String   @default("info") // info / warning / important
+  publishedAt DateTime @default(now())
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User? @relation("AnnouncementCreator", fields: [createdById], references: [id])
+
+  @@index([publishedAt])
 }
 
 // イベント種別 (タグ)

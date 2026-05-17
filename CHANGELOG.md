@@ -3,6 +3,16 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [1.5.0] - 2026-05-17
+
+### Added
+
+- お知らせ機能
+  - `Announcement` モデル + admin の CRUD (`/admin/announcements`)
+  - ホーム上部に直近 3 件のバナー表示 + 全件閲覧用 `/announcements` ページ
+  - 対象ロール (全員 / 管理者のみ / メンバー以上) + 重要度 (お知らせ / 注意 / 重要) の色分け
+  - 既読管理は今回は対象外 (将来追加予定)
+
 ## [1.4.0] - 2026-05-17
 
 ### Added
@@ -186,6 +196,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[1.5.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.2.0...v1.3.0
