@@ -397,16 +397,6 @@ export default function EventDetailPage() {
           </Card>
         )}
 
-        {!canViewAttendees && (
-          <Card>
-            <CardContent>
-              <p className="text-gray-500 text-sm text-center py-4">
-                参加者一覧は一般メンバー以上のみ閲覧できます
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
         {canViewExpenses && event.attendees && (
           <AdminAttendanceManager
             eventId={event.id}
