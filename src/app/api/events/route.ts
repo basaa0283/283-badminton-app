@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
               nickname: true,
             },
           },
+          category: true,
         },
       }),
       prisma.event.count({ where }),
@@ -68,6 +69,9 @@ export async function GET(request: NextRequest) {
         feeVisible: event.feeVisible,
         deadline: event.deadline,
         deadlineEnabled: event.deadlineEnabled,
+        category: event.category
+          ? { id: event.category.id, name: event.category.name, color: event.category.color }
+          : null,
         createdBy: event.createdBy.nickname,
         attendingCount,
         waitlistCount,
@@ -147,6 +151,7 @@ export async function POST(request: NextRequest) {
         feeVisible: parsed.data.feeVisible,
         deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
         deadlineEnabled: parsed.data.deadlineEnabled,
+        categoryId: parsed.data.categoryId ?? null,
         shuttleCount: parsed.data.shuttleCount ?? null,
         shuttleCost: parsed.data.shuttleCost ?? null,
         gymCost: parsed.data.gymCost ?? null,

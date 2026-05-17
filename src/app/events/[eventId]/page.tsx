@@ -28,6 +28,7 @@ interface EventDetail {
   feeVisible: boolean;
   deadline: string | null;
   deadlineEnabled: boolean;
+  category: { id: string; name: string; color: string | null } | null;
   createdBy: string;
   createdById: string;
   attendingCount: number;
@@ -181,7 +182,17 @@ export default function EventDetailPage() {
         <Card className="mb-4">
           <CardHeader>
             <div className="flex items-start justify-between">
-              <h1 className="text-xl font-bold text-gray-900">{event.title}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-gray-900">{event.title}</h1>
+                {event.category && (
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
+                    style={{ backgroundColor: event.category.color ?? "#6B7280" }}
+                  >
+                    {event.category.name}
+                  </span>
+                )}
+              </div>
               {canEdit && (
                 <div className="flex gap-2">
                   <Link href={`/events/${eventId}/edit`}>

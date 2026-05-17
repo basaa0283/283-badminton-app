@@ -29,6 +29,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         createdBy: {
           select: { nickname: true },
         },
+        category: true,
         attendances: {
           include: {
             user: {
@@ -108,6 +109,9 @@ export async function GET(request: NextRequest, { params }: Params) {
         feeVisible: event.feeVisible,
         deadline: event.deadline,
         deadlineEnabled: event.deadlineEnabled,
+        category: event.category
+          ? { id: event.category.id, name: event.category.name, color: event.category.color }
+          : null,
         createdBy: event.createdBy.nickname,
         createdById: event.createdById,
         createdAt: event.createdAt,
@@ -224,6 +228,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.deadline !== undefined)
       updateData.deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
     if (parsed.data.deadlineEnabled !== undefined) updateData.deadlineEnabled = parsed.data.deadlineEnabled;
+    if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
     if (parsed.data.shuttleCount !== undefined) updateData.shuttleCount = parsed.data.shuttleCount;
     if (parsed.data.shuttleCost !== undefined) updateData.shuttleCost = parsed.data.shuttleCost;
     if (parsed.data.gymCost !== undefined) updateData.gymCost = parsed.data.gymCost;

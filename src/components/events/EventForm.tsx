@@ -16,6 +16,13 @@ interface EventFormData {
   deadline: string;
   deadlineEnabled: boolean;
   notifyMembers: boolean;
+  categoryId: string;
+}
+
+interface EventCategory {
+  id: string;
+  name: string;
+  color: string | null;
 }
 
 interface EventFormProps {
@@ -104,6 +111,17 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [deadline, setDeadline] = useState(initialData?.deadline || "");
   const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
   const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
+  const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
+  const [categories, setCategories] = useState<EventCategory[]>([]);
+
+  useEffect(() => {
+    fetch("/api/event-categories")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setCategories(json.data);
+      })
+      .catch(() => {});
+  }, []);
 
   // 過去イベントから場所の候補を取得
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
@@ -145,6 +163,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       deadline,
       deadlineEnabled,
       notifyMembers,
+      categoryId,
     };
 
     try {
@@ -176,6 +195,25 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="例: 12月練習会"
         />
+      </div>
+
+      <div>
+        <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-1">
+          種別
+        </label>
+        <select
+          id="categoryId"
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+        >
+          <option value="">未指定</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="min-w-0">

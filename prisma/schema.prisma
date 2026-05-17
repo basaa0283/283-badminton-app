@@ -101,6 +101,19 @@ model ShuttlePrice {
   @@index([effectiveFrom])
 }
 
+// イベント種別 (タグ)
+model EventCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?  // 例: "#3B82F6" (Tailwind blue-500)
+  order     Int      @default(0) // 表示順 (小さい順)
+  createdAt DateTime @default(now())
+
+  events    Event[]
+
+  @@index([order])
+}
+
 // イベント
 model Event {
   id              String    @id @default(cuid())
@@ -114,6 +127,10 @@ model Event {
   feeVisible      Boolean   @default(false) // 参加費を表示するか
   deadline        DateTime? // 締め切り日時
   deadlineEnabled Boolean   @default(false) // 締め切りを有効にするか
+
+  // イベント種別 (タグ)
+  categoryId      String?
+  category        EventCategory? @relation(fields: [categoryId], references: [id])
 
   // 経費・収支 (管理者用、イベント実施後に入力)
   shuttleCount    Int?      // 使用シャトル本数
