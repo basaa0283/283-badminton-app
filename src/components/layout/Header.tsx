@@ -28,8 +28,8 @@ export function Header() {
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-4xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-gray-900">
-            283バドミントン
+          <Link href="/" aria-label="ホームに戻る" className="hover:opacity-80 transition-opacity">
+            <img src="/logo.png" alt="２８ばど" className="h-9 w-auto" />
           </Link>
 
           <div ref={menuRef} className="relative">
@@ -58,12 +58,20 @@ export function Header() {
                 role="menu"
                 className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
               >
+                <Link
+                  href="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  role="menuitem"
+                >
+                  プロフィール
+                </Link>
                 <button
                   onClick={() => {
                     setMenuOpen(false);
                     signOut({ callbackUrl: "/login" });
                   }}
-                  className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
                   role="menuitem"
                 >
                   ログアウト
@@ -75,8 +83,8 @@ export function Header() {
 
         <nav className="flex gap-1 mt-3 -mx-2 overflow-x-auto">
           <NavLink href="/events">イベント一覧</NavLink>
+          <NavLink href="/announcements">お知らせ</NavLink>
           {isAdmin && <NavLink href="/members">メンバー</NavLink>}
-          <NavLink href="/profile">プロフィール</NavLink>
           {isAdmin && <NavLink href="/admin">管理</NavLink>}
         </nav>
       </div>

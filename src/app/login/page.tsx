@@ -38,14 +38,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          283バドミントン
-        </h1>
-        <p className="text-gray-600 text-center mb-8">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100 px-4 py-8">
+      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+        <div className="flex justify-center mb-3">
+          <img src="/logo.png" alt="２８ばど" className="h-20 w-auto max-w-full" />
+        </div>
+        <h1 className="text-xl font-bold text-center mb-1 text-gray-900">
           出欠管理アプリ
+        </h1>
+        <p className="text-gray-500 text-center text-sm mb-6">
+          サークルの練習・イベントの出欠を簡単に
         </p>
+        <div className="text-center mb-6">
+          <span className="inline-block text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-bold">
+            ベータ版
+          </span>
+        </div>
 
         {status === "loading" ? (
           <div className="text-center text-gray-500">

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { permissions, getRoleName, isValidRole, type UserRole } from "./permissions";
 
-const ALL_ROLES: UserRole[] = ["admin", "subadmin", "member", "visitor", "guest"];
+const ALL_ROLES: UserRole[] = ["admin", "subadmin", "member", "visitor", "guest", "pending"];
 
 describe("permissions", () => {
   describe("canCreateEvent / canEditEvent / canDeleteEvent", () => {
@@ -11,6 +11,7 @@ describe("permissions", () => {
       ["member", false],
       ["visitor", false],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canCreateEvent(role)).toBe(expected);
       expect(permissions.canEditEvent(role)).toBe(expected);
@@ -18,10 +19,22 @@ describe("permissions", () => {
     });
   });
 
-  describe("canViewEvent / canRespondToEvent", () => {
-    it.each(ALL_ROLES)("%s は誰でも閲覧・出欠可能", (role) => {
+  describe("canViewEvent", () => {
+    it.each(ALL_ROLES)("%s は誰でもイベントを閲覧可能", (role) => {
       expect(permissions.canViewEvent(role)).toBe(true);
-      expect(permissions.canRespondToEvent(role)).toBe(true);
+    });
+  });
+
+  describe("canRespondToEvent", () => {
+    it.each([
+      ["admin", true],
+      ["subadmin", true],
+      ["member", true],
+      ["visitor", true],
+      ["guest", false],
+      ["pending", false],
+    ] as const)("%s → %s", (role, expected) => {
+      expect(permissions.canRespondToEvent(role)).toBe(expected);
     });
   });
 
@@ -32,6 +45,7 @@ describe("permissions", () => {
       ["member", true],
       ["visitor", false],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canViewAttendeeList(role)).toBe(expected);
       expect(permissions.canViewAttendeeDetails(role)).toBe(expected);
@@ -39,8 +53,15 @@ describe("permissions", () => {
   });
 
   describe("canViewMemberList", () => {
-    it.each(ALL_ROLES)("%s は誰でもメンバー一覧を閲覧可能", (role) => {
-      expect(permissions.canViewMemberList(role)).toBe(true);
+    it.each([
+      ["admin", true],
+      ["subadmin", true],
+      ["member", false],
+      ["visitor", false],
+      ["guest", false],
+      ["pending", false],
+    ] as const)("%s → %s", (role, expected) => {
+      expect(permissions.canViewMemberList(role)).toBe(expected);
     });
   });
 
@@ -51,6 +72,7 @@ describe("permissions", () => {
       ["member", true],
       ["visitor", false],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canViewMemberDetails(role)).toBe(expected);
     });
@@ -63,6 +85,7 @@ describe("permissions", () => {
       ["member", false],
       ["visitor", false],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canEditMemberRole(role)).toBe(expected);
       expect(permissions.canAccessAdmin(role)).toBe(expected);
@@ -77,6 +100,7 @@ describe("getRoleName", () => {
     ["member", "一般"],
     ["visitor", "ビジター"],
     ["guest", "ゲスト"],
+    ["pending", "承認待ち"],
   ] as const)("%s → %s", (role, expected) => {
     expect(getRoleName(role)).toBe(expected);
   });

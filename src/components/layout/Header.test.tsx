@@ -38,7 +38,7 @@ describe("Header", () => {
     expect(screen.getByText("ツバサ")).toBeInTheDocument();
     expect(screen.getByText("一般")).toBeInTheDocument();
     expect(screen.getByText("イベント一覧")).toBeInTheDocument();
-    expect(screen.getByText("プロフィール")).toBeInTheDocument();
+    // プロフィールはタブから外し、アバターメニュー内に移動した
     expect(screen.queryByText("管理")).not.toBeInTheDocument();
     expect(screen.queryByText("メンバー")).not.toBeInTheDocument();
   });
@@ -69,8 +69,8 @@ describe("Header", () => {
       },
     });
     const { container } = render(<Header />);
-    const img = container.querySelector("img");
-    expect(img).toHaveAttribute("src", "https://example.com/avatar.png");
+    const avatar = container.querySelector('img[src="https://example.com/avatar.png"]');
+    expect(avatar).not.toBeNull();
   });
 
   it("アバターメニューを開いてログアウトボタンクリックで signOut が呼ばれる", async () => {

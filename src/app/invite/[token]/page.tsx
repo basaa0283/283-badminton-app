@@ -33,25 +33,23 @@ export default function InvitePage() {
       return;
     }
 
-    validateToken();
-  }, [status, token]);
+    (async () => {
+      try {
+        const res = await fetch(`/api/invite/${token}`);
+        const data = await res.json();
 
-  const validateToken = async () => {
-    try {
-      const res = await fetch(`/api/invite/${token}`);
-      const data = await res.json();
+        if (!data.success) {
+          setState(data.error?.code === "EXPIRED" ? "expired" : "invalid");
+          return;
+        }
 
-      if (!data.success) {
-        setState(data.error?.code === "EXPIRED" ? "expired" : "invalid");
-        return;
+        setNickname(data.data.nickname);
+        setState("valid");
+      } catch {
+        setState("invalid");
       }
-
-      setNickname(data.data.nickname);
-      setState("valid");
-    } catch {
-      setState("invalid");
-    }
-  };
+    })();
+  }, [status, token]);
 
   const handleLogin = () => {
     signIn("line", { callbackUrl: `/invite/complete?token=${token}` });

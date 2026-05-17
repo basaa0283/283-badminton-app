@@ -17,6 +17,7 @@ interface EventFormData {
   deadlineEnabled: boolean;
   notifyMembers: boolean;
   categoryId: string;
+  visibleToGuest: boolean;
 }
 
 interface EventCategory {
@@ -112,6 +113,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
   const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
+  const [visibleToGuest, setVisibleToGuest] = useState(initialData?.visibleToGuest ?? false);
   const [categories, setCategories] = useState<EventCategory[]>([]);
 
   useEffect(() => {
@@ -164,6 +166,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       deadlineEnabled,
       notifyMembers,
       categoryId,
+      visibleToGuest,
     };
 
     try {
@@ -493,6 +496,24 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
             />
           </div>
         )}
+      </div>
+
+      <div className="pt-2">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="visibleToGuest"
+            checked={visibleToGuest}
+            onChange={(e) => setVisibleToGuest(e.target.checked)}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="visibleToGuest" className="text-sm font-medium text-gray-700">
+            ゲスト (閲覧専用ロール) に公開する
+          </label>
+        </div>
+        <p className="text-xs text-gray-500 mt-1 ml-7">
+          サークル外の見学候補者にも見せて良いイベントだけ ON にしてください。OFF だとゲストの一覧にはイベントが現れません。
+        </p>
       </div>
 
       {showNotifyOption && (

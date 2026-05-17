@@ -130,17 +130,38 @@ export const authOptions: NextAuthOptions = {
           // クライアントはこの状態を検知して signOut → 再ログインに導くこと。
           return session;
         }
+
+        // 「最終操作」を更新。session callback は (a) ページレンダリング時、
+        // (b) クライアントが /api/auth/session を叩いたとき、(c) update() 呼び出し時
+        // に走るので、ユーザーが実際にアプリを開いているタイミングを概ね拾える。
+        // 5分以内に既に更新済みなら何もしない (DB書き込みのスロットル)。
+        const FIVE_MIN_MS = 5 * 60 * 1000;
+        const now = Date.now();
+        const last = dbUser.lastActiveAt?.getTime() ?? 0;
+        if (now - last > FIVE_MIN_MS) {
+          try {
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: { lastActiveAt: new Date(now) },
+            });
+          } catch (touchErr) {
+            console.error("[session] lastActiveAt touch failed:", touchErr);
+          }
+        }
+
         session.user = {
           ...session.user,
           id: dbUser.id,
           lineId: dbUser.lineId,
           nickname: dbUser.nickname,
           role: dbUser.role,
+          termsAcceptedVersion: dbUser.termsAcceptedVersion,
         } as typeof session.user & {
           id: string;
           lineId: string | null;
           nickname: string;
           role: string;
+          termsAcceptedVersion: string | null;
         };
       } catch (error) {
         // DB一時障害等。null系で fallthrough して session を返す。

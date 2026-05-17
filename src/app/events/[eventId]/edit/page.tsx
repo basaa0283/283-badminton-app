@@ -22,6 +22,7 @@ interface EventData {
   deadline: string | null;
   deadlineEnabled: boolean;
   category: { id: string; name: string; color: string | null } | null;
+  visibleToGuest: boolean;
 }
 
 export default function EditEventPage() {
@@ -84,8 +85,11 @@ export default function EditEventPage() {
   }
 
   const formatDateForInput = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toISOString().slice(0, 16);
+    // ISO 文字列 (UTC) をローカルタイムの "YYYY-MM-DDTHH:MM" に変換。
+    // toISOString().slice(0,16) は UTC のままズレるので NG。
+    const d = new Date(dateString);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
   const handleSubmit = async (formData: {
@@ -100,6 +104,7 @@ export default function EditEventPage() {
     deadline: string;
     deadlineEnabled: boolean;
     categoryId: string;
+    visibleToGuest: boolean;
   }) => {
     const res = await fetch(`/api/events/${eventId}`, {
       method: "PUT",
@@ -116,6 +121,7 @@ export default function EditEventPage() {
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
         deadlineEnabled: formData.deadlineEnabled,
         categoryId: formData.categoryId || null,
+        visibleToGuest: formData.visibleToGuest,
       }),
     });
 
@@ -157,6 +163,7 @@ export default function EditEventPage() {
                 deadline: event.deadline ? formatDateForInput(event.deadline) : "",
                 deadlineEnabled: event.deadlineEnabled,
                 categoryId: event.category?.id || "",
+                visibleToGuest: event.visibleToGuest,
               }}
               onSubmit={handleSubmit}
               submitLabel="更新する"

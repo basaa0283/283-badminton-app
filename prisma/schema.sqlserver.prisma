@@ -26,12 +26,16 @@ model User {
   ageVisible      Boolean   @default(true) // 生年月日・年齢を公開するか
   profileImageUrl String?   @db.NVarChar(500) // プロフィール画像URL（後方互換性）
   comment         String?   @db.NVarChar(1000) // その他コメント
-  role            String    @default("guest") // admin / subadmin / member / visitor / guest
+  role            String    @default("pending") // admin / subadmin / member / visitor / guest / pending (承認待ち)
   lastActiveAt    DateTime? // 最終操作日時
 
   // 管理者専用フィールド（一般ユーザーには見えない）
   skillLevel      Int?      // スキルレベル: 1-10
   adminNote       String?   @db.NVarChar(2000) // 管理者メモ
+
+  // 利用規約・プライバシーポリシーへの同意
+  termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
+  termsAcceptedVersion String?   @db.NVarChar(50) // 同意した規約バージョン (例: "2026-05-17")
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -47,6 +51,9 @@ model User {
   sessions        Session[]
 
   invitationToken InvitationToken?
+
+  announcements   Announcement[] @relation("AnnouncementCreator")
+  announcementReads AnnouncementRead[]
 }
 
 // NextAuth Account
@@ -101,13 +108,46 @@ model ShuttlePrice {
   @@index([effectiveFrom])
 }
 
+// お知らせ
+model Announcement {
+  id              String   @id @default(cuid())
+  title           String   @db.NVarChar(200)
+  body            String   @db.NVarChar(4000)
+  audienceMember  Boolean  @default(true)
+  audienceVisitor Boolean  @default(true)
+  audienceGuest   Boolean  @default(true)
+  severity        String   @default("info")
+  publishedAt     DateTime @default(now())
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  createdBy User? @relation("AnnouncementCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reads     AnnouncementRead[]
+
+  @@index([publishedAt])
+}
+
+// お知らせ既読マーカー
+model AnnouncementRead {
+  userId         String
+  announcementId String
+  readAt         DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@id([userId, announcementId])
+  @@index([userId])
+}
+
 // イベント種別 (タグ)
 model EventCategory {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  color     String?  // 例: "#3B82F6"
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  name            String   @unique
+  color           String?  // 例: "#3B82F6"
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
 
   events    Event[]
 
@@ -131,6 +171,13 @@ model Event {
   // イベント種別 (タグ)
   categoryId      String?
   category        EventCategory? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // ゲスト (閲覧専用ロール) に公開するか
+  visibleToGuest  Boolean   @default(false)
+
+  // 中止フラグ
+  cancelledAt     DateTime?
+  cancelReason    String?  @db.NVarChar(500)
 
   // 経費・収支 (管理者用、イベント実施後に入力)
   shuttleCount    Int?      // 使用シャトル本数

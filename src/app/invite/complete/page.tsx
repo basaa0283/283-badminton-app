@@ -33,32 +33,30 @@ function InviteCompleteContent() {
     if (completionStartedRef.current) return;
     completionStartedRef.current = true;
 
-    completeInvitation();
-  }, [status, token]);
+    (async () => {
+      try {
+        const res = await fetch("/api/invite/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
 
-  const completeInvitation = async () => {
-    try {
-      const res = await fetch("/api/invite/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
+        const data = await res.json();
 
-      const data = await res.json();
+        if (!data.success) {
+          setErrorMessage(data.error?.message || "招待の完了に失敗しました");
+          setState("error");
+          return;
+        }
 
-      if (!data.success) {
-        setErrorMessage(data.error?.message || "招待の完了に失敗しました");
+        await update();
+        setState("success");
+      } catch {
+        setErrorMessage("エラーが発生しました");
         setState("error");
-        return;
       }
-
-      await update();
-      setState("success");
-    } catch {
-      setErrorMessage("エラーが発生しました");
-      setState("error");
-    }
-  };
+    })();
+  }, [status, token, router, update]);
 
   return (
     <>

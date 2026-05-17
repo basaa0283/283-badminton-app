@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
+import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
+import { AdminAlertsBanner } from "@/components/admin/AdminAlertsBanner";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -36,6 +38,10 @@ export default function Home() {
 
       {/* メインコンテンツ */}
       <main className="max-w-4xl mx-auto px-4 py-6">
+        <AnnouncementBanner />
+
+        {isAdmin && <AdminAlertsBanner />}
+
         {/* クイックアクション */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <Link
@@ -79,24 +85,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* 権限表示 */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500">
-            あなたの権限: <span className="font-medium text-gray-700">{getRoleName(session.user.role)}</span>
-          </div>
-        </div>
       </main>
     </div>
   );
-}
-
-function getRoleName(role: string): string {
-  const roles: Record<string, string> = {
-    admin: "管理者",
-    subadmin: "副管理者",
-    member: "一般",
-    visitor: "ビジター",
-    guest: "ゲスト",
-  };
-  return roles[role] || role;
 }

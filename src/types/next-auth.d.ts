@@ -7,6 +7,7 @@ declare module "next-auth" {
       lineId: string | null;
       nickname: string;
       role: string;
+      termsAcceptedVersion: string | null;
       name?: string | null;
       email?: string | null;
       image?: string | null;

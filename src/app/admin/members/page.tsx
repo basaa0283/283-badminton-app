@@ -10,14 +10,89 @@ import { Button } from "@/components/ui/Button";
 import { RoleBadge } from "@/components/ui/Badge";
 import { permissions, UserRole } from "@/lib/permissions";
 import { formatSkillLevel } from "@/lib/skill-level";
+import { PendingApprovalCard } from "@/components/admin/PendingApprovalCard";
 
 interface Member {
   id: string;
   nickname: string;
   profileImageUrl: string | null;
   role: string;
+  gender: string | null;
+  age: number | null;
   skillLevel?: number | null;
   lastActiveAt?: string | null;
+  createdAt?: string | null;
+}
+
+type SortKey = "nickname" | "role" | "gender" | "age" | "skillLevel" | "lastActiveAt";
+type SortDir = "asc" | "desc";
+
+const ROLE_ORDER: Record<string, number> = {
+  pending: -1,
+  admin: 0,
+  subadmin: 1,
+  member: 2,
+  visitor: 3,
+  guest: 4,
+};
+
+function compareMembers(a: Member, b: Member, key: SortKey, dir: SortDir): number {
+  const sign = dir === "asc" ? 1 : -1;
+  const nullLast = (v: unknown) => (v === null || v === undefined ? Infinity : 0);
+  switch (key) {
+    case "nickname":
+      return sign * a.nickname.localeCompare(b.nickname, "ja");
+    case "role":
+      return sign * ((ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99));
+    case "gender": {
+      const av = a.gender ?? "";
+      const bv = b.gender ?? "";
+      return sign * av.localeCompare(bv);
+    }
+    case "age": {
+      const an = nullLast(a.age) || (a.age ?? 0);
+      const bn = nullLast(b.age) || (b.age ?? 0);
+      return sign * (an - bn);
+    }
+    case "skillLevel": {
+      const an = nullLast(a.skillLevel) || (a.skillLevel ?? 0);
+      const bn = nullLast(b.skillLevel) || (b.skillLevel ?? 0);
+      return sign * (an - bn);
+    }
+    case "lastActiveAt": {
+      const av = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+      const bv = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+      return sign * (av - bv);
+    }
+  }
+}
+
+function SortHeader({
+  sortKey,
+  current,
+  dir,
+  onClick,
+  numeric,
+  children,
+}: {
+  sortKey: SortKey;
+  current: SortKey;
+  dir: SortDir;
+  onClick: () => void;
+  numeric?: boolean;
+  children: React.ReactNode;
+}) {
+  const active = sortKey === current;
+  const arrow = !active ? "" : dir === "asc" ? " ↑" : " ↓";
+  return (
+    <th
+      onClick={onClick}
+      className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider select-none cursor-pointer hover:bg-gray-100 ${numeric ? "text-right" : "text-left"} ${active ? "text-blue-700" : "text-gray-600"}`}
+    >
+      {children}
+      <span>{arrow}</span>
+    </th>
+  );
 }
 
 function formatRelativeTime(dateString: string | null | undefined): string {
@@ -45,6 +120,28 @@ export default function AdminMembersPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newMemberNickname, setNewMemberNickname] = useState("");
+
+  // フィルタ・ソート状態
+  const [filterRole, setFilterRole] = useState<string>("all");
+  const [filterGender, setFilterGender] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("lastActiveAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "lastActiveAt" ? "desc" : "asc");
+    }
+  };
+
+  const visibleMembers = members
+    .filter((m) => filterRole === "all" || m.role === filterRole)
+    .filter((m) => filterGender === "all" || (m.gender ?? "") === filterGender)
+    .filter((m) => !search.trim() || m.nickname.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => compareMembers(a, b, sortKey, sortDir));
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -138,6 +235,11 @@ export default function AdminMembersPage() {
           </Button>
         </div>
 
+        <PendingApprovalCard
+          pendingMembers={members.filter((m) => m.role === "pending")}
+          onChanged={fetchMembers}
+        />
+
         {showCreateForm && (
           <Card className="mb-4">
             <CardContent className="py-4">
@@ -162,54 +264,110 @@ export default function AdminMembersPage() {
           </Card>
         )}
 
-        <div className="space-y-2">
-          {members.map((member) => (
-            <Card
-              key={member.id}
-              hover
-              onClick={() => handleMemberClick(member.id)}
-            >
-              <CardContent className="py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {member.profileImageUrl ? (
-                      <img
-                        src={member.profileImageUrl}
-                        alt=""
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-500">{member.nickname[0]}</span>
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{member.nickname}</span>
-                        <RoleBadge role={member.role} />
-                        {member.skillLevel !== null && member.skillLevel !== undefined && (
-                          <span
-                            className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded"
-                            title={formatSkillLevel(member.skillLevel)}
-                          >
-                            Lv.{member.skillLevel}
-                          </span>
+        <div className="bg-white rounded-lg shadow p-3 mb-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ニックネームで検索"
+            className="px-3 py-2 border border-gray-300 rounded-lg"
+          />
+          <select
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
+          >
+            <option value="all">権限: すべて</option>
+            <option value="pending">承認待ち</option>
+            <option value="admin">管理者</option>
+            <option value="subadmin">副管理者</option>
+            <option value="member">一般</option>
+            <option value="visitor">ビジター</option>
+            <option value="guest">ゲスト</option>
+          </select>
+          <select
+            value={filterGender}
+            onChange={(e) => setFilterGender(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
+          >
+            <option value="all">性別: すべて</option>
+            <option value="male">男性</option>
+            <option value="female">女性</option>
+            <option value="">未設定</option>
+          </select>
+        </div>
+
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-700">
+              <tr>
+                <SortHeader sortKey="nickname" current={sortKey} dir={sortDir} onClick={() => toggleSort("nickname")}>
+                  ニックネーム
+                </SortHeader>
+                <SortHeader sortKey="role" current={sortKey} dir={sortDir} onClick={() => toggleSort("role")}>
+                  権限
+                </SortHeader>
+                <SortHeader sortKey="gender" current={sortKey} dir={sortDir} onClick={() => toggleSort("gender")}>
+                  性別
+                </SortHeader>
+                <SortHeader sortKey="age" current={sortKey} dir={sortDir} onClick={() => toggleSort("age")} numeric>
+                  年齢
+                </SortHeader>
+                <SortHeader sortKey="skillLevel" current={sortKey} dir={sortDir} onClick={() => toggleSort("skillLevel")} numeric>
+                  Lv
+                </SortHeader>
+                <SortHeader sortKey="lastActiveAt" current={sortKey} dir={sortDir} onClick={() => toggleSort("lastActiveAt")}>
+                  最終操作
+                </SortHeader>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {visibleMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-6 text-gray-500">該当するメンバーがいません</td>
+                </tr>
+              ) : (
+                visibleMembers.map((member) => (
+                  <tr
+                    key={member.id}
+                    onClick={() => handleMemberClick(member.id)}
+                    className="hover:bg-blue-50 cursor-pointer"
+                  >
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {member.profileImageUrl ? (
+                          <img src={member.profileImageUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs shrink-0">
+                            {member.nickname[0]}
+                          </div>
+                        )}
+                        <span className="font-medium text-gray-900 truncate">{member.nickname}</span>
+                        {member.id === session.user.id && (
+                          <span className="text-[10px] text-gray-400 shrink-0">(自分)</span>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {formatRelativeTime(member.lastActiveAt)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {member.id === session.user.id && (
-                    <span className="text-xs text-gray-400">自分</span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    </td>
+                    <td className="px-3 py-2"><RoleBadge role={member.role} /></td>
+                    <td className="px-3 py-2 text-gray-700">
+                      {member.gender === "male" ? "男" : member.gender === "female" ? "女" : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right text-gray-700">
+                      {member.age !== null ? `${member.age}` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right text-gray-700" title={member.skillLevel !== null && member.skillLevel !== undefined ? formatSkillLevel(member.skillLevel) : ""}>
+                      {member.skillLevel !== null && member.skillLevel !== undefined ? member.skillLevel : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">
+                      {formatRelativeTime(member.lastActiveAt)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+        <p className="text-xs text-gray-400 mt-2">表示: {visibleMembers.length} / 全 {members.length}</p>
       </main>
     </div>
   );

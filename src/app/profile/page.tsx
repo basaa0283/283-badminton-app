@@ -177,12 +177,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {success && (
-              <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm mb-4">
-                プロフィールを更新しました
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="nickname" className="block text-sm font-medium text-gray-700 mb-1">
@@ -290,6 +284,12 @@ export default function ProfilePage() {
                   {formData.comment.length}/500
                 </div>
               </div>
+
+              {success && (
+                <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm">
+                  プロフィールを更新しました
+                </div>
+              )}
 
               <Button type="submit" className="w-full" loading={saving}>
                 保存する

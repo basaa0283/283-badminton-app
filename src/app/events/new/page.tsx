@@ -48,6 +48,7 @@ export default function NewEventPage() {
     deadlineEnabled: boolean;
     notifyMembers: boolean;
     categoryId: string;
+    visibleToGuest: boolean;
   }) => {
     const res = await fetch("/api/events", {
       method: "POST",
@@ -65,6 +66,7 @@ export default function NewEventPage() {
         deadlineEnabled: formData.deadlineEnabled,
         notifyMembers: formData.notifyMembers,
         categoryId: formData.categoryId || null,
+        visibleToGuest: formData.visibleToGuest,
       }),
     });
 

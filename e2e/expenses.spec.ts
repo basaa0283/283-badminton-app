@@ -22,7 +22,6 @@ test.describe("経費・収支管理 (admin)", () => {
       const putRes = await page.request.put(`/api/events/${eventId}`, {
         data: {
           shuttleCount: 3,
-          shuttleCost: 4500,
           gymCost: 5000,
           otherCost: 800,
           otherMemo: "飲み物代",
@@ -34,7 +33,7 @@ test.describe("経費・収支管理 (admin)", () => {
       const fetched = (await getRes.json()).data;
       expect(fetched.expenses).toBeTruthy();
       expect(fetched.expenses.shuttleCount).toBe(3);
-      expect(fetched.expenses.shuttleCost).toBe(4500);
+      // shuttleCost は適用単価から自動算出。単価未登録 (このテスト範囲外) なら null。
       expect(fetched.expenses.gymCost).toBe(5000);
       expect(fetched.expenses.otherCost).toBe(800);
       expect(fetched.expenses.otherMemo).toBe("飲み物代");
@@ -103,16 +102,17 @@ test.describe("経費・収支管理 (admin)", () => {
 
       await expensesCard.getByRole("button", { name: "編集" }).click();
 
-      await page.getByLabel("シャトル個数").fill("4");
-      await page.getByLabel("シャトル代 (円)").fill("6000");
+      // シャトル個数は入れない (シャトル代は自動算出のため、適用単価の有無で値が
+      // 変動する。ここでは個数依存しない 体育館代・その他経費 の保存フローを検証)
       await page.getByLabel("体育館代 (円)").fill("3000");
+      await page.getByLabel("その他経費 (円)").fill("500");
 
       await page.getByRole("button", { name: "保存" }).click();
 
       // 編集モードが閉じる
       await expect(expensesCard.getByRole("button", { name: "編集" })).toBeVisible();
-      // 経費合計 9000円 が表示される
-      await expect(expensesCard.getByText(/9,000円/)).toBeVisible();
+      // 経費合計 3,500円 が表示される (体育館 3000 + その他 500)
+      await expect(expensesCard.getByText(/3,500円/)).toBeVisible();
     } finally {
       if (eventId) {
         await page.request.delete(`/api/events/${eventId}`).catch(() => {});

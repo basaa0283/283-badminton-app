@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { attendanceSchema } from "@/lib/validations";
 import { notifyWaitlistPromotion } from "@/lib/line-messaging";
+import { permissions, UserRole } from "@/lib/permissions";
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -17,6 +18,14 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json(
         { success: false, error: { code: "UNAUTHORIZED", message: "ログインが必要です" } },
         { status: 401 }
+      );
+    }
+
+    const role = session.user.role as UserRole;
+    if (!permissions.canRespondToEvent(role)) {
+      return NextResponse.json(
+        { success: false, error: { code: "FORBIDDEN", message: "出欠回答の権限がありません" } },
+        { status: 403 }
       );
     }
 

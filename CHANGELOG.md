@@ -3,6 +3,109 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [2.0.0] - 2026-05-17
+
+ベータ公開版の初版。新規ゲスト動線・規約同意・ゲストロールの厳格化など、既存ユーザーの利用フローに影響する変更が含まれるため MAJOR バンプ。
+
+### Added
+
+#### 規約同意フロー
+- 利用規約 / プライバシーポリシーへの同意画面 (`/onboarding/terms`)
+  - `User.termsAcceptedAt` / `termsAcceptedVersion` で同意記録 (timestamp + version)
+  - `src/lib/legal.ts` の `CURRENT_TERMS_VERSION` をバンプすると全ユーザーが再同意必須
+  - 規約・PP のリンクを同意画面から開ける (新規タブ)
+  - 規約 / PP の本文をベータ公開向けに加筆 (ベータ告知 / 同意記録の明示 / 公式LINE問い合わせ先)
+
+#### 新規参加リクエスト承認フロー
+- `pending` ロールを新設 (新規 LINE ログインユーザーのデフォルトを `guest` → `pending` に変更)
+- `/onboarding/pending` 承認待ち画面 (公式 LINE への連絡 CTA + 30秒ごとの session 自動 refetch で承認後自動遷移)
+- 管理者向けの `/admin/members` ページに「承認待ち」カードを追加
+  - ロール選択 (guest / visitor / member) + 承認 / 却下 (削除) アクション
+- 管理者向け承認通知
+  - ホーム画面 (`/`) に「参加リクエストが N 件届いています」バナー (admin/subadmin のみ、件数 0 で非表示)
+  - 自力ゲストが規約同意した時点で `SystemSetting.contactEmail` 宛にメール通知 (Gmail SMTP)
+
+#### ゲスト動線
+- `Event.visibleToGuest` フラグ (デフォルト false)
+- イベント作成 / 編集フォームに「ゲスト公開」チェックボックス
+- ゲスト向けの「公式 LINE で問い合わせ」CTA カード
+- 公式 LINE URL を `SystemSetting.officialLineUrl` で管理 (管理画面で編集)
+
+#### お知らせ機能
+- `Announcement` モデル + admin の CRUD (`/admin/announcements`)
+- ホーム上部に直近 30日以内の最大 3件をバナー表示 + 全件閲覧用 `/announcements` ページ
+- 表示対象: 一般 / ビジター / ゲスト の複数選択 (admin/subadmin は常に閲覧可)
+- 重要度: 通常 (青) / 重要 (赤) の2段階で色分け
+- お知らせの既読管理 (`AnnouncementRead` テーブル)
+  - ホームバナーは「重要は常に表示、通常は未読のみ」
+  - `/announcements` を開くと表示中の未読を全件まとめて既読化
+  - 各カードに「未読」バッジ
+
+#### イベント・出欠
+- イベント中止フラグ (削除と区別。中止理由を記録、参加者に表示)
+  - イベント詳細から「中止する」ボタン (admin/subadmin)、解除も可能
+  - 一覧・詳細で「中止」バッジ + タイトル取り消し線
+
+#### 管理画面
+- メンバー一覧をテーブル形式に (検索 / 権限 / 性別 でフィルタ、各列クリックでソート)
+- ヘッダーアバターメニューに「プロフィール」を集約 (タブから除外)
+- ヘッダーナビゲーションに「お知らせ」タブを追加
+- `/admin` 設定: 公式 LINE URL、管理者通知メール、「お問い合わせ先」を分離
+
+#### 規約・PP / ベータ整備
+- `/privacy` / `/terms` ページを新設 (サークル内部利用前提の簡潔テンプレ)
+- フッターにプライバシーポリシー / 利用規約 / 公式LINE リンク
+- バージョン名と環境 suffix をフッター・ログイン画面に表示
+- 「２８ばど」ロゴをヘッダー / ログイン画面 / アプリアイコンに採用 (#1d6dca)
+- PWA `manifest.json` + アプリアイコン (iOS ホーム画面追加対応)
+- サークル名を「２８ばど」(全角) に統一
+
+#### 開発 / 運用
+- CI/CD パイプラインを `dev-pipeline.yml` / `prod-pipeline.yml` / `pr-check.yml` に再編
+  - test → deploy → e2e → notify の順次実行 (DEV)、test → deploy → release → notify (PROD)
+  - E2E は DEV のみ。本番DBを汚染しないため除外
+- E2E パイプラインに自動掃除ジョブ (`scripts/e2e-cleanup.ts`) を追加
+- 完了メールに「日本語変更点」「確認ポイント」セクションをコミット本文から抽出して載せる仕組み
+- ゲスト挙動の E2E (`e2e/guest-role.spec.ts`)
+
+### Changed
+
+- **ゲストロールを閲覧専用に厳格化**
+  - 出欠登録 (`canRespondToEvent`) を visitor 以上に
+  - メンバー一覧閲覧 (`canViewMemberList`) を subadmin 以上に
+  - イベント閲覧は `visibleToGuest=true` のものに限定
+- **新規 LINE ログインのデフォルトロールを `guest` → `pending`** に変更 (招待リンク経由は引き続き member に自動昇格)
+- フッターの「お問い合わせ」を公式 LINE 一本化 (`SystemSetting.contactEmail` は管理者通知メール用に転用)
+- 過去イベント一覧の表示範囲を「当月 + 先月」に絞り、ページング廃止
+- シャトル代の算出を「個数 × イベント日時点で適用される単価」に変更
+  - 過去イベントで単価未登録だったケースでも、後から該当期間の単価を追加するだけで経費レポート・経費欄に反映される
+  - 編集フォームのシャトル代入力欄は廃止 (自動算出値を表示のみ)
+- ホーム画面の「あなたの権限」表示を削除 (ヘッダーのアバター部分で確認可能)
+- プロフィール保存メッセージ「プロフィールを更新しました」の位置を「保存する」ボタンの直上に移動
+- `User.lastActiveAt` を出欠登録だけでなく任意のページアクセスでも更新するように (5分スロットル)
+
+### Fixed
+
+- イベント編集画面で開催日時が UTC で表示され、新規作成時と乖離する不具合を修正
+- `BirthdateInput` で月 / 日だけクリアすると `"1991--"` のような不正な値が出て、保存時にサイレントに null 化されるバグを修正
+- 未同意ユーザーが `/terms` / `/privacy` の「ホームに戻る」を押した際にホームが一瞬表示される問題を修正
+- 新規ログインの flow で旧 Cookie が残っているケース (DB に user が居ない) を検知して自動 sign-out
+- 旧 deploy / e2e / release ワークフローの並列実行による「deploy 失敗でも release が作成される」問題を解消
+
+### Removed
+
+- ゲスト・ビジターからのメンバー一覧アクセス (API + ナビゲーションタブ)
+- フッターの mailto: お問い合わせリンク (公式 LINE に統合)
+- イベント詳細の「参加者一覧は一般メンバー以上のみ閲覧できます」空状態カード (説明過多のため)
+- 旧 `deploy-dev.yml` / `deploy-prod.yml` / `e2e.yml` / `release.yml` / `test.yml` (パイプライン統合)
+- 過去イベント一覧の `page` / `limit` ページングパラメータ
+
+### Security
+
+- 利用規約 / プライバシーポリシーへの同意を全ユーザーに必須化、同意記録 (timestamp + バージョン) を保持
+- 新規ゲストの自動メンバー化を停止し、管理者承認制に変更
+- 招待リンクから入った既存メンバー以外の新規ユーザーに対し、デフォルトでイベント情報を非公開化 (`visibleToGuest=false` がデフォルト)
+
 ## [1.4.0] - 2026-05-17
 
 ### Added
@@ -186,6 +289,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[2.0.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.2.0...v1.3.0

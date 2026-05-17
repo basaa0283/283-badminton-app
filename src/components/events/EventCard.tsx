@@ -18,6 +18,7 @@ interface EventCardProps {
     deadline: Date | string | null;
     deadlineEnabled: boolean;
     category?: { id: string; name: string; color: string | null } | null;
+    cancelledAt?: string | Date | null;
     myAttendance?: {
       status: string;
       position: number | null;
@@ -37,7 +38,14 @@ export function EventCard({ event }: EventCardProps) {
         <CardContent>
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2 min-w-0 flex-wrap">
-              <h3 className="font-semibold text-gray-900 line-clamp-1">{event.title}</h3>
+              <h3 className={`font-semibold line-clamp-1 ${event.cancelledAt ? "text-gray-400 line-through" : "text-gray-900"}`}>
+                {event.title}
+              </h3>
+              {event.cancelledAt && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-red-500 shrink-0">
+                  中止
+                </span>
+              )}
               {event.category && (
                 <span
                   className="text-xs px-2 py-0.5 rounded-full font-medium text-white shrink-0"

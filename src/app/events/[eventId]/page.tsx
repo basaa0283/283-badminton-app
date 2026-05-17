@@ -8,12 +8,13 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Header } from "@/components/layout/Header";
 import { AttendanceForm } from "@/components/events/AttendanceForm";
+import { GuestContactCard } from "@/components/guests/GuestContactCard";
 import { AttendeeList } from "@/components/events/AttendeeList";
 import { AdminAttendanceManager } from "@/components/events/AdminAttendanceManager";
 import { ExpensesCard } from "@/components/events/ExpensesCard";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
-import { ConfirmModal } from "@/components/ui/Modal";
+import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { permissions, UserRole } from "@/lib/permissions";
 
 interface EventDetail {
@@ -29,6 +30,8 @@ interface EventDetail {
   deadline: string | null;
   deadlineEnabled: boolean;
   category: { id: string; name: string; color: string | null } | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
   createdBy: string;
   createdById: string;
   attendingCount: number;
@@ -81,6 +84,9 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelReasonInput, setCancelReasonInput] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -146,6 +152,31 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancelReasonInput.trim() || null }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCancelModalOpen(false);
+        setCancelReasonInput("");
+        await fetchEvent();
+      }
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleUncancel = async () => {
+    if (!confirm("中止を解除してイベントを再開しますか？")) return;
+    const res = await fetch(`/api/events/${eventId}/cancel`, { method: "DELETE" });
+    if ((await res.json()).success) await fetchEvent();
+  };
+
   if (status === "loading" || !session || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -163,6 +194,7 @@ export default function EventDetailPage() {
   const canDelete = permissions.canDeleteEvent(role);
   const canViewAttendees = permissions.canViewAttendeeList(role);
   const canViewExpenses = permissions.canAccessAdmin(role);
+  const canRespond = permissions.canRespondToEvent(role);
   const eventDate = new Date(event.eventDate);
   const isDeadlinePassed =
     event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date();
@@ -194,12 +226,21 @@ export default function EventDetailPage() {
                 )}
               </div>
               {canEdit && (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 justify-end">
                   <Link href={`/events/${eventId}/edit`}>
                     <Button size="sm" variant="secondary">
                       編集
                     </Button>
                   </Link>
+                  {event.cancelledAt ? (
+                    <Button size="sm" variant="secondary" onClick={handleUncancel}>
+                      中止を解除
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="secondary" onClick={() => setCancelModalOpen(true)}>
+                      中止する
+                    </Button>
+                  )}
                   {canDelete && (
                     <Button
                       size="sm"
@@ -214,6 +255,14 @@ export default function EventDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {event.cancelledAt && (
+              <div className="mb-3 p-3 rounded-lg bg-red-50 border border-red-200">
+                <div className="text-sm font-bold text-red-800">⚠️ このイベントは中止されました</div>
+                {event.cancelReason && (
+                  <div className="text-sm text-red-700 mt-1 whitespace-pre-wrap">理由: {event.cancelReason}</div>
+                )}
+              </div>
+            )}
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2 text-gray-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,7 +364,7 @@ export default function EventDetailPage() {
         </Card>
 
         <div className="space-y-4">
-        {!isPast && (
+        {!isPast && canRespond && (
           <Card>
             <CardHeader>
               <h2 className="font-semibold text-gray-900">出欠登録</h2>
@@ -331,6 +380,8 @@ export default function EventDetailPage() {
           </Card>
         )}
 
+        {!canRespond && <GuestContactCard />}
+
         {canViewAttendees && event.attendees && (
           <Card>
             <CardHeader>
@@ -342,16 +393,6 @@ export default function EventDetailPage() {
               ) : (
                 <AttendeeList attendees={event.attendees} />
               )}
-            </CardContent>
-          </Card>
-        )}
-
-        {!canViewAttendees && (
-          <Card>
-            <CardContent>
-              <p className="text-gray-500 text-sm text-center py-4">
-                参加者一覧は一般メンバー以上のみ閲覧できます
-              </p>
             </CardContent>
           </Card>
         )}
@@ -385,6 +426,40 @@ export default function EventDetailPage() {
         variant="danger"
         loading={deleting}
       />
+
+      <Modal
+        isOpen={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        title="イベントを中止"
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700">
+            イベントを中止します。削除と違い、参加者には「中止」と表示されます。
+          </p>
+          <div>
+            <label htmlFor="cancel-reason" className="block text-xs text-gray-600 mb-1">
+              中止理由 (任意、メンバーに表示されます)
+            </label>
+            <textarea
+              id="cancel-reason"
+              value={cancelReasonInput}
+              onChange={(e) => setCancelReasonInput(e.target.value)}
+              rows={3}
+              maxLength={500}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              placeholder="例: 会場の都合により中止"
+            />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setCancelModalOpen(false)} disabled={cancelling}>
+              キャンセル
+            </Button>
+            <Button variant="danger" className="flex-1" onClick={handleCancel} loading={cancelling}>
+              中止する
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

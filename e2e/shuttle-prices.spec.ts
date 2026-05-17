@@ -48,7 +48,12 @@ test.describe("シャトル単価マスタ (admin)", () => {
     try {
       // 単価設定: 1個あたり 100円 (1200円のケース)
       const priceRes = await page.request.post("/api/admin/shuttle-prices", {
-        data: { effectiveFrom, casePrice: 1200, shuttlesPerCase: 12 },
+        data: {
+          effectiveFrom,
+          casePrice: 1200,
+          shuttlesPerCase: 12,
+          memo: `E2E auto-calc ${Date.now()}`,
+        },
       });
       priceId = (await priceRes.json()).data.id as string;
 
@@ -73,8 +78,8 @@ test.describe("シャトル単価マスタ (admin)", () => {
       await expensesCard.getByRole("button", { name: "編集" }).click();
       await page.getByLabel("シャトル個数").fill("5");
 
-      // シャトル代が自動で 500 に
-      await expect(page.getByLabel("シャトル代 (円)")).toHaveValue("500");
+      // シャトル代 (自動算出) 表示に 500円 が出る
+      await expect(page.getByTestId("shuttle-cost-auto")).toHaveText("500円");
     } finally {
       if (eventId) await page.request.delete(`/api/events/${eventId}`).catch(() => {});
       if (priceId) await page.request.delete(`/api/admin/shuttle-prices/${priceId}`).catch(() => {});

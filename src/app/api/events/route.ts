@@ -19,18 +19,26 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const upcoming = searchParams.get("upcoming") !== "false";
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
 
     const now = new Date();
-    const where = upcoming ? { eventDate: { gte: now } } : { eventDate: { lt: now } };
+    // 過去イベントは「当月＋先月」のみ表示する。それ以前は管理者画面から見る。
+    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const dateWhere = upcoming
+      ? { eventDate: { gte: now } }
+      : { eventDate: { gte: startOfPrevMonth, lt: now } };
+
+    // ゲスト (閲覧専用ロール) と pending (承認待ち) は visibleToGuest=true なイベントのみ。
+    // pending は本来 /onboarding/pending に redirect されるが、API 直叩きに対する防衛線。
+    const role = session.user.role as UserRole;
+    const restrictToGuestVisible = role === "guest" || role === "pending";
+    const where = restrictToGuestVisible
+      ? { ...dateWhere, visibleToGuest: true }
+      : dateWhere;
 
     const [events, total] = await Promise.all([
       prisma.event.findMany({
         where,
         orderBy: { eventDate: upcoming ? "asc" : "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
         include: {
           attendances: {
             select: {
@@ -72,6 +80,8 @@ export async function GET(request: NextRequest) {
         category: event.category
           ? { id: event.category.id, name: event.category.name, color: event.category.color }
           : null,
+        cancelledAt: event.cancelledAt,
+        cancelReason: event.cancelReason,
         createdBy: event.createdBy.nickname,
         attendingCount,
         waitlistCount,
@@ -88,11 +98,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: eventsWithCounts,
+      // 過去イベントは「当月＋先月」、未来イベントは全期間で、ページング廃止。
+      // 型互換のため pagination は自己整合な値で残しておく。
       pagination: {
-        page,
-        limit,
+        page: 1,
+        limit: total,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: 1,
       },
     });
   } catch (error) {
@@ -152,6 +164,7 @@ export async function POST(request: NextRequest) {
         deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
         deadlineEnabled: parsed.data.deadlineEnabled,
         categoryId: parsed.data.categoryId ?? null,
+        visibleToGuest: parsed.data.visibleToGuest ?? false,
         shuttleCount: parsed.data.shuttleCount ?? null,
         shuttleCost: parsed.data.shuttleCost ?? null,
         gymCost: parsed.data.gymCost ?? null,

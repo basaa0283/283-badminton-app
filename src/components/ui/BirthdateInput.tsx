@@ -19,7 +19,12 @@ interface BirthdateInputProps {
 }
 
 export function BirthdateInput({ value, onChange, idPrefix = "birthdate" }: BirthdateInputProps) {
-  const [y, m, d] = value ? value.split("-") : ["", "", ""];
+  // value は常に "YYYY-MM-DD" 形式 (全て揃った状態) または空文字 のいずれかを保つ。
+  // 月や日だけクリアされた中途半端な状態は内部的にもファイル外にも出さない:
+  // - 過去にここで "1991--" や "1991-01-" のような不正値を返してしまい、
+  //   保存処理で new Date(invalid).toISOString() が走って失敗 (または NaN を経て
+  //   サイレントに null 保存) するバグがあった。
+  const [y, m, d] = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.split("-") : ["", "", ""];
 
   const setY = (newY: string) => {
     if (!newY) {
@@ -34,8 +39,8 @@ export function BirthdateInput({ value, onChange, idPrefix = "birthdate" }: Birt
   };
   const setM = (newM: string) => {
     if (!newM) {
-      if (y) onChange(`${y}--`);
-      else onChange("");
+      // 月クリア = 生年月日全体をリセット (中途半端な状態を作らない)
+      onChange("");
       return;
     }
     const yy = y || String(NOW.getFullYear() - 30);
@@ -46,7 +51,8 @@ export function BirthdateInput({ value, onChange, idPrefix = "birthdate" }: Birt
   };
   const setD = (newD: string) => {
     if (!newD) {
-      onChange(y && m ? `${y}-${m}-` : "");
+      // 日クリア = 生年月日全体をリセット
+      onChange("");
       return;
     }
     const yy = y || String(NOW.getFullYear() - 30);

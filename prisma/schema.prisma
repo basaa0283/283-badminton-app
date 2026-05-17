@@ -26,12 +26,16 @@ model User {
   ageVisible      Boolean   @default(true) // 生年月日・年齢を公開するか
   profileImageUrl String?   // プロフィール画像URL（後方互換性）
   comment         String?   // その他コメント
-  role            String    @default("guest") // admin / subadmin / member / visitor / guest
+  role            String    @default("pending") // admin / subadmin / member / visitor / guest / pending (承認待ち)
   lastActiveAt    DateTime? // 最終操作日時
 
   // 管理者専用フィールド（一般ユーザーには見えない）
   skillLevel      Int?      // スキルレベル: 1-10
   adminNote       String?   // 管理者メモ
+
+  // 利用規約・プライバシーポリシーへの同意
+  termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
+  termsAcceptedVersion String?   // 同意した規約バージョン (例: "2026-05-17")
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -47,6 +51,9 @@ model User {
   sessions        Session[]
 
   invitationToken InvitationToken?
+
+  announcements   Announcement[] @relation("AnnouncementCreator")
+  announcementReads AnnouncementRead[]
 }
 
 // NextAuth Account
@@ -101,13 +108,47 @@ model ShuttlePrice {
   @@index([effectiveFrom])
 }
 
+// お知らせ
+// 表示対象は non-admin role ごとに on/off。admin/subadmin は常に全件閲覧。
+model Announcement {
+  id              String   @id @default(cuid())
+  title           String
+  body            String
+  audienceMember  Boolean  @default(true)
+  audienceVisitor Boolean  @default(true)
+  audienceGuest   Boolean  @default(true)
+  severity        String   @default("info") // info / important
+  publishedAt     DateTime @default(now())
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  createdBy User? @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  reads     AnnouncementRead[]
+
+  @@index([publishedAt])
+}
+
+// お知らせ既読マーカー (ユーザー × お知らせ)
+model AnnouncementRead {
+  userId         String
+  announcementId String
+  readAt         DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@id([userId, announcementId])
+  @@index([userId])
+}
+
 // イベント種別 (タグ)
 model EventCategory {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  color     String?  // 例: "#3B82F6" (Tailwind blue-500)
-  order     Int      @default(0) // 表示順 (小さい順)
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  name            String   @unique
+  color           String?  // 例: "#3B82F6" (Tailwind blue-500)
+  order           Int      @default(0) // 表示順 (小さい順)
+  createdAt       DateTime @default(now())
 
   events    Event[]
 
@@ -131,6 +172,13 @@ model Event {
   // イベント種別 (タグ)
   categoryId      String?
   category        EventCategory? @relation(fields: [categoryId], references: [id])
+
+  // ゲスト (閲覧専用ロール) に公開するか。デフォルトは非公開。
+  visibleToGuest  Boolean   @default(false)
+
+  // 中止フラグ (削除と区別。中止理由を後から見られるよう履歴として残す)
+  cancelledAt     DateTime?
+  cancelReason    String?
 
   // 経費・収支 (管理者用、イベント実施後に入力)
   shuttleCount    Int?      // 使用シャトル本数
