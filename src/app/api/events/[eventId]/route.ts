@@ -53,6 +53,15 @@ export async function GET(request: NextRequest, { params }: Params) {
       );
     }
 
+    // ゲスト (閲覧専用ロール) は visibleToGuest=true のカテゴリのみアクセス可。
+    // それ以外は存在を隠す (404 で返す)。
+    if (role === "guest" && !event.category?.visibleToGuest) {
+      return NextResponse.json(
+        { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
+        { status: 404 }
+      );
+    }
+
     const attendingCount = event.attendances.filter((a) => a.status === "attending").length;
     const waitlistCount = event.attendances.filter((a) => a.status === "waitlist").length;
     const myAttendance = event.attendances.find((a) => a.user.id === session.user.id);

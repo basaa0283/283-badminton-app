@@ -139,11 +139,12 @@ model AnnouncementRead {
 
 // イベント種別 (タグ)
 model EventCategory {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  color     String?  // 例: "#3B82F6"
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  name            String   @unique
+  color           String?  // 例: "#3B82F6"
+  order           Int      @default(0)
+  visibleToGuest  Boolean  @default(false) // ゲスト (閲覧専用ロール) に公開するか
+  createdAt       DateTime @default(now())
 
   events    Event[]
 

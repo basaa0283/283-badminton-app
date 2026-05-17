@@ -12,6 +12,7 @@ type AppSettings = {
   notifyReminderEnabled: boolean;
   notifyWaitlistEnabled: boolean;
   contactEmail: string;
+  officialLineUrl: string;
 };
 
 type SettingKey = "notifyReminderEnabled" | "notifyWaitlistEnabled";
@@ -47,6 +48,9 @@ export default function AdminPage() {
   const [contactEmailInput, setContactEmailInput] = useState("");
   const [savingContact, setSavingContact] = useState(false);
   const [contactSaved, setContactSaved] = useState(false);
+  const [officialLineUrlInput, setOfficialLineUrlInput] = useState("");
+  const [savingLine, setSavingLine] = useState(false);
+  const [lineSaved, setLineSaved] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -67,6 +71,7 @@ export default function AdminPage() {
           if (json.success) {
             setSettings(json.data);
             setContactEmailInput(json.data.contactEmail || "");
+            setOfficialLineUrlInput(json.data.officialLineUrl || "");
           }
         });
     }
@@ -92,6 +97,29 @@ export default function AdminPage() {
       }
     } finally {
       setSavingContact(false);
+    }
+  };
+
+  const handleSaveOfficialLine = async () => {
+    if (savingLine) return;
+    setSavingLine(true);
+    setLineSaved(false);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ officialLineUrl: officialLineUrlInput.trim() }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettings((prev) =>
+          prev ? { ...prev, officialLineUrl: officialLineUrlInput.trim() } : prev
+        );
+        setLineSaved(true);
+        setTimeout(() => setLineSaved(false), 2000);
+      }
+    } finally {
+      setSavingLine(false);
     }
   };
 
@@ -234,6 +262,31 @@ export default function AdminPage() {
               className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
             >
               {savingContact ? "保存中..." : contactSaved ? "保存しました" : "保存"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-700">公式 LINE</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              ゲスト (閲覧専用ロール) に表示する「お問い合わせはこちら」リンクの URL。空欄ならゲスト画面に CTA を出さない。
+            </p>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-2">
+            <input
+              type="url"
+              value={officialLineUrlInput}
+              onChange={(e) => setOfficialLineUrlInput(e.target.value)}
+              placeholder="例: https://line.me/R/ti/p/@xxxxxx"
+              className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <button
+              onClick={handleSaveOfficialLine}
+              disabled={savingLine || settings === null}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
+            >
+              {savingLine ? "保存中..." : lineSaved ? "保存しました" : "保存"}
             </button>
           </div>
         </div>

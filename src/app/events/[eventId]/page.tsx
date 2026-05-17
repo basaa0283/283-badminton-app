@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Header } from "@/components/layout/Header";
 import { AttendanceForm } from "@/components/events/AttendanceForm";
+import { GuestContactCard } from "@/components/guests/GuestContactCard";
 import { AttendeeList } from "@/components/events/AttendeeList";
 import { AdminAttendanceManager } from "@/components/events/AdminAttendanceManager";
 import { ExpensesCard } from "@/components/events/ExpensesCard";
@@ -193,6 +194,7 @@ export default function EventDetailPage() {
   const canDelete = permissions.canDeleteEvent(role);
   const canViewAttendees = permissions.canViewAttendeeList(role);
   const canViewExpenses = permissions.canAccessAdmin(role);
+  const canRespond = permissions.canRespondToEvent(role);
   const eventDate = new Date(event.eventDate);
   const isDeadlinePassed =
     event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date();
@@ -362,7 +364,7 @@ export default function EventDetailPage() {
         </Card>
 
         <div className="space-y-4">
-        {!isPast && (
+        {!isPast && canRespond && (
           <Card>
             <CardHeader>
               <h2 className="font-semibold text-gray-900">出欠登録</h2>
@@ -377,6 +379,8 @@ export default function EventDetailPage() {
             </CardContent>
           </Card>
         )}
+
+        {!canRespond && <GuestContactCard />}
 
         {canViewAttendees && event.attendees && (
           <Card>

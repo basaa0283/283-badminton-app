@@ -14,6 +14,7 @@ interface EventCategory {
   name: string;
   color: string | null;
   order: number;
+  visibleToGuest: boolean;
 }
 
 const COLOR_PRESETS = [
@@ -29,6 +30,7 @@ export default function EventCategoriesPage() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState(COLOR_PRESETS[0]);
+  const [visibleToGuest, setVisibleToGuest] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submitRef = useRef(false);
@@ -65,7 +67,7 @@ export default function EventCategoriesPage() {
       const res = await fetch("/api/admin/event-categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), color }),
+        body: JSON.stringify({ name: name.trim(), color, visibleToGuest }),
       });
       const data = await res.json();
       if (!data.success) {
@@ -73,6 +75,7 @@ export default function EventCategoriesPage() {
         return;
       }
       setName("");
+      setVisibleToGuest(false);
       setShowForm(false);
       await fetchCategories();
     } finally {
@@ -98,6 +101,15 @@ export default function EventCategoriesPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ color: newColor }),
+    });
+    await fetchCategories();
+  };
+
+  const handleToggleGuestVisible = async (id: string, next: boolean) => {
+    await fetch(`/api/admin/event-categories/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visibleToGuest: next }),
     });
     await fetchCategories();
   };
@@ -179,8 +191,22 @@ export default function EventCategoriesPage() {
                     ))}
                   </div>
                 </div>
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={visibleToGuest}
+                      onChange={(e) => setVisibleToGuest(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    ゲスト (閲覧専用ロール) にも公開する
+                  </label>
+                  <p className="text-xs text-gray-500 ml-6 mt-1">
+                    通常練習などサークル外に見せても支障のない種別だけ ON にしてください。
+                  </p>
+                </div>
                 <div className="flex gap-2 pt-2">
-                  <Button variant="secondary" className="flex-1 text-sm" onClick={() => { setShowForm(false); setName(""); setError(null); }} disabled={submitting}>
+                  <Button variant="secondary" className="flex-1 text-sm" onClick={() => { setShowForm(false); setName(""); setVisibleToGuest(false); setError(null); }} disabled={submitting}>
                     キャンセル
                   </Button>
                   <Button className="flex-1 text-sm" onClick={handleAdd} loading={submitting} disabled={!name.trim()}>
@@ -226,6 +252,17 @@ export default function EventCategoriesPage() {
                     >
                       削除
                     </button>
+                  </div>
+                  <div className="mt-2">
+                    <label className="flex items-center gap-2 text-xs text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={c.visibleToGuest}
+                        onChange={(e) => handleToggleGuestVisible(c.id, e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      ゲスト公開
+                    </label>
                   </div>
                 </CardContent>
               </Card>

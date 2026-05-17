@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { EventCard } from "@/components/events/EventCard";
 import { Button } from "@/components/ui/Button";
+import { GuestContactCard } from "@/components/guests/GuestContactCard";
 import { permissions, UserRole } from "@/lib/permissions";
 
 interface Event {
@@ -69,6 +70,7 @@ export default function EventsPage() {
 
   const role = session.user.role as UserRole;
   const canCreate = permissions.canCreateEvent(role);
+  const canRespond = permissions.canRespondToEvent(role);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -107,6 +109,12 @@ export default function EventsPage() {
           </button>
         </div>
 
+        {!canRespond && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-900">
+            あなたは閲覧専用モードでご利用中です。出欠登録などの操作はできません。
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-8 text-gray-500">読み込み中...</div>
         ) : events.length === 0 ? (
@@ -118,6 +126,12 @@ export default function EventsPage() {
             {events.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
+          </div>
+        )}
+
+        {!canRespond && (
+          <div className="mt-6">
+            <GuestContactCard />
           </div>
         )}
       </main>

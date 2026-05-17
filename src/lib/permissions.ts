@@ -14,14 +14,15 @@ export const permissions = {
   canEditEvent: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.subadmin,
   canDeleteEvent: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.subadmin,
   canViewEvent: (_role: UserRole) => true,
-  canRespondToEvent: (_role: UserRole) => true,
+  // 出欠回答は visitor 以上のみ。ゲストは閲覧専用。
+  canRespondToEvent: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.visitor,
 
   // 参加者リスト権限
   canViewAttendeeList: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
   canViewAttendeeDetails: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
 
-  // メンバー権限
-  canViewMemberList: (_role: UserRole) => true,
+  // メンバー権限。ゲストはメンバー一覧も見せない (個人情報保護)。
+  canViewMemberList: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.visitor,
   canViewMemberDetails: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
   canEditMemberRole: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.subadmin,
 
