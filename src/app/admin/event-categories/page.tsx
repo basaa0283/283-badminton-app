@@ -55,19 +55,6 @@ export default function EventCategoriesPage() {
     if (status === "authenticated") fetchCategories().finally(() => setLoading(false));
   }, [status]);
 
-  const handleSeed = async () => {
-    if (submitRef.current) return;
-    submitRef.current = true;
-    setSubmitting(true);
-    try {
-      await fetch("/api/admin/event-categories", { method: "POST" });
-      await fetchCategories();
-    } finally {
-      setSubmitting(false);
-      submitRef.current = false;
-    }
-  };
-
   const handleAdd = async () => {
     if (submitRef.current) return;
     if (!name.trim()) return;
@@ -145,13 +132,10 @@ export default function EventCategoriesPage() {
 
         {!loading && categories.length === 0 && (
           <Card className="mb-4">
-            <CardContent className="py-4 space-y-3">
+            <CardContent className="py-4">
               <p className="text-sm text-gray-700">
-                種別がまだ登録されていません。「通常練習 / シングル練 / 基礎練 / 大会 / 飲み会」の5種を一括登録できます。
+                種別がまだ登録されていません。右上の「+ 追加」から登録してください。
               </p>
-              <Button onClick={handleSeed} loading={submitting} className="w-full text-sm">
-                5種を一括登録
-              </Button>
             </CardContent>
           </Card>
         )}

@@ -5,14 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 
-const DEFAULT_CATEGORIES = [
-  { name: "通常練習", color: "#3B82F6", order: 10 }, // blue
-  { name: "シングル練", color: "#8B5CF6", order: 20 }, // violet
-  { name: "基礎練", color: "#10B981", order: 30 }, // emerald
-  { name: "大会", color: "#EF4444", order: 40 }, // red
-  { name: "飲み会", color: "#F59E0B", order: 50 }, // amber
-];
-
 const createSchema = z.object({
   name: z.string().min(1, "名称は必須です").max(50, "名称は50文字以内"),
   color: z
@@ -39,7 +31,7 @@ export async function GET() {
   return NextResponse.json({ success: true, data: categories });
 }
 
-// POST /api/admin/event-categories - 新規追加。body が空なら初期5種を一括投入。
+// POST /api/admin/event-categories - 新規追加
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -50,22 +42,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: { code: "FORBIDDEN" } }, { status: 403 });
   }
 
-  // body が無い (= 初期データ投入) リクエストかをチェック
-  const raw = await request.text();
-  if (!raw.trim()) {
-    const existing = await prisma.eventCategory.findMany({ select: { name: true } });
-    const existingNames = new Set(existing.map((c) => c.name));
-    const toCreate = DEFAULT_CATEGORIES.filter((c) => !existingNames.has(c.name));
-    if (toCreate.length === 0) {
-      return NextResponse.json({ success: true, data: [], message: "既に登録済み" });
-    }
-    const created = await prisma.$transaction(
-      toCreate.map((c) => prisma.eventCategory.create({ data: c }))
-    );
-    return NextResponse.json({ success: true, data: created }, { status: 201 });
-  }
-
-  const body = JSON.parse(raw);
+  const body = await request.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
