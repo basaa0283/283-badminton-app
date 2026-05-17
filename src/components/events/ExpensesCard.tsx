@@ -131,7 +131,10 @@ export function ExpensesCard({ eventId, expenses, onUpdated }: ExpensesCardProps
               </div>
               <div>
                 <label className="block text-xs text-gray-600 mb-1">シャトル代 (自動算出)</label>
-                <div className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-700">
+                <div
+                  data-testid="shuttle-cost-auto"
+                  className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-700"
+                >
                   {(() => {
                     const n = Number(shuttleCount);
                     if (!shuttleCount || !Number.isFinite(n) || n < 0) return "—";
