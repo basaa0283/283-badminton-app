@@ -69,6 +69,9 @@ test.describe("ゲストロール (閲覧専用)", () => {
       });
 
       // ----- ゲストとしてログインし直し -----
+      // WebKit はセッション cookie の上書きが不安定なので、
+      // 旧 admin セッションを明示的に消してから guest としてログインする。
+      await page.context().clearCookies();
       await loginAs(page, guestUserId);
 
       // ----- /events を開いて検証 -----
@@ -105,7 +108,8 @@ test.describe("ゲストロール (閲覧専用)", () => {
       );
       expect(attendRes.status()).toBe(403);
     } finally {
-      // admin に戻してから片付け
+      // admin に戻してから片付け (cookie を一度クリアして再ログイン)
+      await page.context().clearCookies();
       await loginAs(page, admin!);
       if (visibleEventId) {
         await page.request.delete(`/api/events/${visibleEventId}`).catch(() => {});
