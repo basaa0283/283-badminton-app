@@ -24,8 +24,6 @@ interface Announcement {
   createdBy?: { nickname: string } | null;
 }
 
-const SEVERITIES: Severity[] = ["info", "important"];
-
 function audienceLabel(a: Pick<Announcement, "audienceMember" | "audienceVisitor" | "audienceGuest">): string {
   const targets: string[] = [];
   if (a.audienceMember) targets.push("一般");
@@ -245,19 +243,15 @@ export default function AdminAnnouncementsPage() {
                     </label>
                   </div>
                 </div>
-                <div>
-                  <label htmlFor="ann-severity" className="block text-xs text-gray-600 mb-1">重要度</label>
-                  <select
-                    id="ann-severity"
-                    value={severity}
-                    onChange={(e) => setSeverity(e.target.value as Severity)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                  >
-                    {SEVERITIES.map((s) => (
-                      <option key={s} value={s}>{SEVERITY_STYLE[s].label}</option>
-                    ))}
-                  </select>
-                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={severity === "important"}
+                    onChange={(e) => setSeverity(e.target.checked ? "important" : "info")}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  重要なお知らせとして強調表示する
+                </label>
                 <div className="flex gap-2 pt-2">
                   <Button variant="secondary" className="flex-1 text-sm" onClick={() => { resetForm(); setShowForm(false); }} disabled={submitting}>
                     キャンセル
