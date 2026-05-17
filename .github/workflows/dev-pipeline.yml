@@ -166,6 +166,74 @@ jobs:
     if: success()
     runs-on: ubuntu-latest
     steps:
+      # github.event.commits[*].message に各コミットの full body が入っているので、
+      # ここから「日本語変更点:」「確認ポイント:」セクションを抽出して
+      # メール本文用の日本語サマリーを組み立てる。
+      - name: Build Japanese summary
+        id: summary
+        env:
+          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+        run: |
+          python3 <<'PY' > /tmp/summary.txt
+          import os, json, re
+
+          raw = os.environ.get("COMMITS_JSON", "null")
+          try:
+              commits = json.loads(raw) or []
+          except Exception:
+              commits = []
+
+          subjects = []
+          ja_changes = []
+          qa_points = []
+
+          def extract_section(body, label):
+              pattern = rf"(?m)^[ \t]*{re.escape(label)}[ \t]*:?[ \t]*\n((?:[ \t]*-.*\n?)+)"
+              m = re.search(pattern, body)
+              if not m:
+                  return None
+              return m.group(1).rstrip()
+
+          for c in commits:
+              sha = (c.get("id") or "")[:7]
+              msg = c.get("message") or ""
+              lines = msg.splitlines()
+              subject = lines[0] if lines else ""
+              body = "\n".join(lines[1:])
+              subjects.append(f"- {sha} {subject}")
+
+              ja = extract_section(body, "日本語変更点")
+              if ja:
+                  ja_changes.append(ja)
+              qa = extract_section(body, "確認ポイント")
+              if qa:
+                  qa_points.append(qa)
+
+          print("== このプッシュの変更点 ==")
+          if ja_changes:
+              print("\n".join(ja_changes))
+          else:
+              print("(日本語サマリーなし。コミット件名:)")
+              print("\n".join(subjects) if subjects else "(コミット情報なし)")
+
+          print()
+          print("== 確認ポイント ==")
+          if qa_points:
+              print("\n".join(qa_points))
+          else:
+              print("(明示なし。ベース動線をスモークチェックしてください)")
+
+          if commits:
+              print()
+              print("== 含まれるコミット ==")
+              print("\n".join(subjects))
+          PY
+          {
+            echo "body<<__END__"
+            cat /tmp/summary.txt
+            echo "__END__"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Notify DEV ready for QA
         uses: dawidd6/action-send-mail@v3
         with:
@@ -181,8 +249,7 @@ jobs:
             DEV パイプライン (test → deploy → e2e) が全て成功しました。
             動作確認を始めて大丈夫です。
 
-            Commit: ${{ github.sha }}
-            Message: ${{ github.event.head_commit.message }}
-            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            ${{ steps.summary.outputs.body }}
 
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             DEV URL: https://dev-283-badminton-app-dae7h5bjbddcdnd3.japaneast-01.azurewebsites.net/
