@@ -28,9 +28,8 @@ export function Header() {
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-4xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          <Link href="/" aria-label="ホームに戻る" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <img src="/logo.png" alt="" className="w-9 h-9 object-contain" />
-            <span className="text-base font-bold text-gray-900 hidden sm:inline">２８ばど</span>
+          <Link href="/" aria-label="ホームに戻る" className="hover:opacity-80 transition-opacity">
+            <img src="/logo.png" alt="２８ばど" className="h-9 w-auto" />
           </Link>
 
           <div ref={menuRef} className="relative">

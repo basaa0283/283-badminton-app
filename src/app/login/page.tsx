@@ -41,9 +41,9 @@ export default function LoginPage() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100 px-4 py-8">
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
         <div className="flex justify-center mb-3">
-          <img src="/logo.png" alt="２８ばど" className="w-28 h-28 object-contain" />
+          <img src="/logo.png" alt="２８ばど" className="h-20 w-auto max-w-full" />
         </div>
-        <h1 className="text-2xl font-bold text-center mb-1 text-gray-900">
+        <h1 className="text-xl font-bold text-center mb-1 text-gray-900">
           出欠管理アプリ
         </h1>
         <p className="text-gray-500 text-center text-sm mb-6">
