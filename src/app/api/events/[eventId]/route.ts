@@ -53,9 +53,9 @@ export async function GET(request: NextRequest, { params }: Params) {
       );
     }
 
-    // ゲスト (閲覧専用ロール) は visibleToGuest=true のカテゴリのみアクセス可。
+    // ゲスト (閲覧専用ロール) と pending (承認待ち) は visibleToGuest=true のみアクセス可。
     // それ以外は存在を隠す (404 で返す)。
-    if (role === "guest" && !event.category?.visibleToGuest) {
+    if ((role === "guest" || role === "pending") && !event.category?.visibleToGuest) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
         { status: 404 }

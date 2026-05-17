@@ -27,12 +27,13 @@ export async function GET(request: NextRequest) {
       ? { eventDate: { gte: now } }
       : { eventDate: { gte: startOfPrevMonth, lt: now } };
 
-    // ゲスト (閲覧専用ロール) は visibleToGuest=true のカテゴリのイベントのみ。
+    // ゲスト (閲覧専用ロール) と pending (承認待ち) は visibleToGuest=true のカテゴリのみ。
+    // pending は本来 /onboarding/pending に redirect されるが、API 直叩きに対する防衛線。
     const role = session.user.role as UserRole;
-    const where =
-      role === "guest"
-        ? { ...dateWhere, category: { visibleToGuest: true } }
-        : dateWhere;
+    const restrictToGuestVisible = role === "guest" || role === "pending";
+    const where = restrictToGuestVisible
+      ? { ...dateWhere, category: { visibleToGuest: true } }
+      : dateWhere;
 
     const [events, total] = await Promise.all([
       prisma.event.findMany({

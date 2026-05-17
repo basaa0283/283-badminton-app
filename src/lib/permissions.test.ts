@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { permissions, getRoleName, isValidRole, type UserRole } from "./permissions";
 
-const ALL_ROLES: UserRole[] = ["admin", "subadmin", "member", "visitor", "guest"];
+const ALL_ROLES: UserRole[] = ["admin", "subadmin", "member", "visitor", "guest", "pending"];
 
 describe("permissions", () => {
   describe("canCreateEvent / canEditEvent / canDeleteEvent", () => {
@@ -11,6 +11,7 @@ describe("permissions", () => {
       ["member", false],
       ["visitor", false],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canCreateEvent(role)).toBe(expected);
       expect(permissions.canEditEvent(role)).toBe(expected);
@@ -31,6 +32,7 @@ describe("permissions", () => {
       ["member", true],
       ["visitor", true],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canRespondToEvent(role)).toBe(expected);
     });
@@ -43,6 +45,7 @@ describe("permissions", () => {
       ["member", true],
       ["visitor", false],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canViewAttendeeList(role)).toBe(expected);
       expect(permissions.canViewAttendeeDetails(role)).toBe(expected);
@@ -56,6 +59,7 @@ describe("permissions", () => {
       ["member", false],
       ["visitor", false],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canViewMemberList(role)).toBe(expected);
     });
@@ -68,6 +72,7 @@ describe("permissions", () => {
       ["member", true],
       ["visitor", false],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canViewMemberDetails(role)).toBe(expected);
     });
@@ -80,6 +85,7 @@ describe("permissions", () => {
       ["member", false],
       ["visitor", false],
       ["guest", false],
+      ["pending", false],
     ] as const)("%s → %s", (role, expected) => {
       expect(permissions.canEditMemberRole(role)).toBe(expected);
       expect(permissions.canAccessAdmin(role)).toBe(expected);
@@ -94,6 +100,7 @@ describe("getRoleName", () => {
     ["member", "一般"],
     ["visitor", "ビジター"],
     ["guest", "ゲスト"],
+    ["pending", "承認待ち"],
   ] as const)("%s → %s", (role, expected) => {
     expect(getRoleName(role)).toBe(expected);
   });

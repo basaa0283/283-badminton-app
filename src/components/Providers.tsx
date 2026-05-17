@@ -58,11 +58,40 @@ function TermsAcceptanceGuard() {
   return null;
 }
 
+// 承認待ち (role=pending) のユーザーを /onboarding/pending に閉じ込める。
+// 規約同意は通っている前提 (TermsAcceptanceGuard で順序が担保される)。
+const PENDING_EXEMPT_PREFIXES = [
+  "/login",
+  "/onboarding",
+  "/privacy",
+  "/terms",
+  "/api",
+];
+
+function PendingApprovalGuard() {
+  const { data: session, status } = useSession();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    if (!pathname) return;
+    if (PENDING_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p))) return;
+
+    if (session?.user?.role === "pending") {
+      router.replace("/onboarding/pending");
+    }
+  }, [status, session, pathname, router]);
+
+  return null;
+}
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
       <StaleSessionGuard />
       <TermsAcceptanceGuard />
+      <PendingApprovalGuard />
       {children}
     </SessionProvider>
   );

@@ -26,7 +26,7 @@ model User {
   ageVisible      Boolean   @default(true) // 生年月日・年齢を公開するか
   profileImageUrl String?   // プロフィール画像URL（後方互換性）
   comment         String?   // その他コメント
-  role            String    @default("guest") // admin / subadmin / member / visitor / guest
+  role            String    @default("pending") // admin / subadmin / member / visitor / guest / pending (承認待ち)
   lastActiveAt    DateTime? // 最終操作日時
 
   // 管理者専用フィールド（一般ユーザーには見えない）

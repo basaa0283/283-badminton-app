@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { RoleBadge } from "@/components/ui/Badge";
 import { permissions, UserRole } from "@/lib/permissions";
 import { formatSkillLevel } from "@/lib/skill-level";
+import { PendingApprovalCard } from "@/components/admin/PendingApprovalCard";
 
 interface Member {
   id: string;
@@ -26,7 +27,14 @@ interface Member {
 type SortKey = "nickname" | "role" | "gender" | "age" | "skillLevel" | "lastActiveAt";
 type SortDir = "asc" | "desc";
 
-const ROLE_ORDER: Record<string, number> = { admin: 0, subadmin: 1, member: 2, visitor: 3, guest: 4 };
+const ROLE_ORDER: Record<string, number> = {
+  pending: -1,
+  admin: 0,
+  subadmin: 1,
+  member: 2,
+  visitor: 3,
+  guest: 4,
+};
 
 function compareMembers(a: Member, b: Member, key: SortKey, dir: SortDir): number {
   const sign = dir === "asc" ? 1 : -1;
@@ -227,6 +235,11 @@ export default function AdminMembersPage() {
           </Button>
         </div>
 
+        <PendingApprovalCard
+          pendingMembers={members.filter((m) => m.role === "pending")}
+          onChanged={fetchMembers}
+        />
+
         {showCreateForm && (
           <Card className="mb-4">
             <CardContent className="py-4">
@@ -265,6 +278,7 @@ export default function AdminMembersPage() {
             className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
           >
             <option value="all">権限: すべて</option>
+            <option value="pending">承認待ち</option>
             <option value="admin">管理者</option>
             <option value="subadmin">副管理者</option>
             <option value="member">一般</option>

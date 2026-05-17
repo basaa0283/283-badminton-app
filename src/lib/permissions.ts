@@ -1,6 +1,13 @@
-export type UserRole = "admin" | "subadmin" | "member" | "visitor" | "guest";
+export type UserRole =
+  | "admin"
+  | "subadmin"
+  | "member"
+  | "visitor"
+  | "guest"
+  | "pending"; // 新規ログイン直後、管理者の承認待ち
 
 const ROLE_HIERARCHY: Record<UserRole, number> = {
+  pending: -1, // 承認前は guest 未満。実質何もできない (onboarding 画面のみ)
   guest: 0,
   visitor: 1,
   member: 2,
@@ -38,10 +45,11 @@ export function getRoleName(role: UserRole): string {
     member: "一般",
     visitor: "ビジター",
     guest: "ゲスト",
+    pending: "承認待ち",
   };
   return names[role] || role;
 }
 
 export function isValidRole(role: string): role is UserRole {
-  return ["admin", "subadmin", "member", "visitor", "guest"].includes(role);
+  return ["admin", "subadmin", "member", "visitor", "guest", "pending"].includes(role);
 }

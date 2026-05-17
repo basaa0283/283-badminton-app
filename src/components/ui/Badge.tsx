@@ -43,6 +43,7 @@ export function RoleBadge({ role }: { role: string }) {
     member: { variant: "success", label: "一般" },
     visitor: { variant: "info", label: "ビジター" },
     guest: { variant: "default", label: "ゲスト" },
+    pending: { variant: "warning", label: "承認待ち" },
   };
 
   const { variant, label } = config[role] || { variant: "default", label: role };
