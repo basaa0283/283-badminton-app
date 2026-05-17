@@ -105,15 +105,17 @@ model ShuttlePrice {
 
 // お知らせ
 model Announcement {
-  id          String   @id @default(cuid())
-  title       String   @db.NVarChar(200)
-  body        String   @db.NVarChar(4000)
-  audience    String   @default("all")
-  severity    String   @default("info")
-  publishedAt DateTime @default(now())
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  title           String   @db.NVarChar(200)
+  body            String   @db.NVarChar(4000)
+  audienceMember  Boolean  @default(true)
+  audienceVisitor Boolean  @default(true)
+  audienceGuest   Boolean  @default(true)
+  severity        String   @default("info")
+  publishedAt     DateTime @default(now())
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   createdBy User? @relation("AnnouncementCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 

@@ -8,8 +8,10 @@ import { z } from "zod";
 const createSchema = z.object({
   title: z.string().min(1, "タイトルは必須です").max(200, "タイトルは200文字以内"),
   body: z.string().min(1, "本文は必須です").max(4000, "本文は4000文字以内"),
-  audience: z.enum(["all", "admin", "member"]).default("all"),
-  severity: z.enum(["info", "warning", "important"]).default("info"),
+  audienceMember: z.boolean().default(true),
+  audienceVisitor: z.boolean().default(true),
+  audienceGuest: z.boolean().default(true),
+  severity: z.enum(["info", "important"]).default("info"),
   publishedAt: z.string().datetime().optional(),
 });
 
@@ -55,7 +57,9 @@ export async function POST(request: NextRequest) {
     data: {
       title: parsed.data.title,
       body: parsed.data.body,
-      audience: parsed.data.audience,
+      audienceMember: parsed.data.audienceMember,
+      audienceVisitor: parsed.data.audienceVisitor,
+      audienceGuest: parsed.data.audienceGuest,
       severity: parsed.data.severity,
       publishedAt: parsed.data.publishedAt ? new Date(parsed.data.publishedAt) : new Date(),
       createdById: session.user.id,

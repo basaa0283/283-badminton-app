@@ -16,19 +16,23 @@ interface Announcement {
   id: string;
   title: string;
   body: string;
-  audience: string;
+  audienceMember: boolean;
+  audienceVisitor: boolean;
+  audienceGuest: boolean;
   severity: string;
   publishedAt: string;
   createdBy?: { nickname: string } | null;
 }
 
-const AUDIENCE_LABELS: Record<string, string> = {
-  all: "全員",
-  admin: "管理者のみ",
-  member: "メンバー以上",
-};
+const SEVERITIES: Severity[] = ["info", "important"];
 
-const SEVERITIES: Severity[] = ["info", "warning", "important"];
+function audienceLabel(a: Pick<Announcement, "audienceMember" | "audienceVisitor" | "audienceGuest">): string {
+  const targets: string[] = [];
+  if (a.audienceMember) targets.push("一般");
+  if (a.audienceVisitor) targets.push("ビジター");
+  if (a.audienceGuest) targets.push("ゲスト");
+  return targets.length === 3 ? "全員" : targets.length === 0 ? "(なし)" : targets.join(" / ");
+}
 
 export default function AdminAnnouncementsPage() {
   const { data: session, status } = useSession();
@@ -42,7 +46,9 @@ export default function AdminAnnouncementsPage() {
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [audience, setAudience] = useState("all");
+  const [audienceMember, setAudienceMember] = useState(true);
+  const [audienceVisitor, setAudienceVisitor] = useState(true);
+  const [audienceGuest, setAudienceGuest] = useState(true);
   const [severity, setSeverity] = useState<Severity>("info");
 
   const submitRef = useRef(false);
@@ -74,7 +80,9 @@ export default function AdminAnnouncementsPage() {
   const resetForm = () => {
     setTitle("");
     setBody("");
-    setAudience("all");
+    setAudienceMember(true);
+    setAudienceVisitor(true);
+    setAudienceGuest(true);
     setSeverity("info");
     setEditingId(null);
     setError(null);
@@ -84,7 +92,9 @@ export default function AdminAnnouncementsPage() {
     setEditingId(a.id);
     setTitle(a.title);
     setBody(a.body);
-    setAudience(a.audience);
+    setAudienceMember(a.audienceMember);
+    setAudienceVisitor(a.audienceVisitor);
+    setAudienceGuest(a.audienceGuest);
     setSeverity((a.severity as Severity) || "info");
     setShowForm(true);
   };
@@ -104,7 +114,14 @@ export default function AdminAnnouncementsPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), body: body.trim(), audience, severity }),
+        body: JSON.stringify({
+          title: title.trim(),
+          body: body.trim(),
+          audienceMember,
+          audienceVisitor,
+          audienceGuest,
+          severity,
+        }),
       });
       const data = await res.json();
       if (!data.success) {
@@ -196,33 +213,50 @@ export default function AdminAnnouncementsPage() {
                     placeholder="詳細を記入"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor="ann-audience" className="block text-xs text-gray-600 mb-1">対象</label>
-                    <select
-                      id="ann-audience"
-                      value={audience}
-                      onChange={(e) => setAudience(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                    >
-                      {Object.entries(AUDIENCE_LABELS).map(([v, l]) => (
-                        <option key={v} value={v}>{l}</option>
-                      ))}
-                    </select>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">対象 (複数選択可、admin/subadmin は常に閲覧可)</label>
+                  <div className="flex flex-wrap gap-3">
+                    <label className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={audienceMember}
+                        onChange={(e) => setAudienceMember(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      一般
+                    </label>
+                    <label className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={audienceVisitor}
+                        onChange={(e) => setAudienceVisitor(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      ビジター
+                    </label>
+                    <label className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={audienceGuest}
+                        onChange={(e) => setAudienceGuest(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      ゲスト
+                    </label>
                   </div>
-                  <div>
-                    <label htmlFor="ann-severity" className="block text-xs text-gray-600 mb-1">重要度</label>
-                    <select
-                      id="ann-severity"
-                      value={severity}
-                      onChange={(e) => setSeverity(e.target.value as Severity)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                    >
-                      {SEVERITIES.map((s) => (
-                        <option key={s} value={s}>{SEVERITY_STYLE[s].label}</option>
-                      ))}
-                    </select>
-                  </div>
+                </div>
+                <div>
+                  <label htmlFor="ann-severity" className="block text-xs text-gray-600 mb-1">重要度</label>
+                  <select
+                    id="ann-severity"
+                    value={severity}
+                    onChange={(e) => setSeverity(e.target.value as Severity)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                  >
+                    {SEVERITIES.map((s) => (
+                      <option key={s} value={s}>{SEVERITY_STYLE[s].label}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="secondary" className="flex-1 text-sm" onClick={() => { resetForm(); setShowForm(false); }} disabled={submitting}>
@@ -260,7 +294,7 @@ export default function AdminAnnouncementsPage() {
                       <span className="text-gray-500">
                         {format(new Date(a.publishedAt), "yyyy/M/d", { locale: ja })}
                       </span>
-                      <span className="text-gray-500">対象: {AUDIENCE_LABELS[a.audience] ?? a.audience}</span>
+                      <span className="text-gray-500">対象: {audienceLabel(a)}</span>
                     </div>
                     <h2 className="font-bold text-gray-900 mb-1">{a.title}</h2>
                     <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3">{a.body}</p>

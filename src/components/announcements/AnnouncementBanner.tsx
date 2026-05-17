@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { SEVERITY_STYLE, Severity } from "@/lib/announcement";
+import { BANNER_MAX_DAYS, SEVERITY_STYLE, Severity } from "@/lib/announcement";
 
 interface Announcement {
   id: string;
@@ -21,7 +21,12 @@ export function AnnouncementBanner() {
     fetch("/api/announcements")
       .then((r) => r.json())
       .then((json) => {
-        if (json.success) setItems(json.data.slice(0, 3));
+        if (!json.success) return;
+        const cutoff = Date.now() - BANNER_MAX_DAYS * 24 * 60 * 60 * 1000;
+        const fresh = (json.data as Announcement[]).filter(
+          (a) => new Date(a.publishedAt).getTime() >= cutoff
+        );
+        setItems(fresh.slice(0, 3));
       })
       .catch(() => {});
   }, []);

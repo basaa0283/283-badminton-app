@@ -8,8 +8,10 @@ import { z } from "zod";
 const updateSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   body: z.string().min(1).max(4000).optional(),
-  audience: z.enum(["all", "admin", "member"]).optional(),
-  severity: z.enum(["info", "warning", "important"]).optional(),
+  audienceMember: z.boolean().optional(),
+  audienceVisitor: z.boolean().optional(),
+  audienceGuest: z.boolean().optional(),
+  severity: z.enum(["info", "important"]).optional(),
   publishedAt: z.string().datetime().optional(),
 });
 
@@ -40,7 +42,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const data: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) data.title = parsed.data.title;
   if (parsed.data.body !== undefined) data.body = parsed.data.body;
-  if (parsed.data.audience !== undefined) data.audience = parsed.data.audience;
+  if (parsed.data.audienceMember !== undefined) data.audienceMember = parsed.data.audienceMember;
+  if (parsed.data.audienceVisitor !== undefined) data.audienceVisitor = parsed.data.audienceVisitor;
+  if (parsed.data.audienceGuest !== undefined) data.audienceGuest = parsed.data.audienceGuest;
   if (parsed.data.severity !== undefined) data.severity = parsed.data.severity;
   if (parsed.data.publishedAt !== undefined) data.publishedAt = new Date(parsed.data.publishedAt);
 

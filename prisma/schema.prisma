@@ -104,16 +104,19 @@ model ShuttlePrice {
 }
 
 // お知らせ
+// 表示対象は non-admin role ごとに on/off。admin/subadmin は常に全件閲覧。
 model Announcement {
-  id          String   @id @default(cuid())
-  title       String
-  body        String
-  audience    String   @default("all") // all / admin / member
-  severity    String   @default("info") // info / warning / important
-  publishedAt DateTime @default(now())
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  title           String
+  body            String
+  audienceMember  Boolean  @default(true)
+  audienceVisitor Boolean  @default(true)
+  audienceGuest   Boolean  @default(true)
+  severity        String   @default("info") // info / important
+  publishedAt     DateTime @default(now())
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   createdBy User? @relation("AnnouncementCreator", fields: [createdById], references: [id])
 
