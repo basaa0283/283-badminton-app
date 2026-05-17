@@ -134,6 +134,33 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+  # E2E が DEV DB に残した残骸データを掃除する。
+  # e2e の成否に関わらず必ず走らせる (途中失敗時のほうが残骸が多いため)。
+  # notify とは独立。cleanup の失敗は通知の成否に影響しない。
+  cleanup:
+    needs: e2e
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client (SQL Server schema)
+        run: npx prisma generate --schema=prisma/schema.sqlserver.prisma
+
+      - name: Run E2E cleanup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ALLOW_CLEANUP: "1"
+        run: npx tsx scripts/e2e-cleanup.ts
+
   notify:
     needs: e2e
     if: success()
