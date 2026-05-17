@@ -53,6 +53,22 @@ export async function PUT(request: NextRequest, { params }: Params) {
   if (parsed.data.paymentAmount !== undefined) data.paymentAmount = parsed.data.paymentAmount;
   if (parsed.data.paymentNote !== undefined) data.paymentNote = parsed.data.paymentNote;
 
+  // 「受取済み」に切り替えた瞬間の event.fee を snapshot し、後で event.fee が
+  // 変わっても受取金額が連動しないようにする。
+  // 条件: paymentStatus が paid に変わった + リクエストで paymentAmount を明示していない
+  //       + 既存の paymentAmount が null (未設定)
+  const becomingPaid =
+    parsed.data.paymentStatus === "paid" && existing.paymentStatus !== "paid";
+  const amountNotProvided = parsed.data.paymentAmount === undefined;
+  const noExistingAmount = existing.paymentAmount === null;
+  if (becomingPaid && amountNotProvided && noExistingAmount) {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { fee: true },
+    });
+    data.paymentAmount = event?.fee ?? 0;
+  }
+
   const updated = await prisma.attendance.update({
     where: { id: attendanceId },
     data,
