@@ -176,8 +176,8 @@ model Event {
   //   minViewRole:    "guest" | "visitor" | "member"
   //   minRespondRole: "visitor" | "member" (guest は常に回答不可)
   // admin / subadmin は閾値に関わらず常にアクセス可。
-  minViewRole     String    @default("visitor") @db.NVarChar(20)
-  minRespondRole  String    @default("visitor") @db.NVarChar(20)
+  minViewRole     String    @default("visitor")
+  minRespondRole  String    @default("visitor")
 
   // 中止フラグ
   cancelledAt     DateTime?
