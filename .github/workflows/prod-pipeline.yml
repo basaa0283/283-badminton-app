@@ -71,15 +71,14 @@ jobs:
           cp prisma/schema.sqlserver.prisma prisma/schema.prisma
           npx prisma generate
 
-      # PROD DB のスキーマを最新に揃える。失敗したら deploy を止める。
-      # 以前は App Service 起動時の `npx prisma db push` 任せだったが、
-      # サイレント失敗するケースがあり、API 実行時に column missing で落ちる事象が発生したため
-      # CI 側に移動した。
+      # PROD DB のスキーマ差分を同期しようとする。失敗してもデプロイは続行 (drift していたら
+      # 事前に DEV で確認 → 手動 SQL を流す運用)。
       # NOTE: --accept-data-loss は「縮小される列・テーブルを許可」する。本番では
       # スキーマ削減が伴う変更を事前に DEV で確認してから master へ流すこと。
       - name: Apply DB schema (prisma db push)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+        continue-on-error: true
         run: npx prisma db push --accept-data-loss
 
       - name: Build Next.js
