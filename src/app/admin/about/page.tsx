@@ -8,6 +8,7 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Markdown } from "@/components/ui/Markdown";
+import { ABOUT_DEFAULT_MARKDOWN } from "@/lib/about-default";
 import { permissions, UserRole } from "@/lib/permissions";
 
 /**
@@ -41,8 +42,10 @@ export default function AdminAboutPage() {
         .then((r) => r.json())
         .then((json) => {
           if (json.success) {
-            setContent(json.data.aboutPageContent || "");
-            setOriginalContent(json.data.aboutPageContent || "");
+            const saved = (json.data.aboutPageContent || "") as string;
+            setOriginalContent(saved);
+            // 未保存 (空) のときはデフォルト本文を pre-fill して「保存」だけで反映できるようにする。
+            setContent(saved.length > 0 ? saved : ABOUT_DEFAULT_MARKDOWN);
           }
         })
         .finally(() => setLoading(false));

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Markdown } from "@/components/ui/Markdown";
+import { ABOUT_DEFAULT_MARKDOWN } from "@/lib/about-default";
 
 export const metadata = {
   title: "サークルについて | 283バドミントン",
@@ -8,21 +9,6 @@ export const metadata = {
 
 // 認証不要。未ログインのゲスト候補者からも見られる。
 export const dynamic = "force-dynamic";
-
-const PLACEHOLDER = `# ２８ばど について
-
-ここにサークルの紹介を記入してください (管理者が \`/admin/about\` から編集できます)。
-
-## 例: 練習の流れ
-
-- アップ
-- 基礎打ち
-- ゲーム
-
-## 例: ご参加にあたって
-
-- 初心者・経験者問わず歓迎です
-- 服装は動きやすいものでお越しください`;
 
 interface AboutData {
   content: string;
@@ -40,11 +26,11 @@ async function getAboutData(): Promise<AboutData> {
     const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     const content = map.aboutPageContent?.trim();
     return {
-      content: content && content.length > 0 ? content : PLACEHOLDER,
+      content: content && content.length > 0 ? content : ABOUT_DEFAULT_MARKDOWN,
       officialLineUrl: map.officialLineUrl ?? "",
     };
   } catch {
-    return { content: PLACEHOLDER, officialLineUrl: "" };
+    return { content: ABOUT_DEFAULT_MARKDOWN, officialLineUrl: "" };
   }
 }
 
