@@ -91,12 +91,22 @@ function OnboardingTermsContent() {
               <p className="text-sm text-gray-600">
                 {isRevision
                   ? "最新の利用規約・プライバシーポリシーをご確認の上、改めてご同意ください。"
-                  : "ご利用前に利用規約・プライバシーポリシーをご確認ください。"}
+                  : "ご利用前に、サークルの方針と利用規約・プライバシーポリシーをご確認ください。"}
               </p>
               <p className="text-xs text-gray-400">バージョン: {CURRENT_TERMS_VERSION}</p>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 space-y-2">
+              <p>
+                <Link
+                  href="/about"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  サークルについて (運営方針・練習の流れ) を読む ↗
+                </Link>
+              </p>
               <p>
                 <Link
                   href="/terms"

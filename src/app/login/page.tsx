@@ -3,7 +3,6 @@
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 // 開発環境かどうか
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -54,15 +53,6 @@ export default function LoginPage() {
           <span className="inline-block text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-bold">
             ベータ版
           </span>
-        </div>
-
-        <div className="text-center mb-4">
-          <Link
-            href="/about"
-            className="inline-block text-sm text-blue-600 hover:underline"
-          >
-            サークルについて (運営方針・練習の流れ)
-          </Link>
         </div>
 
         {status === "loading" ? (
