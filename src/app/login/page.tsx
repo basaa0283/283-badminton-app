@@ -61,7 +61,7 @@ export default function LoginPage() {
             href="/about"
             className="inline-block text-sm text-blue-600 hover:underline"
           >
-            サークルについて (運営方針・練習の流れ) →
+            サークルについて (運営方針・練習の流れ)
           </Link>
         </div>
 
