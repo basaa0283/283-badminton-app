@@ -99,8 +99,11 @@ export default function AdminAboutPage() {
         </div>
 
         <h1 className="text-xl font-bold text-gray-900 mb-4">サークル概要ページ</h1>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-gray-600 mb-2">
           公開ページ <code>/about</code> の本文です (Markdown 対応、未ログインでも閲覧可)。
+        </p>
+        <p className="text-xs text-gray-500 mb-4">
+          ※ 「お問い合わせ」セクションは <code>/admin</code> で設定した公式 LINE URL から自動表示されます。本文には書かなくて OK です。
         </p>
 
         <Card>
