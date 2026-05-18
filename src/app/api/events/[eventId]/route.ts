@@ -64,6 +64,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const attendingCount = event.attendances.filter((a) => a.status === "attending").length;
     const waitlistCount = event.attendances.filter((a) => a.status === "waitlist").length;
+    const observingCount = event.attendances.filter((a) => a.status === "observing").length;
     const myAttendance = event.attendances.find((a) => a.user.id === session.user.id);
 
     // 参加者リストは member 以上のみ閲覧可能
@@ -129,6 +130,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         createdAt: event.createdAt,
         attendingCount,
         waitlistCount,
+        observingCount,
         expenses: canViewExpenses
           ? {
               shuttleCount: event.shuttleCount,

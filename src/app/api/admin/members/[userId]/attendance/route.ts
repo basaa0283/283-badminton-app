@@ -8,7 +8,7 @@ import { notifyWaitlistPromotion } from "@/lib/line-messaging";
 
 const proxyAttendanceSchema = z.object({
   eventId: z.string().min(1),
-  status: z.enum(["attending", "not_attending"]),
+  status: z.enum(["attending", "not_attending", "observing"]),
 });
 
 // GET /api/admin/members/[userId]/attendance - 直近イベント一覧と対象ユーザーの出欠状況
@@ -104,9 +104,10 @@ export async function POST(
       return NextResponse.json({ success: true, data: { status: existing.status, position: existing.position } });
     }
 
-    let finalStatus: "attending" | "not_attending" | "waitlist" = status;
+    let finalStatus: "attending" | "not_attending" | "waitlist" | "observing" = status;
     let position: number | null = null;
 
+    // 「見学」は定員枠を消費しないので waitlist にしない。
     if (status === "attending" && event.capacity) {
       const currentAttending = event.attendances.filter((a) => a.userId !== userId).length;
       if (currentAttending >= event.capacity) {

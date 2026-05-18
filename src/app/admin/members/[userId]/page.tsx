@@ -94,7 +94,7 @@ export default function MemberDetailPage() {
   }
   const [proxyEvents, setProxyEvents] = useState<ProxyEvent[]>([]);
   const [proxyLoading, setProxyLoading] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState<Record<string, "attending" | "not_attending">>({});
+  const [pendingStatus, setPendingStatus] = useState<Record<string, "attending" | "not_attending" | "observing">>({});
   const [showSkillLegend, setShowSkillLegend] = useState(false);
 
   // 編集用フォームの状態
@@ -647,7 +647,9 @@ export default function MemberDetailPage() {
                         // 未クリック時は現在のステータス（参加/不参加）をボタン選択状態として表示
                         const selected =
                           pendingStatus[event.id] ??
-                          (currentStatus === "attending" || currentStatus === "not_attending"
+                          (currentStatus === "attending" ||
+                          currentStatus === "not_attending" ||
+                          currentStatus === "observing"
                             ? currentStatus
                             : null);
                         const hasChange = selected !== null && selected !== currentStatus;
@@ -658,6 +660,8 @@ export default function MemberDetailPage() {
                           ? `キャンセル待ち${event.attendance?.position}番`
                           : currentStatus === "not_attending"
                           ? "不参加"
+                          : currentStatus === "observing"
+                          ? "見学"
                           : null;
 
                         return (
@@ -674,6 +678,7 @@ export default function MemberDetailPage() {
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
                                   currentStatus === "attending" ? "bg-green-100 text-green-700"
                                   : currentStatus === "waitlist" ? "bg-yellow-100 text-yellow-700"
+                                  : currentStatus === "observing" ? "bg-blue-100 text-blue-700"
                                   : "bg-gray-200 text-gray-500"
                                 }`}>
                                   {statusLabel}
@@ -693,6 +698,16 @@ export default function MemberDetailPage() {
                                 }`}
                               >
                                 参加
+                              </button>
+                              <button
+                                onClick={() => setPendingStatus((prev) => ({ ...prev, [event.id]: "observing" }))}
+                                className={`flex-1 text-xs py-1.5 rounded font-medium transition-colors border ${
+                                  selected === "observing"
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                                }`}
+                              >
+                                見学
                               </button>
                               <button
                                 onClick={() => setPendingStatus((prev) => ({ ...prev, [event.id]: "not_attending" }))}

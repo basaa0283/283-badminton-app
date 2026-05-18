@@ -349,8 +349,18 @@ export default function AdminMembersPage() {
                       </div>
                     </td>
                     <td className="px-3 py-2"><RoleBadge role={member.role} /></td>
-                    <td className="px-3 py-2 text-gray-700">
-                      {member.gender === "male" ? "男" : member.gender === "female" ? "女" : "—"}
+                    <td className="px-3 py-2">
+                      {member.gender === "male" ? (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                          ♂ 男
+                        </span>
+                      ) : member.gender === "female" ? (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 font-medium">
+                          ♀ 女
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right text-gray-700">
                       {member.age !== null ? `${member.age}` : "—"}

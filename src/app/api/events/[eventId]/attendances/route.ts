@@ -7,7 +7,8 @@ import { z } from "zod";
 
 const createSchema = z.object({
   userId: z.string().min(1),
-  status: z.enum(["attending", "not_attending"]),
+  // 代理での出欠付与は「参加 / 不参加 / 見学」の3択。waitlist は内部状態なので外部から指定不可。
+  status: z.enum(["attending", "not_attending", "observing"]),
 });
 
 interface Params {

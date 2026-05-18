@@ -100,11 +100,14 @@ export function AdminAttendanceManager({
         if (!isDirty(a)) continue;
         const r = rows[a.id];
         const body: {
-          status?: "attending" | "not_attending";
+          status?: "attending" | "not_attending" | "observing";
           paymentStatus?: "paid" | "unpaid" | null;
           paymentAmount?: number | null;
         } = {};
-        if (r.status !== a.status && (r.status === "attending" || r.status === "not_attending")) {
+        if (
+          r.status !== a.status &&
+          (r.status === "attending" || r.status === "not_attending" || r.status === "observing")
+        ) {
           body.status = r.status;
         }
         const origPaid = a.paymentStatus === "paid";
@@ -238,11 +241,12 @@ function AttendeeRow({
   row: RowState;
   eventFee: number | null;
   dirty: boolean;
-  onChangeStatus: (status: "attending" | "not_attending") => void;
+  onChangeStatus: (status: "attending" | "not_attending" | "observing") => void;
   onTogglePaid: () => void;
   onChangeAmount: (amountInput: string) => void;
 }) {
   const isAttending = row.status === "attending";
+  const isObserving = row.status === "observing";
 
   return (
     <div
@@ -284,6 +288,16 @@ function AttendeeRow({
           参加
         </button>
         <button
+          onClick={() => onChangeStatus("observing")}
+          className={`flex-1 text-xs py-1 rounded font-medium border transition-colors ${
+            isObserving
+              ? "bg-blue-500 text-white border-blue-500"
+              : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+          }`}
+        >
+          見学
+        </button>
+        <button
           onClick={() => onChangeStatus("not_attending")}
           className={`flex-1 text-xs py-1 rounded font-medium border transition-colors ${
             row.status === "not_attending"
@@ -295,7 +309,7 @@ function AttendeeRow({
         </button>
       </div>
 
-      {isAttending && (
+      {(isAttending || isObserving) && (
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-1 text-xs text-gray-700">
             <input

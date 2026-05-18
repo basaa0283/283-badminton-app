@@ -35,12 +35,16 @@ export function AttendeeList({ attendees }: AttendeeListProps) {
   const attending = attendees.filter((a) => a.status === "attending");
   const notAttending = attendees.filter((a) => a.status === "not_attending");
   const waitlist = attendees.filter((a) => a.status === "waitlist").sort((a, b) => (a.position || 0) - (b.position || 0));
+  const observing = attendees.filter((a) => a.status === "observing");
 
   return (
     <div className="space-y-6">
       <AttendeeSection title={`参加 (${attending.length})`} attendees={attending} />
       {waitlist.length > 0 && (
         <AttendeeSection title={`キャンセル待ち (${waitlist.length})`} attendees={waitlist} showPosition />
+      )}
+      {observing.length > 0 && (
+        <AttendeeSection title={`見学 (${observing.length})`} attendees={observing} />
       )}
       {notAttending.length > 0 && (
         <AttendeeSection title={`不参加 (${notAttending.length})`} attendees={notAttending} />

@@ -105,8 +105,10 @@ export default function OnboardingPendingPage() {
               </a>
             )}
 
-            <p className="text-xs text-gray-400">
-              承認されると、画面が自動で切り替わります。
+            <p className="text-xs text-gray-400 leading-relaxed">
+              承認されると、登録された LINE に通知が届きます。
+              <br />
+              このページを開いたままなら、自動で画面が切り替わります。
             </p>
 
             <div className="pt-2">
