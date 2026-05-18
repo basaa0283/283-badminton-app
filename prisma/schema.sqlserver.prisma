@@ -255,7 +255,7 @@ model InvitationToken {
 // システム設定（key-value）
 model SystemSetting {
   key   String @id
-  value String @db.NVarChar(500)
+  value String @db.NVarChar(Max)
 }
 
 // メッセージ（対象者へのメッセージ送信用）
