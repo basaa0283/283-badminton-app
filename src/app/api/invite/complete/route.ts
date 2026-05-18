@@ -78,6 +78,8 @@ export async function POST(request: NextRequest) {
       }
 
       // 仮アカウントのプロフィール情報を現ユーザーに反映
+      // 注: 仮アカウントの role はそのまま受け継ぐ (visitor で作られていたら visitor のまま)。
+      // 定着したら admin が /admin/members から手動で member に昇格させる運用。
       await tx.user.update({
         where: { id: currentUserId },
         data: {
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
           birthdate: provisionalUser.birthdate ?? undefined,
           ageVisible: provisionalUser.ageVisible,
           comment: provisionalUser.comment ?? undefined,
-          role: provisionalUser.role === "visitor" ? "member" : provisionalUser.role,
+          role: provisionalUser.role,
           skillLevel: provisionalUser.skillLevel ?? undefined,
           adminNote: provisionalUser.adminNote ?? undefined,
         },

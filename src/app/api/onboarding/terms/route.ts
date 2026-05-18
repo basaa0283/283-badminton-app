@@ -33,8 +33,8 @@ export async function POST() {
     });
 
     // role が pending のまま規約同意した = 自力で来たゲストの参加リクエスト確定。
-    // 招待リンク経由は /invite/complete で role=member に昇格済みなので、
-    // ここを通過するときには role は member などになっており、この条件には引っかからない。
+    // 招待リンク経由は /invite/complete で仮アカ (visitor 等) のロールを引き継ぐため、
+    // ここを通過するときには role は visitor などになっており、この条件には引っかからない。
     if (updated.role === "pending") {
       const baseUrl =
         process.env.NEXTAUTH_URL ||
