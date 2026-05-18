@@ -17,7 +17,8 @@ interface EventFormData {
   deadlineEnabled: boolean;
   notifyMembers: boolean;
   categoryId: string;
-  visibleToGuest: boolean;
+  minViewRole: "guest" | "visitor" | "member";
+  minRespondRole: "visitor" | "member";
 }
 
 interface EventCategory {
@@ -113,7 +114,12 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
   const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
-  const [visibleToGuest, setVisibleToGuest] = useState(initialData?.visibleToGuest ?? false);
+  const [minViewRole, setMinViewRole] = useState<"guest" | "visitor" | "member">(
+    initialData?.minViewRole ?? "visitor"
+  );
+  const [minRespondRole, setMinRespondRole] = useState<"visitor" | "member">(
+    initialData?.minRespondRole ?? "visitor"
+  );
   const [categories, setCategories] = useState<EventCategory[]>([]);
 
   useEffect(() => {
@@ -166,7 +172,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       deadlineEnabled,
       notifyMembers,
       categoryId,
-      visibleToGuest,
+      minViewRole,
+      minRespondRole,
     };
 
     try {
@@ -498,22 +505,43 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         )}
       </div>
 
-      <div className="pt-2">
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="visibleToGuest"
-            checked={visibleToGuest}
-            onChange={(e) => setVisibleToGuest(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-          <label htmlFor="visibleToGuest" className="text-sm font-medium text-gray-700">
-            ゲスト (閲覧専用ロール) に公開する
+      <div className="pt-2 space-y-3 border-t border-gray-100">
+        <div>
+          <label htmlFor="minViewRole" className="block text-sm font-medium text-gray-700 mb-1">
+            閲覧できる最低ロール
           </label>
+          <select
+            id="minViewRole"
+            value={minViewRole}
+            onChange={(e) => setMinViewRole(e.target.value as "guest" | "visitor" | "member")}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+          >
+            <option value="guest">ゲスト以上 (全公開)</option>
+            <option value="visitor">ビジター以上 (見学候補・ビジター・メンバー)</option>
+            <option value="member">一般メンバー以上 (内部限定)</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            このロール以上にだけイベントが見えます。管理者・副管理者は閾値に関わらず常に閲覧できます。
+          </p>
         </div>
-        <p className="text-xs text-gray-500 mt-1 ml-7">
-          サークル外の見学候補者にも見せて良いイベントだけ ON にしてください。OFF だとゲストの一覧にはイベントが現れません。
-        </p>
+
+        <div>
+          <label htmlFor="minRespondRole" className="block text-sm font-medium text-gray-700 mb-1">
+            出欠回答できる最低ロール
+          </label>
+          <select
+            id="minRespondRole"
+            value={minRespondRole}
+            onChange={(e) => setMinRespondRole(e.target.value as "visitor" | "member")}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+          >
+            <option value="visitor">ビジター以上</option>
+            <option value="member">一般メンバー以上</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            このロール以上だけが出欠回答できます。ゲストは常に回答できません。
+          </p>
+        </div>
       </div>
 
       {showNotifyOption && (

@@ -27,13 +27,24 @@ export async function GET(request: NextRequest) {
       ? { eventDate: { gte: now } }
       : { eventDate: { gte: startOfPrevMonth, lt: now } };
 
-    // ゲスト (閲覧専用ロール) と pending (承認待ち) は visibleToGuest=true なイベントのみ。
-    // pending は本来 /onboarding/pending に redirect されるが、API 直叩きに対する防衛線。
+    // 閾値方式: 各イベントの minViewRole に対し、現在のロールが届いているもののみ。
+    //   - admin / subadmin は閾値に関わらず常に全件
+    //   - member は minViewRole in {guest, visitor, member}
+    //   - visitor は minViewRole in {guest, visitor}
+    //   - guest / pending は minViewRole = "guest" のみ
     const role = session.user.role as UserRole;
-    const restrictToGuestVisible = role === "guest" || role === "pending";
-    const where = restrictToGuestVisible
-      ? { ...dateWhere, visibleToGuest: true }
-      : dateWhere;
+    const visibleRoleFilter: string[] | null =
+      role === "admin" || role === "subadmin"
+        ? null
+        : role === "member"
+          ? ["guest", "visitor", "member"]
+          : role === "visitor"
+            ? ["guest", "visitor"]
+            : ["guest"]; // guest / pending
+    const where =
+      visibleRoleFilter === null
+        ? dateWhere
+        : { ...dateWhere, minViewRole: { in: visibleRoleFilter } };
 
     const [events, total] = await Promise.all([
       prisma.event.findMany({
@@ -164,7 +175,8 @@ export async function POST(request: NextRequest) {
         deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
         deadlineEnabled: parsed.data.deadlineEnabled,
         categoryId: parsed.data.categoryId ?? null,
-        visibleToGuest: parsed.data.visibleToGuest ?? false,
+        minViewRole: parsed.data.minViewRole ?? "visitor",
+        minRespondRole: parsed.data.minRespondRole ?? "visitor",
         shuttleCount: parsed.data.shuttleCount ?? null,
         shuttleCost: parsed.data.shuttleCost ?? null,
         gymCost: parsed.data.gymCost ?? null,

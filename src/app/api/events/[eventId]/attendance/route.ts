@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { attendanceSchema } from "@/lib/validations";
 import { notifyWaitlistPromotion } from "@/lib/line-messaging";
-import { permissions, UserRole } from "@/lib/permissions";
+import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -59,6 +59,15 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
         { status: 404 }
+      );
+    }
+
+    // 閾値: event.minRespondRole に届かないロールは回答不可。
+    // canRespondToEvent でグローバルに guest を弾いた後、イベント個別の閾値で更に絞る。
+    if (!meetsRoleThreshold(role, event.minRespondRole)) {
+      return NextResponse.json(
+        { success: false, error: { code: "FORBIDDEN", message: "このイベントには回答できません" } },
+        { status: 403 }
       );
     }
 
