@@ -102,17 +102,17 @@ describe("EventForm", () => {
 
   it("showNotifyOption=true で通知チェックボックスが表示される", () => {
     render(<EventForm onSubmit={vi.fn()} showNotifyOption />);
-    expect(screen.getByLabelText("作成時にメンバーへLINE通知を送る")).toBeInTheDocument();
+    expect(screen.getByLabelText("作成時にメンバーへ LINE 通知を送る")).toBeInTheDocument();
   });
 
   it("showNotifyOption=false（デフォルト）では通知チェックボックスが表示されない", () => {
     render(<EventForm onSubmit={vi.fn()} />);
-    expect(screen.queryByLabelText("作成時にメンバーへLINE通知を送る")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("作成時にメンバーへ LINE 通知を送る")).not.toBeInTheDocument();
   });
 
   it("通知チェックボックスはデフォルトで OFF", () => {
     render(<EventForm onSubmit={vi.fn()} showNotifyOption />);
-    expect(screen.getByLabelText("作成時にメンバーへLINE通知を送る")).not.toBeChecked();
+    expect(screen.getByLabelText("作成時にメンバーへ LINE 通知を送る")).not.toBeChecked();
   });
 
   it("終了時刻 ≤ 開始時刻 で バリデーションエラー", async () => {
