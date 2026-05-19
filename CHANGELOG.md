@@ -3,6 +3,47 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [2.1.0] - 2026-05-19
+
+ベータ運用中のフィードバックを反映した改善・機能追加と、CI 周りの足回り整理。
+事前に PROD DB へ `scripts/migrations/2026-05-19_event-role-thresholds.sql` の適用が必要。
+
+### Added
+
+- `/release-notes` ページ: ユーザー向けの更新履歴を「新機能 / 改善 / 修正 / 重要な変更」のラベル付きで表示。フッターからリンク。
+- `/about` サークル概要ページ (未ログインでも閲覧可)。`SystemSetting.aboutPageContent` に Markdown を保存し、`/admin/about` のエディタ (textarea + プレビュー) で編集できる。
+- 規約同意画面 (`/onboarding/terms`) に「サークルについて (運営方針・練習の流れ)」へのリンクを追加。
+- 承認時の LINE 通知: 管理者が pending ユーザーを承認するとそのユーザーの LINE に「ご参加リクエストが承認されました🎉」が届く。
+- 出欠ステータスに「見学」を追加: 定員枠を消費せず、管理者だけが付与可能。参加者一覧では「見学 (N)」セクションを別表示。
+
+### Changed
+
+- イベントの公開/回答権限を `visibleToGuest` ブール値から **`minViewRole` / `minRespondRole`** の閾値方式に置き換え。閲覧最低ロール (guest / visitor / member) と回答最低ロール (visitor / member) をイベント毎に設定できる。管理者・副管理者は閾値に関わらず常にアクセス可。
+- 招待リンク完了時に visitor → member へ自動昇格する処理を撤廃: 仮アカウントのロールがそのまま受け継がれる。定着後に管理者が手動で member に昇格する運用へ。
+- 管理画面のメンバー一覧で性別を `♂ 男` / `♀ 女` のカラーバッジ表示に変更 (区別しやすく)。
+- プロフィール画面の「プロフィールを更新しました」表示を「保存する」ボタンの直上に移動。
+- `User.lastActiveAt` を出欠回答以外の操作 (画面アクセス等) でも更新するように (5分スロットル)。
+- 規約同意フローのリンク導線を整理: ログイン画面の「サークルについて」リンクは削除し、同意画面に集約。
+- フッターのお問い合わせを「公式 LINE」一本化 (旧 contactEmail は管理者通知メール用に転用)。
+- パイプライン完了通知メールに、コミット本文から `日本語変更点:` / `確認ポイント:` を抽出した日本語サマリーを掲載するように。
+- `prisma db push` を App Service 起動時から CI のデプロイジョブに移動。失敗してもデプロイは止めない (continue-on-error) ことで、スキーマドリフト時の継続運用を確保。
+
+### Fixed
+
+- OS のダークモード設定が ON のユーザーで、ホームの「イベント一覧」「プロフィール」リンクや、プロフィール編集の入力済み値が薄いグレーで表示される問題を修正 (アプリをライトテーマ固定に)。
+- `BirthdateInput` で月・日のみクリアすると `1991--` のような不正値を発行していた不具合を修正。これに起因する生年月日の意図しない初期化を防止。
+- 未同意ユーザーが `/terms` / `/privacy` から「ホームに戻る」を押した際に、ホーム画面が一瞬表示されてから同意画面へ遷移する flash を解消 (Providers にゲートを追加)。
+- `/onboarding/pending` を開いたまま管理者承認を待つ場合に、最大 30 秒で自動的にホームへ遷移するようセッションを定期 refetch するように。
+
+### Removed
+
+- イベント詳細の「参加者一覧は一般メンバー以上のみ閲覧できます」空状態カードを削除 (説明過多のためノイズ削減)。
+- `EventCategory.visibleToGuest` と `Event.visibleToGuest` カラム (新 `minViewRole` / `minRespondRole` に置き換え。PROD DB へは `scripts/migrations/2026-05-19_event-role-thresholds.sql` を事前適用)。
+
+### Security
+
+- 管理者向けの承認リクエスト通知メール: 自力でゲスト参加した pending ユーザーが規約同意した時点で `SystemSetting.contactEmail` 宛にメールを送信。
+
 ## [2.0.0] - 2026-05-17
 
 ベータ公開版の初版。新規ゲスト動線・規約同意・ゲストロールの厳格化など、既存ユーザーの利用フローに影響する変更が含まれるため MAJOR バンプ。
@@ -289,6 +330,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[2.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.0...v1.3.1
