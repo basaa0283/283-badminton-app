@@ -19,6 +19,7 @@ interface EventFormData {
   respondStartAt: string;
   respondStartEnabled: boolean;
   notifyMembers: boolean;
+  announceOnCreate: boolean;
   categoryId: string;
   minViewRole: "guest" | "visitor" | "member";
   minRespondRole: "visitor" | "member";
@@ -120,6 +121,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [respondStartEnabled, setRespondStartEnabled] = useState(initialData?.respondStartEnabled || false);
   const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
   const [notifyTargetCount, setNotifyTargetCount] = useState<number | null>(null);
+  const [announceOnCreate, setAnnounceOnCreate] = useState(initialData?.announceOnCreate ?? false);
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
   const [minViewRole, setMinViewRole] = useState<"guest" | "visitor" | "member">(
     initialData?.minViewRole ?? "visitor"
@@ -212,6 +214,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       respondStartAt,
       respondStartEnabled,
       notifyMembers,
+      announceOnCreate,
       categoryId,
       minViewRole,
       minRespondRole,
@@ -636,26 +639,46 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       </div>
 
       {showNotifyOption && (
-        <div className="pt-2">
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="notifyMembers"
-              checked={notifyMembers}
-              onChange={(e) => setNotifyMembers(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="notifyMembers" className="text-sm font-medium text-gray-700">
-              作成時にメンバーへ LINE 通知を送る
-            </label>
+        <div className="pt-2 space-y-2">
+          <div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="notifyMembers"
+                checked={notifyMembers}
+                onChange={(e) => setNotifyMembers(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="notifyMembers" className="text-sm font-medium text-gray-700">
+                作成時にメンバーへ LINE 通知を送る
+              </label>
+            </div>
+            {notifyMembers && (
+              <p className="text-xs text-amber-700 mt-1 ml-7">
+                現在 <span className="font-bold">{notifyTargetCount ?? "?"}</span> 人 (一般メンバー以上 + LINE 連携済み) に送信されます。
+                <br />
+                保存時に確認ダイアログが出ます。
+              </p>
+            )}
           </div>
-          {notifyMembers && (
-            <p className="text-xs text-amber-700 mt-1 ml-7">
-              現在 <span className="font-bold">{notifyTargetCount ?? "?"}</span> 人 (一般メンバー以上 + LINE 連携済み) に送信されます。
-              <br />
-              保存時に確認ダイアログが出ます。
+
+          <div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="announceOnCreate"
+                checked={announceOnCreate}
+                onChange={(e) => setAnnounceOnCreate(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="announceOnCreate" className="text-sm font-medium text-gray-700">
+                お知らせにも投稿する
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 ml-7">
+              定型文 (タイトル + 日時 + 場所) でアプリ内のお知らせを 1 件作成します。後から <code>/admin/announcements</code> で編集可能。
             </p>
-          )}
+          </div>
         </div>
       )}
 

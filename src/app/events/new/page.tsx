@@ -50,6 +50,7 @@ export default function NewEventPage() {
     respondStartAt: string;
     respondStartEnabled: boolean;
     notifyMembers: boolean;
+    announceOnCreate: boolean;
     categoryId: string;
     minViewRole: "guest" | "visitor" | "member";
     minRespondRole: "visitor" | "member";
@@ -74,6 +75,7 @@ export default function NewEventPage() {
             ? new Date(formData.respondStartAt).toISOString()
             : null,
         notifyMembers: formData.notifyMembers,
+        announceOnCreate: formData.announceOnCreate,
         categoryId: formData.categoryId || null,
         minViewRole: formData.minViewRole,
         minRespondRole: formData.minRespondRole,

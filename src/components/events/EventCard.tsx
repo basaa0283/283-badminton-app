@@ -11,6 +11,7 @@ interface EventCardProps {
     id: string;
     title: string;
     eventDate: Date | string;
+    eventEndDate?: Date | string | null;
     isAllDay?: boolean;
     location: string | null;
     capacity: number | null;
@@ -73,9 +74,14 @@ export function EventCard({ event }: EventCardProps) {
               </svg>
               <span>
                 {format(eventDate, "M月d日(E)", { locale: ja })}
-                {event.isAllDay
-                  ? " 終日"
-                  : ` ${format(eventDate, "HH:mm", { locale: ja })}`}
+                {event.isAllDay ? (
+                  " 終日"
+                ) : (
+                  <>
+                    {` ${format(eventDate, "HH:mm", { locale: ja })}`}
+                    {event.eventEndDate && `-${format(new Date(event.eventEndDate), "HH:mm", { locale: ja })}`}
+                  </>
+                )}
               </span>
             </div>
 

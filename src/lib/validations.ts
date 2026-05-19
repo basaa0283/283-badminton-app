@@ -15,6 +15,7 @@ export const createEventSchema = z.object({
   deadlineEnabled: z.boolean().default(false),
   respondStartAt: z.string().datetime().optional().nullable(),
   notifyMembers: z.boolean().default(true),
+  announceOnCreate: z.boolean().default(false),
   // 種別タグ
   categoryId: z.string().optional().nullable(),
   // 閲覧・回答できる最低ロール

@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { createEventSchema } from "@/lib/validations";
 import { notifyNewEvent } from "@/lib/line-messaging";
+import { formatInTimeZone } from "date-fns-tz";
+import { ja } from "date-fns/locale";
 
 // GET /api/events - イベント一覧取得
 export async function GET(request: NextRequest) {
@@ -82,6 +84,7 @@ export async function GET(request: NextRequest) {
         description: event.description,
         eventDate: event.eventDate,
         eventEndDate: event.eventEndDate,
+        isAllDay: event.isAllDay,
         location: event.location,
         capacity: event.capacity,
         fee: event.feeVisible ? event.fee : null,
@@ -206,6 +209,32 @@ export async function POST(request: NextRequest) {
         location: event.location,
         appUrl,
       }).catch((err) => console.error("[notify] new event failed:", err));
+    }
+
+    // お知らせにも投稿: イベント情報を定型文で Announcement として作成。
+    // 公開対象は member/visitor。guest はイベント詳細で見ればよく、お知らせは
+    // 内部メンバー向けの位置づけ。後から /admin/announcements で編集可。
+    if (parsed.data.announceOnCreate) {
+      const lines = [
+        event.title,
+        `📅 ${formatInTimeZone(event.eventDate, "Asia/Tokyo", "M月d日(E) HH:mm", { locale: ja })}`,
+        event.location ? `📍 ${event.location}` : null,
+        "",
+        "詳しくはアプリ「イベント一覧」をご確認ください。",
+      ].filter((l): l is string => l !== null);
+      await prisma.announcement
+        .create({
+          data: {
+            title: `イベント追加: ${event.title}`,
+            body: lines.join("\n"),
+            severity: "info",
+            audienceMember: true,
+            audienceVisitor: true,
+            audienceGuest: false,
+            createdById: session.user.id,
+          },
+        })
+        .catch((err) => console.error("[announce] new event announcement failed:", err));
     }
 
     return NextResponse.json({ success: true, data: event }, { status: 201 });
