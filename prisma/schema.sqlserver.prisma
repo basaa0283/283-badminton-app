@@ -55,6 +55,9 @@ model User {
 
   announcements   Announcement[] @relation("AnnouncementCreator")
   announcementReads AnnouncementRead[]
+
+  createdTournaments Tournament[]       @relation("TournamentCreator")
+  tournamentResults  TournamentResult[]
 }
 
 // NextAuth Account
@@ -277,4 +280,49 @@ model Message {
   // リレーション（SQL Server循環参照対策: senderはNoAction）
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+// 大会マスター。一般 (member) 以上が自分の出場した大会を登録する。
+model Tournament {
+  id          String   @id @default(cuid())
+  name        String   @db.NVarChar(200) // 大会名
+  heldAt      DateTime // 開催日
+  tier        String   @db.NVarChar(50)  // national / regional / prefectural / city / club / other
+  format      String   @db.NVarChar(50)  // tournament / league / league_then_tournament / other
+  classCount  Int?     // 何部制か (null = 部なし / 不明)
+  location    String?  @db.NVarChar(200) // 会場
+  description String?  @db.NVarChar(2000)
+  createdById String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // SQL Server の multi-cascade-path を避けるため createdBy は NoAction
+  createdBy User                @relation("TournamentCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  results   TournamentResult[]
+
+  @@index([heldAt])
+  @@index([createdById])
+}
+
+// 大会の個人成績。1 つの Tournament に対して N 個の Result。
+model TournamentResult {
+  id           String   @id @default(cuid())
+  tournamentId String
+  userId       String
+  category     String   @db.NVarChar(20)  // MS / WS / MD / WD / XD / other
+  className    String?  @db.NVarChar(50)  // "1部" "2部" "ベテラン" 等
+  rank         String?  @db.NVarChar(100) // 自由テキスト
+  partnerName  String?  @db.NVarChar(100) // ダブルス相方
+  note         String?  @db.NVarChar(2000)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // tournament 側は Cascade、user 側は NoAction (multi-cascade-path 回避)
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([tournamentId])
 }

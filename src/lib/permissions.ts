@@ -36,6 +36,10 @@ export const permissions = {
 
   // 管理画面権限
   canAccessAdmin: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.subadmin,
+
+  // 大会実績権限。閲覧・登録ともに member 以上 (ビジター・ゲストには見せない)。
+  canViewTournaments: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
+  canManageTournaments: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
 };
 
 /**

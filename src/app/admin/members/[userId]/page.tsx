@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/Modal";
 import { BirthdateInput } from "@/components/ui/BirthdateInput";
 import { permissions, UserRole, getRoleName } from "@/lib/permissions";
 import { formatSkillLevel, SKILL_LEVELS, SKILL_LEVEL_MIN, SKILL_LEVEL_MAX } from "@/lib/skill-level";
+import { TournamentResultsSection } from "@/components/tournaments/TournamentResultsSection";
 
 interface MemberDetail {
   id: string;
@@ -776,6 +777,10 @@ export default function MemberDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        <div className="mt-4">
+          <TournamentResultsSection userId={userId} />
+        </div>
       </main>
 
       <Modal

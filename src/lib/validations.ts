@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  TOURNAMENT_TIERS,
+  TOURNAMENT_FORMATS,
+  TOURNAMENT_CATEGORIES,
+} from "./tournament-meta";
 
 // イベント作成スキーマ
 export const createEventSchema = z.object({
@@ -74,9 +79,37 @@ export const adminUpdateMemberSchema = z.object({
   priorityScore: z.number().int().min(-1000).max(1000).optional(),
 });
 
+// 大会マスター作成/更新スキーマ
+export const tournamentInputSchema = z.object({
+  name: z.string().min(1, "大会名は必須です").max(200, "大会名は200文字以内で入力してください"),
+  heldAt: z.string().datetime({ message: "開催日を入力してください" }),
+  tier: z.enum(TOURNAMENT_TIERS),
+  format: z.enum(TOURNAMENT_FORMATS),
+  classCount: z.number().int().min(1).max(20).optional().nullable(),
+  location: z.string().max(200).optional().nullable(),
+  description: z.string().max(2000).optional().nullable(),
+});
+
+// 大会成績作成/更新スキーマ
+export const tournamentResultInputSchema = z.object({
+  category: z.enum(TOURNAMENT_CATEGORIES),
+  className: z.string().max(50).optional().nullable(),
+  rank: z.string().max(100).optional().nullable(),
+  partnerName: z.string().max(100).optional().nullable(),
+  note: z.string().max(2000).optional().nullable(),
+});
+
+// 管理者が他人の成績を登録するとき用 (userId を明示)
+export const adminTournamentResultInputSchema = tournamentResultInputSchema.extend({
+  userId: z.string().min(1, "対象ユーザーが必要です"),
+});
+
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export type AttendanceInput = z.infer<typeof attendanceSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export type AdminUpdateMemberInput = z.infer<typeof adminUpdateMemberSchema>;
+export type TournamentInput = z.infer<typeof tournamentInputSchema>;
+export type TournamentResultInput = z.infer<typeof tournamentResultInputSchema>;
+export type AdminTournamentResultInput = z.infer<typeof adminTournamentResultInputSchema>;

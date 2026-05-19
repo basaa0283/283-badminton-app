@@ -1,0 +1,67 @@
+"use client";
+
+import { useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Header } from "@/components/layout/Header";
+import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { TournamentForm, TournamentFormValues } from "@/components/tournaments/TournamentForm";
+import { permissions, UserRole } from "@/lib/permissions";
+
+export default function NewTournamentPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/login");
+  }, [status, router]);
+
+  useEffect(() => {
+    if (!session) return;
+    const role = session.user.role as UserRole;
+    if (!permissions.canManageTournaments(role)) router.push("/tournaments");
+  }, [session, router]);
+
+  const handleSubmit = async (values: TournamentFormValues) => {
+    const res = await fetch("/api/tournaments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: values.name,
+        heldAt: new Date(`${values.heldAt}T00:00:00`).toISOString(),
+        tier: values.tier,
+        format: values.format,
+        classCount: values.classCount ? parseInt(values.classCount, 10) : null,
+        location: values.location || null,
+        description: values.description || null,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error?.message || "保存に失敗しました");
+    router.push(`/tournaments/${json.data.id}`);
+  };
+
+  if (status === "loading" || !session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">読み込み中...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <Header />
+      <main className="max-w-2xl mx-auto px-4 py-6">
+        <Card>
+          <CardHeader>
+            <h1 className="text-lg font-bold text-gray-900">大会を登録</h1>
+          </CardHeader>
+          <CardContent>
+            <TournamentForm submitLabel="登録する" onSubmit={handleSubmit} />
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+}
