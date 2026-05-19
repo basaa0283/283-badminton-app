@@ -119,6 +119,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [respondStartAt, setRespondStartAt] = useState(initialData?.respondStartAt || "");
   const [respondStartEnabled, setRespondStartEnabled] = useState(initialData?.respondStartEnabled || false);
   const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
+  const [notifyTargetCount, setNotifyTargetCount] = useState<number | null>(null);
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
   const [minViewRole, setMinViewRole] = useState<"guest" | "visitor" | "member">(
     initialData?.minViewRole ?? "visitor"
@@ -148,8 +149,29 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       .catch(() => {});
   }, []);
 
+  // LINE 通知対象人数 (notifyMembers ON のときフォームに表示)
+  useEffect(() => {
+    if (!showNotifyOption) return;
+    fetch("/api/admin/line-notify-targets")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setNotifyTargetCount(json.data.count);
+      })
+      .catch(() => {});
+  }, [showNotifyOption]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // LINE 通知が ON のとき、確認ダイアログを出して誤爆を防ぐ
+    if (showNotifyOption && notifyMembers) {
+      const count = notifyTargetCount ?? "?";
+      const ok = window.confirm(
+        `LINE 通知が ${count} 人に送信されます。\n本当に作成してよろしいですか？`
+      );
+      if (!ok) return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -614,17 +636,26 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       </div>
 
       {showNotifyOption && (
-        <div className="flex items-center gap-3 pt-2">
-          <input
-            type="checkbox"
-            id="notifyMembers"
-            checked={notifyMembers}
-            onChange={(e) => setNotifyMembers(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-          <label htmlFor="notifyMembers" className="text-sm font-medium text-gray-700">
-            作成時にメンバーへLINE通知を送る
-          </label>
+        <div className="pt-2">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="notifyMembers"
+              checked={notifyMembers}
+              onChange={(e) => setNotifyMembers(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="notifyMembers" className="text-sm font-medium text-gray-700">
+              作成時にメンバーへ LINE 通知を送る
+            </label>
+          </div>
+          {notifyMembers && (
+            <p className="text-xs text-amber-700 mt-1 ml-7">
+              現在 <span className="font-bold">{notifyTargetCount ?? "?"}</span> 人 (一般メンバー以上 + LINE 連携済み) に送信されます。
+              <br />
+              保存時に確認ダイアログが出ます。
+            </p>
+          )}
         </div>
       )}
 

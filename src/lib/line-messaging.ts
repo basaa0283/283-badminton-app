@@ -1,6 +1,8 @@
-import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "./prisma";
+
+const JST = "Asia/Tokyo";
 
 async function isSettingEnabled(key: string): Promise<boolean> {
   const setting = await prisma.systemSetting.findUnique({ where: { key } });
@@ -58,8 +60,13 @@ async function multicast(lineIds: string[], text: string): Promise<void> {
   }
 }
 
+/**
+ * LINE 通知本文の日時表記。
+ * Azure App Service の Node ランタイムは UTC で動くため、date-fns の format を
+ * そのまま使うと JST より 9 時間遅れた表記になっていた。明示的に JST に変換して整形する。
+ */
 function formatEventDate(date: Date): string {
-  return format(date, "M月d日(E) HH:mm", { locale: ja });
+  return formatInTimeZone(date, JST, "M月d日(E) HH:mm", { locale: ja });
 }
 
 export async function notifyApprovalGranted(params: {
