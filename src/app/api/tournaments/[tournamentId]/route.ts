@@ -9,7 +9,10 @@ interface Params {
   params: Promise<{ tournamentId: string }>;
 }
 
-// GET /api/tournaments/[tournamentId] - 大会詳細 + 成績一覧
+// GET /api/tournaments/[tournamentId] - 大会詳細 (classes + results を含む)
+// 表示条件:
+//   - approved: member 以上なら全員見える
+//   - pending / rejected: 本人 (createdById) または admin のみ
 export async function GET(_request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
@@ -32,11 +35,17 @@ export async function GET(_request: NextRequest, { params }: Params) {
       where: { id: tournamentId },
       include: {
         createdBy: { select: { id: true, nickname: true } },
+        classes: {
+          orderBy: [{ gender: "asc" }, { order: "asc" }, { name: "asc" }],
+        },
         results: {
-          orderBy: [{ category: "asc" }, { className: "asc" }, { createdAt: "asc" }],
+          orderBy: [{ category: "asc" }, { createdAt: "asc" }],
           include: {
             user: {
               select: { id: true, nickname: true, profileImageUrl: true },
+            },
+            tournamentClass: {
+              select: { id: true, gender: true, name: true, order: true },
             },
           },
         },
@@ -44,6 +53,18 @@ export async function GET(_request: NextRequest, { params }: Params) {
     });
 
     if (!tournament) {
+      return NextResponse.json(
+        { success: false, error: { code: "NOT_FOUND" } },
+        { status: 404 }
+      );
+    }
+
+    // 承認前は本人と admin だけが見られる
+    if (
+      tournament.approvalStatus !== "approved" &&
+      tournament.createdById !== session.user.id &&
+      !permissions.canApproveTournaments(role)
+    ) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND" } },
         { status: 404 }
@@ -61,7 +82,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 // PUT /api/tournaments/[tournamentId] - 大会マスター編集
-// 自分が登録した大会、または管理者のみ
+// - 自分が登録した大会、または admin のみ
+// - 編集すると approvalStatus は pending に戻す (admin 自身の編集を除く)
+// - classes を丸ごと差し替え。既存 result が紐づくクラスが消える場合は
+//   tournamentClassId = NULL に逃がす (画面側でクラス再選択を促す)
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
@@ -87,7 +111,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
         { status: 404 }
       );
     }
-    if (existing.createdById !== session.user.id && !permissions.canAccessAdmin(role)) {
+    const isApprover = permissions.canApproveTournaments(role);
+    if (existing.createdById !== session.user.id && !isApprover) {
       return NextResponse.json(
         { success: false, error: { code: "FORBIDDEN", message: "他の人が登録した大会は管理者のみ編集できます" } },
         { status: 403 }
@@ -106,20 +131,48 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
-    const tournament = await prisma.tournament.update({
-      where: { id: tournamentId },
-      data: {
-        name: parsed.data.name,
-        heldAt: new Date(parsed.data.heldAt),
-        tier: parsed.data.tier,
-        format: parsed.data.format,
-        classCount: parsed.data.classCount ?? null,
-        location: parsed.data.location ?? null,
-        description: parsed.data.description ?? null,
-      },
+    // 一般メンバーが編集した場合は再度 pending に戻す。admin の編集はそのまま。
+    const resetApproval = !isApprover && existing.approvalStatus === "approved";
+
+    const updated = await prisma.$transaction(async (tx) => {
+      // クラスを丸ごと差し替え。既存 result の tournamentClassId は SetNull で
+      // 自動的に外れる (Prisma リレーション設定による)。
+      await tx.tournamentResult.updateMany({
+        where: { tournamentId },
+        data: { tournamentClassId: null },
+      });
+      await tx.tournamentClass.deleteMany({ where: { tournamentId } });
+      await tx.tournamentClass.createMany({
+        data: (parsed.data.classes ?? []).map((c, idx) => ({
+          tournamentId,
+          gender: c.gender,
+          name: c.name,
+          order: c.order ?? idx,
+        })),
+      });
+
+      return tx.tournament.update({
+        where: { id: tournamentId },
+        data: {
+          name: parsed.data.name,
+          heldAt: new Date(parsed.data.heldAt),
+          tier: parsed.data.tier,
+          format: parsed.data.format,
+          location: parsed.data.location ?? null,
+          description: parsed.data.description ?? null,
+          ...(resetApproval
+            ? {
+                approvalStatus: "pending",
+                approvedById: null,
+                approvedAt: null,
+                rejectionReason: null,
+              }
+            : {}),
+        },
+      });
     });
 
-    return NextResponse.json({ success: true, data: tournament });
+    return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("Tournament PUT error:", error);
     return NextResponse.json(
@@ -130,7 +183,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 // DELETE /api/tournaments/[tournamentId] - 大会マスター削除
-// 自分が登録した大会、または管理者のみ。成績は cascade 削除。
 export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
@@ -156,16 +208,17 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
         { status: 404 }
       );
     }
-    if (existing.createdById !== session.user.id && !permissions.canAccessAdmin(role)) {
+    if (existing.createdById !== session.user.id && !permissions.canApproveTournaments(role)) {
       return NextResponse.json(
         { success: false, error: { code: "FORBIDDEN" } },
         { status: 403 }
       );
     }
 
-    // SQL Server: TournamentResult の user 側 FK が NoAction なので明示的に先に削除
+    // SQL Server: result の user FK が NoAction なので明示的に先に削除
     await prisma.$transaction(async (tx) => {
       await tx.tournamentResult.deleteMany({ where: { tournamentId } });
+      await tx.tournamentClass.deleteMany({ where: { tournamentId } });
       await tx.tournament.delete({ where: { id: tournamentId } });
     });
 

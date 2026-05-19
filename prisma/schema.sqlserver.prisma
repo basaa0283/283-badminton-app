@@ -283,46 +283,70 @@ model Message {
 }
 
 // 大会マスター。一般 (member) 以上が自分の出場した大会を登録する。
+// 承認 (approvalStatus = approved) されるまで一般メンバーには見せない。
 model Tournament {
   id          String   @id @default(cuid())
-  name        String   @db.NVarChar(200) // 大会名
-  heldAt      DateTime // 開催日
-  tier        String   @db.NVarChar(50)  // national / regional / prefectural / city / club / other
-  format      String   @db.NVarChar(50)  // tournament / league / league_then_tournament / other
-  classCount  Int?     // 何部制か (null = 部なし / 不明)
-  location    String?  @db.NVarChar(200) // 会場
+  name        String   @db.NVarChar(200)
+  heldAt      DateTime
+  tier        String   @db.NVarChar(50)
+  format      String   @db.NVarChar(50)
+  location    String?  @db.NVarChar(200)
   description String?  @db.NVarChar(2000)
   createdById String
+
+  approvalStatus  String    @default("pending") @db.NVarChar(20) // pending / approved / rejected
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?   @db.NVarChar(500)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // SQL Server の multi-cascade-path を避けるため createdBy は NoAction
+  // SQL Server の multi-cascade-path を避けるため createdBy / approvedBy は NoAction
   createdBy User                @relation("TournamentCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  classes   TournamentClass[]
   results   TournamentResult[]
 
   @@index([heldAt])
   @@index([createdById])
+  @@index([approvalStatus])
 }
 
-// 大会の個人成績。1 つの Tournament に対して N 個の Result。
-model TournamentResult {
-  id           String   @id @default(cuid())
+// 大会のランク区分 (クラス)。男女別 + ミックスの 3 系統。
+model TournamentClass {
+  id           String  @id @default(cuid())
   tournamentId String
-  userId       String
-  category     String   @db.NVarChar(20)  // MS / WS / MD / WD / XD / other
-  className    String?  @db.NVarChar(50)  // "1部" "2部" "ベテラン" 等
-  rank         String?  @db.NVarChar(100) // 自由テキスト
-  partnerName  String?  @db.NVarChar(100) // ダブルス相方
-  note         String?  @db.NVarChar(2000)
+  gender       String  @db.NVarChar(10)  // male / female / mixed
+  name         String  @db.NVarChar(50)  // "1部" "2部" 等
+  order        Int     @default(0)
+
+  results      TournamentResult[]
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+}
+
+// 大会の個人成績。
+model TournamentResult {
+  id                String   @id @default(cuid())
+  tournamentId      String
+  tournamentClassId String?
+  userId            String
+  category          String   @db.NVarChar(20)
+  rank              String?  @db.NVarChar(100)
+  partnerName       String?  @db.NVarChar(100)
+  note              String?  @db.NVarChar(2000)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // tournament 側は Cascade、user 側は NoAction (multi-cascade-path 回避)
-  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user       User       @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  // tournament 側は Cascade、class / user は NoAction で multi-cascade-path を回避
+  tournament      Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentClass TournamentClass? @relation(fields: [tournamentClassId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user            User             @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([userId])
   @@index([tournamentId])
+  @@index([tournamentClassId])
 }

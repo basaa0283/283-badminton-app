@@ -31,9 +31,13 @@ export default function NewTournamentPage() {
         heldAt: new Date(`${values.heldAt}T00:00:00`).toISOString(),
         tier: values.tier,
         format: values.format,
-        classCount: values.classCount ? parseInt(values.classCount, 10) : null,
         location: values.location || null,
         description: values.description || null,
+        classes: values.classes.map((c, idx) => ({
+          gender: c.gender,
+          name: c.name,
+          order: idx,
+        })),
       }),
     });
     const json = await res.json();
@@ -56,6 +60,9 @@ export default function NewTournamentPage() {
         <Card>
           <CardHeader>
             <h1 className="text-lg font-bold text-gray-900">大会を登録</h1>
+            <p className="text-xs text-gray-500 mt-1">
+              登録後、管理者の承認が完了するまで他のメンバーには表示されません。
+            </p>
           </CardHeader>
           <CardContent>
             <TournamentForm submitLabel="登録する" onSubmit={handleSubmit} />

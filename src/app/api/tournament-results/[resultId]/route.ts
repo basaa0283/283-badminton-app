@@ -9,8 +9,8 @@ interface Params {
   params: Promise<{ resultId: string }>;
 }
 
-// PUT /api/tournament-results/[resultId]
-// 本人のみ編集可。管理者は他人のも編集可。
+// PUT /api/tournament-results/[resultId] - 成績編集
+// 本人または admin。tournamentClassId は同じ大会内のクラスかを検証。
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
@@ -55,11 +55,23 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
+    if (parsed.data.tournamentClassId) {
+      const cls = await prisma.tournamentClass.findUnique({
+        where: { id: parsed.data.tournamentClassId },
+      });
+      if (!cls || cls.tournamentId !== existing.tournamentId) {
+        return NextResponse.json(
+          { success: false, error: { code: "VALIDATION_ERROR", message: "クラスの指定が不正です" } },
+          { status: 400 }
+        );
+      }
+    }
+
     const result = await prisma.tournamentResult.update({
       where: { id: resultId },
       data: {
         category: parsed.data.category,
-        className: parsed.data.className ?? null,
+        tournamentClassId: parsed.data.tournamentClassId ?? null,
         rank: parsed.data.rank ?? null,
         partnerName: parsed.data.partnerName ?? null,
         note: parsed.data.note ?? null,
@@ -77,7 +89,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 // DELETE /api/tournament-results/[resultId]
-// 本人または管理者
 export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);

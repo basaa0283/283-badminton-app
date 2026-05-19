@@ -6,8 +6,10 @@ import { permissions, UserRole } from "@/lib/permissions";
 import { tournamentInputSchema } from "@/lib/validations";
 
 // GET /api/tournaments - 大会マスター一覧
-// 表示は member 以上。新しい順 (heldAt desc) で全件返す。
-export async function GET() {
+//   - 一般メンバー: approved のみ + 自分が登録した pending (本人にだけ可視)
+//   - admin (canApproveTournaments): 全件返す (UI 側で承認待ち/承認済みを区別)
+// 並び順は heldAt desc。
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -24,7 +26,24 @@ export async function GET() {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const statusFilter = searchParams.get("status"); // optional: "pending" | "approved" | "rejected"
+
+    const isApprover = permissions.canApproveTournaments(role);
+    const where = isApprover
+      ? statusFilter
+        ? { approvalStatus: statusFilter }
+        : {}
+      : {
+          // 一般メンバー: approved 全件 + 自分の pending
+          OR: [
+            { approvalStatus: "approved" },
+            { createdById: session.user.id, approvalStatus: { in: ["pending", "rejected"] } },
+          ],
+        };
+
     const tournaments = await prisma.tournament.findMany({
+      where,
       orderBy: { heldAt: "desc" },
       include: {
         createdBy: { select: { id: true, nickname: true } },
@@ -40,9 +59,11 @@ export async function GET() {
         heldAt: t.heldAt,
         tier: t.tier,
         format: t.format,
-        classCount: t.classCount,
         location: t.location,
         description: t.description,
+        approvalStatus: t.approvalStatus,
+        approvedAt: t.approvedAt,
+        rejectionReason: t.rejectionReason,
         createdBy: t.createdBy,
         resultCount: t._count.results,
         createdAt: t.createdAt,
@@ -58,6 +79,8 @@ export async function GET() {
 }
 
 // POST /api/tournaments - 大会マスター登録 (member 以上)
+// 新規登録は常に approvalStatus = "pending"。
+// classes 配列 (ネスト) を同時に作成する。
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -93,10 +116,17 @@ export async function POST(request: NextRequest) {
         heldAt: new Date(parsed.data.heldAt),
         tier: parsed.data.tier,
         format: parsed.data.format,
-        classCount: parsed.data.classCount ?? null,
         location: parsed.data.location ?? null,
         description: parsed.data.description ?? null,
         createdById: session.user.id,
+        approvalStatus: "pending",
+        classes: {
+          create: (parsed.data.classes ?? []).map((c, idx) => ({
+            gender: c.gender,
+            name: c.name,
+            order: c.order ?? idx,
+          })),
+        },
       },
     });
 

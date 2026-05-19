@@ -40,6 +40,10 @@ export const permissions = {
   // 大会実績権限。閲覧・登録ともに member 以上 (ビジター・ゲストには見せない)。
   canViewTournaments: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
   canManageTournaments: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.member,
+  // 大会マスターの承認 (実在性チェック)。
+  // 現状は同サークル admin が担うが、将来「サービス管理者」ロールに切り替える
+  // 想定なので、canAccessAdmin とは独立した関数にしておく。
+  canApproveTournaments: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.admin,
 };
 
 /**

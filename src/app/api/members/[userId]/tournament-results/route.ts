@@ -29,8 +29,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }
 
     const { userId } = await params;
+    // approved な大会の成績だけを返す。pending / rejected な大会は本人にも
+    // ここでは出さない (大会詳細ページ側で見られる前提)。
     const results = await prisma.tournamentResult.findMany({
-      where: { userId },
+      where: { userId, tournament: { approvalStatus: "approved" } },
       include: {
         tournament: {
           select: {
@@ -39,9 +41,11 @@ export async function GET(_request: NextRequest, { params }: Params) {
             heldAt: true,
             tier: true,
             format: true,
-            classCount: true,
             location: true,
           },
+        },
+        tournamentClass: {
+          select: { id: true, gender: true, name: true, order: true },
         },
       },
       orderBy: { tournament: { heldAt: "desc" } },

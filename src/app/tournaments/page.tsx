@@ -18,11 +18,18 @@ interface TournamentItem {
   heldAt: string;
   tier: string;
   format: string;
-  classCount: number | null;
   location: string | null;
+  approvalStatus: "pending" | "approved" | "rejected";
+  rejectionReason: string | null;
   createdBy: { id: string; nickname: string } | null;
   resultCount: number;
 }
+
+const STATUS_BADGE: Record<TournamentItem["approvalStatus"], { label: string; className: string }> = {
+  pending: { label: "承認待ち", className: "bg-amber-100 text-amber-800" },
+  approved: { label: "", className: "" },
+  rejected: { label: "却下", className: "bg-red-100 text-red-800" },
+};
 
 export default function TournamentsPage() {
   const { data: session, status } = useSession();
@@ -56,6 +63,10 @@ export default function TournamentsPage() {
     );
   }
 
+  const role = session.user.role as UserRole;
+  const isApprover = permissions.canApproveTournaments(role);
+  const pendingCount = tournaments?.filter((t) => t.approvalStatus === "pending").length ?? 0;
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
@@ -66,6 +77,16 @@ export default function TournamentsPage() {
             <Button size="sm">大会を登録</Button>
           </Link>
         </div>
+
+        {isApprover && pendingCount > 0 && (
+          <Card className="mb-4 border-2 border-amber-300">
+            <CardContent>
+              <p className="text-sm text-amber-900">
+                承認待ちの大会が {pendingCount} 件あります。下の一覧で「承認待ち」バッジの大会を確認してください。
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {tournaments === null ? (
           <div className="text-gray-500 text-sm">読み込み中...</div>
@@ -79,28 +100,41 @@ export default function TournamentsPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {tournaments.map((t) => (
-              <Link key={t.id} href={`/tournaments/${t.id}`}>
-                <Card hover>
-                  <CardContent>
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h2 className="font-semibold text-gray-900">{t.name}</h2>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0">
-                        {TOURNAMENT_TIER_LABEL[t.tier as TournamentTier] ?? t.tier}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {format(new Date(t.heldAt), "yyyy年M月d日(E)", { locale: ja })}
-                      {t.location ? ` ・ ${t.location}` : ""}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      成績登録: {t.resultCount}件
-                      {t.createdBy ? ` ・ 登録者: ${t.createdBy.nickname}` : ""}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+            {tournaments.map((t) => {
+              const badge = STATUS_BADGE[t.approvalStatus];
+              return (
+                <Link key={t.id} href={`/tournaments/${t.id}`}>
+                  <Card hover>
+                    <CardContent>
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h2 className="font-semibold text-gray-900">{t.name}</h2>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {badge.label && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          )}
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                            {TOURNAMENT_TIER_LABEL[t.tier as TournamentTier] ?? t.tier}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {format(new Date(t.heldAt), "yyyy年M月d日(E)", { locale: ja })}
+                        {t.location ? ` ・ ${t.location}` : ""}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        成績登録: {t.resultCount}件
+                        {t.createdBy ? ` ・ 登録者: ${t.createdBy.nickname}` : ""}
+                      </div>
+                      {t.approvalStatus === "rejected" && t.rejectionReason && (
+                        <div className="text-xs text-red-700 mt-1">却下理由: {t.rejectionReason}</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         )}
       </main>

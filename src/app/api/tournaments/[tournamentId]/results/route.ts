@@ -15,6 +15,9 @@ interface Params {
 // POST /api/tournaments/[tournamentId]/results
 // 本人の成績を登録 (userId はセッションから決定)。
 // 管理者は body に userId を付けて他人の成績も登録できる。
+//
+// 大会が approved でないときは登録を拒否する (admin だけは本人テスト用に許可)。
+// tournamentClassId は同じ大会の class でなければエラー。
 export async function POST(request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
@@ -41,6 +44,19 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
+    if (
+      tournament.approvalStatus !== "approved" &&
+      !permissions.canApproveTournaments(role)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: "NOT_APPROVED", message: "この大会は承認待ちのため成績登録できません" },
+        },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const isAdmin = permissions.canAccessAdmin(role);
     const schema = isAdmin
@@ -64,12 +80,25 @@ export async function POST(request: NextRequest, { params }: Params) {
         ? adminBody.userId
         : session.user.id;
 
+    // tournamentClassId が指定されている場合は、同じ大会のクラスかを検証
+    if (parsed.data.tournamentClassId) {
+      const cls = await prisma.tournamentClass.findUnique({
+        where: { id: parsed.data.tournamentClassId },
+      });
+      if (!cls || cls.tournamentId !== tournamentId) {
+        return NextResponse.json(
+          { success: false, error: { code: "VALIDATION_ERROR", message: "クラスの指定が不正です" } },
+          { status: 400 }
+        );
+      }
+    }
+
     const result = await prisma.tournamentResult.create({
       data: {
         tournamentId,
+        tournamentClassId: parsed.data.tournamentClassId ?? null,
         userId: targetUserId,
         category: parsed.data.category,
-        className: parsed.data.className ?? null,
         rank: parsed.data.rank ?? null,
         partnerName: parsed.data.partnerName ?? null,
         note: parsed.data.note ?? null,

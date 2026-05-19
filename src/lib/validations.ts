@@ -79,24 +79,38 @@ export const adminUpdateMemberSchema = z.object({
   priorityScore: z.number().int().min(-1000).max(1000).optional(),
 });
 
+// 大会クラス入力 (大会作成・編集時にネストして送る)
+export const tournamentClassInputSchema = z.object({
+  gender: z.enum(["male", "female", "mixed"]),
+  name: z.string().min(1, "クラス名は必須です").max(50, "クラス名は50文字以内"),
+  order: z.number().int().min(0).max(999).optional(),
+});
+
 // 大会マスター作成/更新スキーマ
 export const tournamentInputSchema = z.object({
   name: z.string().min(1, "大会名は必須です").max(200, "大会名は200文字以内で入力してください"),
   heldAt: z.string().datetime({ message: "開催日を入力してください" }),
   tier: z.enum(TOURNAMENT_TIERS),
   format: z.enum(TOURNAMENT_FORMATS),
-  classCount: z.number().int().min(1).max(20).optional().nullable(),
   location: z.string().max(200).optional().nullable(),
   description: z.string().max(2000).optional().nullable(),
+  classes: z.array(tournamentClassInputSchema).max(60).optional().default([]),
 });
 
 // 大会成績作成/更新スキーマ
+// classCount→tournamentClassId 化に伴い className は廃止し、tournamentClassId を渡す
 export const tournamentResultInputSchema = z.object({
   category: z.enum(TOURNAMENT_CATEGORIES),
-  className: z.string().max(50).optional().nullable(),
+  tournamentClassId: z.string().optional().nullable(),
   rank: z.string().max(100).optional().nullable(),
   partnerName: z.string().max(100).optional().nullable(),
   note: z.string().max(2000).optional().nullable(),
+});
+
+// 承認/却下入力
+export const tournamentApprovalSchema = z.object({
+  action: z.enum(["approve", "reject"]),
+  rejectionReason: z.string().max(500).optional().nullable(),
 });
 
 // 管理者が他人の成績を登録するとき用 (userId を明示)
@@ -111,5 +125,7 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export type AdminUpdateMemberInput = z.infer<typeof adminUpdateMemberSchema>;
 export type TournamentInput = z.infer<typeof tournamentInputSchema>;
+export type TournamentClassInput = z.infer<typeof tournamentClassInputSchema>;
 export type TournamentResultInput = z.infer<typeof tournamentResultInputSchema>;
 export type AdminTournamentResultInput = z.infer<typeof adminTournamentResultInputSchema>;
+export type TournamentApprovalInput = z.infer<typeof tournamentApprovalSchema>;

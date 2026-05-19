@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
-import { TournamentForm, TournamentFormValues } from "@/components/tournaments/TournamentForm";
+import { TournamentForm, TournamentFormValues, ClassRow } from "@/components/tournaments/TournamentForm";
 import { permissions, UserRole } from "@/lib/permissions";
 import { TournamentTier, TournamentFormat } from "@/lib/tournament-meta";
 
@@ -15,10 +15,10 @@ interface TournamentDetail {
   heldAt: string;
   tier: string;
   format: string;
-  classCount: number | null;
   location: string | null;
   description: string | null;
   createdById: string;
+  classes: { gender: "male" | "female" | "mixed"; name: string; order: number }[];
 }
 
 export default function EditTournamentPage() {
@@ -47,7 +47,7 @@ export default function EditTournamentPage() {
           return;
         }
         const t = json.data;
-        if (t.createdById !== session.user.id && !permissions.canAccessAdmin(role)) {
+        if (t.createdById !== session.user.id && !permissions.canApproveTournaments(role)) {
           alert("他の人が登録した大会は管理者のみ編集できます");
           router.push(`/tournaments/${tournamentId}`);
           return;
@@ -65,9 +65,13 @@ export default function EditTournamentPage() {
         heldAt: new Date(`${values.heldAt}T00:00:00`).toISOString(),
         tier: values.tier,
         format: values.format,
-        classCount: values.classCount ? parseInt(values.classCount, 10) : null,
         location: values.location || null,
         description: values.description || null,
+        classes: values.classes.map((c, idx) => ({
+          gender: c.gender,
+          name: c.name,
+          order: idx,
+        })),
       }),
     });
     const json = await res.json();
@@ -84,6 +88,9 @@ export default function EditTournamentPage() {
   }
 
   const heldDay = data.heldAt.slice(0, 10);
+  const initialClasses: ClassRow[] = [...data.classes]
+    .sort((a, b) => a.order - b.order)
+    .map((c) => ({ gender: c.gender, name: c.name }));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -92,6 +99,9 @@ export default function EditTournamentPage() {
         <Card>
           <CardHeader>
             <h1 className="text-lg font-bold text-gray-900">大会情報を編集</h1>
+            <p className="text-xs text-gray-500 mt-1">
+              一般メンバーの編集後は再度承認が必要になります。クラスを差し替えると、紐づいていた成績はクラス未選択に戻ります。
+            </p>
           </CardHeader>
           <CardContent>
             <TournamentForm
@@ -102,9 +112,9 @@ export default function EditTournamentPage() {
                 heldAt: heldDay,
                 tier: data.tier as TournamentTier,
                 format: data.format as TournamentFormat,
-                classCount: data.classCount?.toString() ?? "",
                 location: data.location ?? "",
                 description: data.description ?? "",
+                classes: initialClasses,
               }}
             />
           </CardContent>

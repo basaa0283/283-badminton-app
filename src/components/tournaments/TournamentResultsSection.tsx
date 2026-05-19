@@ -15,7 +15,6 @@ import {
 interface ResultWithTournament {
   id: string;
   category: string;
-  className: string | null;
   rank: string | null;
   partnerName: string | null;
   note: string | null;
@@ -24,9 +23,13 @@ interface ResultWithTournament {
     name: string;
     heldAt: string;
     tier: string;
-    classCount: number | null;
     location: string | null;
   };
+  tournamentClass: {
+    id: string;
+    gender: "male" | "female" | "mixed";
+    name: string;
+  } | null;
 }
 
 interface Props {
@@ -89,7 +92,7 @@ export function TournamentResultsSection({ userId }: Props) {
                   </div>
                   <div className="text-sm text-gray-700 mt-1">
                     {TOURNAMENT_CATEGORY_LABEL[r.category as TournamentCategory] ?? r.category}
-                    {r.className ? ` (${r.className})` : ""}
+                    {r.tournamentClass ? ` (${r.tournamentClass.name})` : ""}
                     {r.rank ? ` ・ ${r.rank}` : ""}
                   </div>
                   {r.partnerName && (

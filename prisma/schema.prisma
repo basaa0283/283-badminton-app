@@ -284,46 +284,77 @@ model Message {
 }
 
 // 大会マスター。一般 (member) 以上が自分の出場した大会を登録する。
-// 同じ大会が複数登録されることはあり得る (将来のマスター名寄せタスクで吸収)。
+// 登録された大会はサービス管理者の承認 (approvalStatus = approved) を経て
+// 一般メンバーから閲覧できるようになる。現状は同じサークル admin が承認するが、
+// 将来は上位の「サービス管理者」ロールに権限を切り替える前提で
+// approvalStatus / approvedById / approvedAt を別フィールドにしておく。
 model Tournament {
   id          String   @id @default(cuid())
   name        String   // 大会名 (例: "足立区民バドミントン大会 2026春")
   heldAt      DateTime // 開催日
   tier        String   // national / regional / prefectural / city / club / other
   format      String   // tournament / league / league_then_tournament / other
-  classCount  Int?     // 何部制か (null = 部なし / 不明)
   location    String?  // 会場
   description String?  // 自由メモ
   createdById String
+
+  // 承認ステータス: pending / approved / rejected
+  approvalStatus String    @default("pending")
+  approvedById   String?   // 承認した管理者の userId
+  approvedAt     DateTime?
+  rejectionReason String?  // 却下した場合の理由
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   createdBy User                @relation("TournamentCreator", fields: [createdById], references: [id])
+  classes   TournamentClass[]
   results   TournamentResult[]
 
   @@index([heldAt])
   @@index([createdById])
+  @@index([approvalStatus])
+}
+
+// 大会のランク区分 (クラス)。男女別 + ミックスの 3 系統に対して、
+// 各部 (1部, 2部, ベテラン50 等) を行として登録する。
+// クラス無し大会 (例: XD のみ大会) は単純にこのテーブルに行を作らない。
+model TournamentClass {
+  id           String  @id @default(cuid())
+  tournamentId String
+  gender       String  // male / female / mixed
+  name         String  // "1部" "2部" "ベテラン50" 等
+  order        Int     @default(0) // 性別グループ内の並び順
+
+  results      TournamentResult[]
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
 }
 
 // 大会の個人成績。1 つの Tournament に対して N 個の Result。
 // ダブルス・混合の相方はサークル外の人もあるので User FK にはせず文字列で保持。
+// クラス分けがある大会では tournamentClassId を必ず指定する。
+// クラス無し (例: XD のみ大会) のときだけ null を許容する。
 model TournamentResult {
-  id           String   @id @default(cuid())
-  tournamentId String
-  userId       String
-  category     String   // MS / WS / MD / WD / XD / other
-  className    String?  // "1部" "2部" "ベテラン" 等 (大会の classCount を参考に自由入力)
-  rank         String?  // 自由テキスト: "優勝" "ベスト4" "1回戦敗退" など
-  partnerName  String?  // ダブルス相方 (サークル外可)
-  note         String?
+  id                String   @id @default(cuid())
+  tournamentId      String
+  tournamentClassId String?
+  userId            String
+  category          String   // MS / WS / MD / WD / XD / other
+  rank              String?  // 自由テキスト: "優勝" "ベスト4" "1回戦敗退" など
+  partnerName       String?  // ダブルス相方 (サークル外可)
+  note              String?
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournament      Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentClass TournamentClass? @relation(fields: [tournamentClassId], references: [id], onDelete: SetNull)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tournamentId])
+  @@index([tournamentClassId])
 }
