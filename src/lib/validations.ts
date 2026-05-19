@@ -15,8 +15,9 @@ export const createEventSchema = z.object({
   notifyMembers: z.boolean().default(true),
   // 種別タグ
   categoryId: z.string().optional().nullable(),
-  // ゲスト (閲覧専用ロール) に公開するか
-  visibleToGuest: z.boolean().default(false),
+  // 閲覧・回答できる最低ロール
+  minViewRole: z.enum(["guest", "visitor", "member"]).default("visitor"),
+  minRespondRole: z.enum(["visitor", "member"]).default("visitor"),
   // 経費・収支 (管理者用)
   shuttleCount: z.number().int().nonnegative("シャトル本数は0以上で入力してください").optional().nullable(),
   shuttleCost: z.number().int().nonnegative("シャトル代は0以上で入力してください").optional().nullable(),

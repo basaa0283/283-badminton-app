@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { permissions, UserRole } from "@/lib/permissions";
+import { permissions, UserRole, getRoleName } from "@/lib/permissions";
 import { computeAge } from "@/lib/age";
 import { adminUpdateMemberSchema } from "@/lib/validations";
+import { notifyApprovalGranted } from "@/lib/line-messaging";
 
 interface Params {
   params: Promise<{ userId: string }>;
@@ -202,6 +203,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       data: updateData,
       select: {
         id: true,
+        lineId: true,
         nickname: true,
         firstName: true,
         lastName: true,
@@ -216,9 +218,26 @@ export async function PUT(request: NextRequest, { params }: Params) {
       },
     });
 
+    // 承認 (pending → 他ロール) の場合、対象ユーザーに LINE で通知。
+    // 失敗しても保存自体は成功させる (fire-and-forget)。
+    if (existing.role === "pending" && user.role !== "pending" && user.lineId) {
+      const appUrl =
+        process.env.NEXTAUTH_URL ||
+        "https://prod-283-badminton-app-gsacfjcnezadeugd.japanwest-01.azurewebsites.net";
+      void notifyApprovalGranted({
+        lineId: user.lineId,
+        nickname: user.nickname,
+        roleLabel: getRoleName(user.role as UserRole),
+        appUrl,
+      }).catch((err) => console.error("[member.PUT] notifyApprovalGranted failed:", err));
+    }
+
+    // lineId はクライアントには返さない
+    const { lineId: _lineId, ...userPublic } = user;
+    void _lineId;
     return NextResponse.json({
       success: true,
-      data: { ...user, age: computeAge(user.birthdate) },
+      data: { ...userPublic, age: computeAge(user.birthdate) },
     });
   } catch (error) {
     console.error("Member PUT error:", error);

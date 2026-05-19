@@ -80,6 +80,17 @@ jobs:
           cp prisma/schema.sqlserver.prisma prisma/schema.prisma
           npx prisma generate
 
+      # DEV DB のスキーマ差分を自動同期しようとする。
+      # Azure SQL は累積した手動修正・古い index などでドリフトしていることがあり、
+      # ここで毎回成功する保証は無いので、失敗してもデプロイは続行する。
+      # 必須なスキーマ変更がある場合は事前に SQL を手動適用する運用。
+      # ログには push の結果が残るので、失敗時は管理者が SQL で追従する。
+      - name: Apply DB schema (prisma db push)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        continue-on-error: true
+        run: npx prisma db push --accept-data-loss
+
       - name: Build Next.js
         run: npm run build
         env:

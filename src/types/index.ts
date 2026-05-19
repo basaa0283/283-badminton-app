@@ -1,4 +1,4 @@
-export type AttendanceStatus = "attending" | "not_attending" | "waitlist";
+export type AttendanceStatus = "attending" | "not_attending" | "waitlist" | "observing";
 export type UserRole = "admin" | "subadmin" | "member" | "visitor" | "guest";
 
 // イベント（カウント付き）

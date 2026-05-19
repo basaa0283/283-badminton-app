@@ -62,6 +62,22 @@ function formatEventDate(date: Date): string {
   return format(date, "M月d日(E) HH:mm", { locale: ja });
 }
 
+export async function notifyApprovalGranted(params: {
+  lineId: string;
+  nickname: string;
+  roleLabel: string;
+  appUrl: string;
+}): Promise<void> {
+  // 承認通知は重要なのでグローバル設定の影響を受けず常に送る (LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN
+  // が未設定なら push 側で skip)。
+  const text =
+    `【283バドミントン】\nご参加リクエストが承認されました🎉\n\n` +
+    `${params.nickname} さん、ようこそ！\n` +
+    `権限: ${params.roleLabel}\n\n` +
+    `アプリを開いてご利用を始めてください:\n${params.appUrl}/`;
+  await push(params.lineId, text);
+}
+
 export async function notifyWaitlistPromotion(params: {
   lineId: string;
   eventTitle: string;

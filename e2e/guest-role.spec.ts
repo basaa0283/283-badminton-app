@@ -5,7 +5,7 @@ import { adminUserId, loginAs } from "./helpers/auth";
  * ゲストロール (閲覧専用) の UX リグレッションテスト。
  *
  * 仕様:
- *   - ゲストは visibleToGuest=true なカテゴリのイベントのみ閲覧可能
+ *   - ゲストは minViewRole="guest" のイベントのみ閲覧可能
  *   - ゲストは出欠登録できない (フォーム非表示 + API 403)
  *   - ゲストは「閲覧専用モード」バナー表示
  *
@@ -13,7 +13,7 @@ import { adminUserId, loginAs } from "./helpers/auth";
  * 残骸はパイプラインの cleanup ジョブが回収する。
  */
 test.describe("ゲストロール (閲覧専用)", () => {
-  test("visibleToGuest=true のイベントだけ見え、出欠フォームが出ない", async ({ page, browserName }) => {
+  test('minViewRole="guest" のイベントだけ見え、出欠フォームが出ない', async ({ page, browserName }) => {
     const admin = adminUserId();
     test.skip(!admin, "E2E_ADMIN_USER_ID 未設定のためスキップ");
     // WebKit (mobile-safari) は admin → guest のセッション切り替えで
@@ -32,18 +32,18 @@ test.describe("ゲストロール (閲覧専用)", () => {
 
       const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-      // ゲストに見えるはずのイベント (visibleToGuest=true)
+      // ゲストに見えるはずのイベント (minViewRole="guest")
       const visEvRes = await page.request.post("/api/events", {
         data: {
           title: `E2E guest visible ${Date.now()}`,
           eventDate: futureDate,
-          visibleToGuest: true,
+          minViewRole: "guest",
           notifyMembers: false,
         },
       });
       visibleEventId = (await visEvRes.json()).data.id as string;
 
-      // ゲストには隠すべきイベント (デフォルト visibleToGuest=false)
+      // ゲストには隠すべきイベント (デフォルト minViewRole="visitor")
       const hidEvRes = await page.request.post("/api/events", {
         data: {
           title: `E2E guest hidden ${Date.now()}`,

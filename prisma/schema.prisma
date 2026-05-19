@@ -173,8 +173,12 @@ model Event {
   categoryId      String?
   category        EventCategory? @relation(fields: [categoryId], references: [id])
 
-  // ゲスト (閲覧専用ロール) に公開するか。デフォルトは非公開。
-  visibleToGuest  Boolean   @default(false)
+  // 閲覧・回答できる最低ロール (閾値方式)。
+  //   minViewRole:    "guest" | "visitor" | "member"
+  //   minRespondRole: "visitor" | "member" (guest は常に回答不可)
+  // admin / subadmin は閾値に関わらず常にアクセス可。
+  minViewRole     String    @default("visitor")
+  minRespondRole  String    @default("visitor")
 
   // 中止フラグ (削除と区別。中止理由を後から見られるよう履歴として残す)
   cancelledAt     DateTime?

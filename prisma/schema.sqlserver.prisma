@@ -172,8 +172,12 @@ model Event {
   categoryId      String?
   category        EventCategory? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  // ゲスト (閲覧専用ロール) に公開するか
-  visibleToGuest  Boolean   @default(false)
+  // 閲覧・回答できる最低ロール (閾値方式)。
+  //   minViewRole:    "guest" | "visitor" | "member"
+  //   minRespondRole: "visitor" | "member" (guest は常に回答不可)
+  // admin / subadmin は閾値に関わらず常にアクセス可。
+  minViewRole     String    @default("visitor")
+  minRespondRole  String    @default("visitor")
 
   // 中止フラグ
   cancelledAt     DateTime?
@@ -255,7 +259,7 @@ model InvitationToken {
 // システム設定（key-value）
 model SystemSetting {
   key   String @id
-  value String @db.NVarChar(500)
+  value String @db.NVarChar(Max)
 }
 
 // メッセージ（対象者へのメッセージ送信用）

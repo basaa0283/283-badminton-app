@@ -6,7 +6,7 @@ import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 
 const updateSchema = z.object({
-  status: z.enum(["attending", "not_attending"]).optional(),
+  status: z.enum(["attending", "not_attending", "observing"]).optional(),
   paymentStatus: z.enum(["paid", "unpaid"]).nullable().optional(),
   paymentAmount: z.number().int().nonnegative().nullable().optional(),
   paymentNote: z.string().max(500).nullable().optional(),

@@ -1,11 +1,11 @@
 {
   "name": "283-badminton-app",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "npx prisma db push --accept-data-loss; next start",
+    "start": "next start",
     "start:local": "next start",
     "lint": "eslint",
     "test": "vitest run",
@@ -31,6 +31,8 @@
     "prisma": "^5.22.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "zod": "^4.1.13"
   },
   "devDependencies": {

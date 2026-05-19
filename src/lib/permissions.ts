@@ -38,6 +38,21 @@ export const permissions = {
   canAccessAdmin: (role: UserRole) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.subadmin,
 };
 
+/**
+ * イベントの閾値 (minViewRole / minRespondRole) と現在のロールを比較し、
+ * 閲覧・回答できるかを判定するユーティリティ。
+ *
+ * - admin / subadmin は閾値に関わらず常に true。
+ * - 回答時は別途 canRespondToEvent (guest を弾く) と組み合わせて使う。
+ */
+export function meetsRoleThreshold(role: UserRole, threshold: string): boolean {
+  // 管理者は常に通す
+  if (ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.subadmin) return true;
+  const target = ROLE_HIERARCHY[threshold as UserRole];
+  if (typeof target !== "number") return true; // 不明な閾値はオープン扱い
+  return ROLE_HIERARCHY[role] >= target;
+}
+
 export function getRoleName(role: UserRole): string {
   const names: Record<UserRole, string> = {
     admin: "管理者",

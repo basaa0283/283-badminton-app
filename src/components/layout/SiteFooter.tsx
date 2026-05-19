@@ -29,6 +29,10 @@ export function SiteFooter({ version, envSuffix }: SiteFooterProps) {
     <footer className="mt-8 border-t border-gray-200 bg-white">
       <div className="max-w-4xl mx-auto px-4 py-4 text-xs text-gray-500 space-y-2">
         <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link href="/about" className="hover:text-gray-700 hover:underline">
+            サークルについて
+          </Link>
+          <span className="text-gray-300">|</span>
           {officialLineUrl ? (
             <a
               href={officialLineUrl}
@@ -48,6 +52,10 @@ export function SiteFooter({ version, envSuffix }: SiteFooterProps) {
           <span className="text-gray-300">|</span>
           <Link href="/terms" className="hover:text-gray-700 hover:underline">
             利用規約
+          </Link>
+          <span className="text-gray-300">|</span>
+          <Link href="/release-notes" className="hover:text-gray-700 hover:underline">
+            更新履歴
           </Link>
         </div>
         <div className="text-center text-gray-400">

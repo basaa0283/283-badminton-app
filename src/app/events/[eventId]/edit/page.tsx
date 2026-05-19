@@ -22,7 +22,8 @@ interface EventData {
   deadline: string | null;
   deadlineEnabled: boolean;
   category: { id: string; name: string; color: string | null } | null;
-  visibleToGuest: boolean;
+  minViewRole: "guest" | "visitor" | "member";
+  minRespondRole: "visitor" | "member";
 }
 
 export default function EditEventPage() {
@@ -104,7 +105,8 @@ export default function EditEventPage() {
     deadline: string;
     deadlineEnabled: boolean;
     categoryId: string;
-    visibleToGuest: boolean;
+    minViewRole: "guest" | "visitor" | "member";
+    minRespondRole: "visitor" | "member";
   }) => {
     const res = await fetch(`/api/events/${eventId}`, {
       method: "PUT",
@@ -121,7 +123,8 @@ export default function EditEventPage() {
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
         deadlineEnabled: formData.deadlineEnabled,
         categoryId: formData.categoryId || null,
-        visibleToGuest: formData.visibleToGuest,
+        minViewRole: formData.minViewRole,
+        minRespondRole: formData.minRespondRole,
       }),
     });
 
@@ -163,7 +166,8 @@ export default function EditEventPage() {
                 deadline: event.deadline ? formatDateForInput(event.deadline) : "",
                 deadlineEnabled: event.deadlineEnabled,
                 categoryId: event.category?.id || "",
-                visibleToGuest: event.visibleToGuest,
+                minViewRole: event.minViewRole,
+                minRespondRole: event.minRespondRole,
               }}
               onSubmit={handleSubmit}
               submitLabel="更新する"

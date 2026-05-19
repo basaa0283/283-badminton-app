@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { permissions, UserRole } from "@/lib/permissions";
+import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { updateEventSchema } from "@/lib/validations";
+
+function isStaff(role: UserRole) {
+  return role === "admin" || role === "subadmin";
+}
+function canRoleView(role: UserRole, minViewRole: string) {
+  return meetsRoleThreshold(role, minViewRole);
+}
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -53,9 +60,9 @@ export async function GET(request: NextRequest, { params }: Params) {
       );
     }
 
-    // ゲスト (閲覧専用ロール) と pending (承認待ち) は visibleToGuest=true なイベントのみアクセス可。
-    // それ以外は存在を隠す (404 で返す)。
-    if ((role === "guest" || role === "pending") && !event.visibleToGuest) {
+    // 閾値方式: event.minViewRole に対し、現在ロールが届かないなら 404 で隠す。
+    // admin / subadmin は閾値を無視して常に閲覧可。
+    if (!isStaff(role) && !canRoleView(role, event.minViewRole)) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
         { status: 404 }
@@ -64,6 +71,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const attendingCount = event.attendances.filter((a) => a.status === "attending").length;
     const waitlistCount = event.attendances.filter((a) => a.status === "waitlist").length;
+    const observingCount = event.attendances.filter((a) => a.status === "observing").length;
     const myAttendance = event.attendances.find((a) => a.user.id === session.user.id);
 
     // 参加者リストは member 以上のみ閲覧可能
@@ -121,7 +129,8 @@ export async function GET(request: NextRequest, { params }: Params) {
         category: event.category
           ? { id: event.category.id, name: event.category.name, color: event.category.color }
           : null,
-        visibleToGuest: event.visibleToGuest,
+        minViewRole: event.minViewRole,
+        minRespondRole: event.minRespondRole,
         cancelledAt: event.cancelledAt,
         cancelReason: event.cancelReason,
         createdBy: event.createdBy.nickname,
@@ -129,6 +138,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         createdAt: event.createdAt,
         attendingCount,
         waitlistCount,
+        observingCount,
         expenses: canViewExpenses
           ? {
               shuttleCount: event.shuttleCount,
@@ -249,7 +259,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
       updateData.deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
     if (parsed.data.deadlineEnabled !== undefined) updateData.deadlineEnabled = parsed.data.deadlineEnabled;
     if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
-    if (parsed.data.visibleToGuest !== undefined) updateData.visibleToGuest = parsed.data.visibleToGuest;
+    if (parsed.data.minViewRole !== undefined) updateData.minViewRole = parsed.data.minViewRole;
+    if (parsed.data.minRespondRole !== undefined) updateData.minRespondRole = parsed.data.minRespondRole;
     if (parsed.data.shuttleCount !== undefined) updateData.shuttleCount = parsed.data.shuttleCount;
     if (parsed.data.shuttleCost !== undefined) updateData.shuttleCost = parsed.data.shuttleCost;
     if (parsed.data.gymCost !== undefined) updateData.gymCost = parsed.data.gymCost;

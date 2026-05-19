@@ -28,6 +28,7 @@ export function AttendanceStatusBadge({ status }: { status: string }) {
     attending: { variant: "success", label: "参加" },
     not_attending: { variant: "danger", label: "不参加" },
     waitlist: { variant: "warning", label: "キャンセル待ち" },
+    observing: { variant: "info", label: "見学" },
   };
 
   const { variant, label } = config[status] || { variant: "default", label: status };

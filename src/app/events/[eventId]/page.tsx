@@ -36,6 +36,7 @@ interface EventDetail {
   createdById: string;
   attendingCount: number;
   waitlistCount: number;
+  observingCount: number;
   myAttendance: {
     id: string;
     status: string;
@@ -313,6 +314,9 @@ export default function EventDetailPage() {
                   {event.capacity !== null && `/${event.capacity}`}人
                   {event.waitlistCount > 0 && (
                     <span className="text-yellow-600 ml-1">(待ち{event.waitlistCount}人)</span>
+                  )}
+                  {event.observingCount > 0 && (
+                    <span className="text-blue-600 ml-1">(見学{event.observingCount}人)</span>
                   )}
                 </span>
               </div>

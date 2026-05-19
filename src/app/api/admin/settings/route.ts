@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 
 const BOOLEAN_KEYS = ["notifyReminderEnabled", "notifyWaitlistEnabled"] as const;
-const STRING_KEYS = ["contactEmail", "officialLineUrl"] as const;
+const STRING_KEYS = ["contactEmail", "officialLineUrl", "aboutPageContent"] as const;
 type BooleanKey = (typeof BOOLEAN_KEYS)[number];
 type StringKey = (typeof STRING_KEYS)[number];
 
