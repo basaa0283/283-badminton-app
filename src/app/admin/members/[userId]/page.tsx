@@ -28,6 +28,7 @@ interface MemberDetail {
   lastActiveAt: string | null;
   skillLevel: number | null;
   adminNote: string | null;
+  priorityScore: number | null;
   createdAt: string;
   attendanceCount: number;
   pastAttendanceCount: number;
@@ -109,6 +110,7 @@ export default function MemberDetailPage() {
     role: "" as UserRole | "",
     skillLevel: "",
     adminNote: "",
+    priorityScore: "",
   });
 
   useEffect(() => {
@@ -150,6 +152,8 @@ export default function MemberDetailPage() {
           role: data.data.role || "",
           skillLevel: data.data.skillLevel?.toString() || "",
           adminNote: data.data.adminNote || "",
+          priorityScore:
+            typeof data.data.priorityScore === "number" ? data.data.priorityScore.toString() : "",
         });
 
         if (data.data.role === "visitor") {
@@ -276,6 +280,7 @@ export default function MemberDetailPage() {
           role: formData.role || undefined,
           skillLevel: formData.skillLevel ? parseInt(formData.skillLevel) : null,
           adminNote: formData.adminNote || null,
+          priorityScore: formData.priorityScore === "" ? 0 : parseInt(formData.priorityScore, 10),
         }),
       });
 
@@ -517,6 +522,22 @@ export default function MemberDetailPage() {
                     placeholder="メンバーに関するメモ..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    キャンセル待ち優先度
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.priorityScore}
+                    onChange={(e) => setFormData({ ...formData, priorityScore: e.target.value })}
+                    placeholder="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    システム設定「キャンセル待ち繰り上げ方式」が「優先度順」の場合に使われます。値が大きい人ほど先に繰り上げ。同点は申込順。デフォルト 0。
+                  </p>
                 </div>
 
                 <div className="flex gap-3 pt-2">

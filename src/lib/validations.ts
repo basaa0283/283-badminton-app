@@ -69,6 +69,9 @@ export const adminUpdateMemberSchema = z.object({
   role: z.enum(["admin", "subadmin", "member", "visitor", "guest"]).optional(),
   skillLevel: z.number().int().min(0, "スキルレベルは0以上で入力してください").max(10, "スキルレベルは10以下で入力してください").optional().nullable(),
   adminNote: z.string().max(1000).optional().nullable(),
+  // キャンセル待ち繰り上げ優先度 (priority モード時に使用)。負値も許可しておくと
+  // 「絶対あとに回したい」運用を表現できる。常識的な範囲は -100〜100。
+  priorityScore: z.number().int().min(-1000).max(1000).optional(),
 });
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;

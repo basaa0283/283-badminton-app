@@ -32,6 +32,7 @@ model User {
   // 管理者専用フィールド（一般ユーザーには見えない）
   skillLevel      Int?      // スキルレベル: 1-10
   adminNote       String?   @db.NVarChar(2000) // 管理者メモ
+  priorityScore   Int       @default(0) // キャンセル待ち繰り上げ優先度 (大きいほど先に繰り上げ)
 
   // 利用規約・プライバシーポリシーへの同意
   termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)

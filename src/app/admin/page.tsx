@@ -13,6 +13,7 @@ type AppSettings = {
   notifyWaitlistEnabled: boolean;
   contactEmail: string;
   officialLineUrl: string;
+  waitlistPolicy: string; // "fifo" | "priority"
 };
 
 type SettingKey = "notifyReminderEnabled" | "notifyWaitlistEnabled";
@@ -51,6 +52,7 @@ export default function AdminPage() {
   const [officialLineUrlInput, setOfficialLineUrlInput] = useState("");
   const [savingLine, setSavingLine] = useState(false);
   const [lineSaved, setLineSaved] = useState(false);
+  const [savingPolicy, setSavingPolicy] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -120,6 +122,24 @@ export default function AdminPage() {
       }
     } finally {
       setSavingLine(false);
+    }
+  };
+
+  const handleWaitlistPolicyChange = async (next: "fifo" | "priority") => {
+    if (savingPolicy) return;
+    setSavingPolicy(true);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ waitlistPolicy: next }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettings((prev) => (prev ? { ...prev, waitlistPolicy: next } : prev));
+      }
+    } finally {
+      setSavingPolicy(false);
     }
   };
 
@@ -276,6 +296,39 @@ export default function AdminPage() {
             >
               {savingContact ? "保存中..." : contactSaved ? "保存しました" : "保存"}
             </button>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-700">キャンセル待ち繰り上げ方式</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              定員が空いたときに、誰を繰り上げるか。デフォルトは「先着順」。
+              「優先度順」を選ぶと各メンバーの「キャンセル待ち優先度」値が大きい順に繰り上げます (同点は申込順)。
+            </p>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-3">
+            <label className="inline-flex items-center gap-1 text-sm">
+              <input
+                type="radio"
+                name="waitlistPolicy"
+                checked={(settings?.waitlistPolicy ?? "fifo") !== "priority"}
+                onChange={() => handleWaitlistPolicyChange("fifo")}
+                disabled={savingPolicy || settings === null}
+              />
+              先着順 (FIFO)
+            </label>
+            <label className="inline-flex items-center gap-1 text-sm">
+              <input
+                type="radio"
+                name="waitlistPolicy"
+                checked={settings?.waitlistPolicy === "priority"}
+                onChange={() => handleWaitlistPolicyChange("priority")}
+                disabled={savingPolicy || settings === null}
+              />
+              優先度順
+            </label>
+            {savingPolicy && <span className="text-xs text-gray-500">保存中...</span>}
           </div>
         </div>
 
