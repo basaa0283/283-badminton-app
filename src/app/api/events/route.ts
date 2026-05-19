@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
         description: parsed.data.description || null,
         eventDate: new Date(parsed.data.eventDate),
         eventEndDate: parsed.data.eventEndDate ? new Date(parsed.data.eventEndDate) : null,
+        isAllDay: parsed.data.isAllDay ?? false,
         location: parsed.data.location || null,
         capacity: parsed.data.capacity || null,
         fee: parsed.data.fee || null,

@@ -9,6 +9,7 @@ interface EventFormData {
   description: string;
   eventDate: string;
   eventEndDate: string;
+  isAllDay: boolean;
   location: string;
   capacity: string;
   fee: string;
@@ -98,6 +99,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [eventDay, setEventDay] = useState(initStart.day || today);
   const [startTime, setStartTime] = useState(initStart.time);
   const [endTime, setEndTime] = useState(initEnd.time);
+  const [isAllDay, setIsAllDay] = useState(initialData?.isAllDay ?? false);
   // 既存データが 30分刻みでない場合は最初から細かいモードに
   const isFineInitial =
     (initStart.time && !/(00|30)$/.test(initStart.time)) ||
@@ -147,23 +149,34 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
     setLoading(true);
     setError(null);
 
-    if (!eventDay || !startTime) {
-      setError("開催日と開始時刻は必須です");
+    if (!eventDay) {
+      setError("開催日は必須です");
       setLoading(false);
       return;
     }
 
-    if (endTime && endTime <= startTime) {
+    if (!isAllDay && !startTime) {
+      setError("開始時刻は必須です (終日の場合は「終日」をチェックしてください)");
+      setLoading(false);
+      return;
+    }
+
+    if (!isAllDay && endTime && endTime <= startTime) {
       setError("終了時刻は開始時刻より後に設定してください");
       setLoading(false);
       return;
     }
 
+    // 終日のときは開始/終了時刻を 00:00 に揃える (DB 上は DateTime のため、時刻部分を持つ)
+    const effectiveStartTime = isAllDay ? "00:00" : startTime;
+    const effectiveEndTime = isAllDay ? "" : endTime;
+
     const data: EventFormData = {
       title,
       description,
-      eventDate: combine(eventDay, startTime),
-      eventEndDate: endTime ? combine(eventDay, endTime) : "",
+      eventDate: combine(eventDay, effectiveStartTime),
+      eventEndDate: effectiveEndTime ? combine(eventDay, effectiveEndTime) : "",
+      isAllDay,
       location,
       capacity,
       fee,
@@ -305,6 +318,22 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         </div>
       </div>
 
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <input
+            type="checkbox"
+            checked={isAllDay}
+            onChange={(e) => setIsAllDay(e.target.checked)}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          終日イベント
+        </label>
+        <p className="text-xs text-gray-500 mt-1 ml-6">
+          合宿の日や大会日など、特定時刻を持たないイベントに使います。
+        </p>
+      </div>
+
+      {!isAllDay && (
       <div className="space-y-3 min-w-0">
         <div className="min-w-0">
           <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">
@@ -374,6 +403,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           1分単位で指定する（オフ時は30分刻み）
         </label>
       </div>
+      )}
 
       <div>
         <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">

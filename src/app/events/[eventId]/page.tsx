@@ -23,6 +23,7 @@ interface EventDetail {
   description: string | null;
   eventDate: string;
   eventEndDate: string | null;
+  isAllDay: boolean;
   location: string | null;
   capacity: number | null;
   fee: number | null;
@@ -197,9 +198,13 @@ export default function EventDetailPage() {
   const canViewExpenses = permissions.canAccessAdmin(role);
   const canRespond = permissions.canRespondToEvent(role);
   const eventDate = new Date(event.eventDate);
+  // 終日イベントは「その日 24:00」までを開催中扱い (isPast 判定を時刻で誤らせない)
+  const effectiveEndForPast = event.isAllDay
+    ? new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate() + 1)
+    : eventDate;
   const isDeadlinePassed =
     event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date();
-  const isPast = eventDate < new Date();
+  const isPast = effectiveEndForPast < new Date();
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -275,8 +280,15 @@ export default function EventDetailPage() {
                   />
                 </svg>
                 <span>
-                  {format(eventDate, "yyyy年M月d日(E) HH:mm", { locale: ja })}
-                  {event.eventEndDate && ` 〜 ${format(new Date(event.eventEndDate), "HH:mm", { locale: ja })}`}
+                  {format(eventDate, "yyyy年M月d日(E)", { locale: ja })}
+                  {event.isAllDay
+                    ? " 終日"
+                    : (
+                      <>
+                        {` ${format(eventDate, "HH:mm", { locale: ja })}`}
+                        {event.eventEndDate && ` 〜 ${format(new Date(event.eventEndDate), "HH:mm", { locale: ja })}`}
+                      </>
+                    )}
                 </span>
               </div>
 

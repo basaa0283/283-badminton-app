@@ -120,6 +120,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         description: event.description,
         eventDate: event.eventDate,
         eventEndDate: event.eventEndDate,
+        isAllDay: event.isAllDay,
         location: event.location,
         capacity: event.capacity,
         fee: event.feeVisible ? event.fee : null,
@@ -251,6 +252,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.eventDate !== undefined) updateData.eventDate = new Date(parsed.data.eventDate);
     if (parsed.data.eventEndDate !== undefined)
       updateData.eventEndDate = parsed.data.eventEndDate ? new Date(parsed.data.eventEndDate) : null;
+    if (parsed.data.isAllDay !== undefined) updateData.isAllDay = parsed.data.isAllDay;
     if (parsed.data.location !== undefined) updateData.location = parsed.data.location || null;
     if (parsed.data.capacity !== undefined) updateData.capacity = parsed.data.capacity || null;
     if (parsed.data.fee !== undefined) updateData.fee = parsed.data.fee || null;

@@ -44,6 +44,7 @@ export default function NewEventPage() {
     capacity: string;
     fee: string;
     feeVisible: boolean;
+    isAllDay: boolean;
     deadline: string;
     deadlineEnabled: boolean;
     notifyMembers: boolean;
@@ -59,6 +60,7 @@ export default function NewEventPage() {
         description: formData.description || undefined,
         eventDate: new Date(formData.eventDate).toISOString(),
         eventEndDate: formData.eventEndDate ? new Date(formData.eventEndDate).toISOString() : undefined,
+        isAllDay: formData.isAllDay,
         location: formData.location || undefined,
         capacity: formData.capacity ? parseInt(formData.capacity) : undefined,
         fee: formData.fee ? parseInt(formData.fee) : undefined,

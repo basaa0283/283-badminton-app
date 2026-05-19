@@ -15,6 +15,7 @@ interface EventData {
   description: string | null;
   eventDate: string;
   eventEndDate: string | null;
+  isAllDay: boolean;
   location: string | null;
   capacity: number | null;
   fee: number | null;
@@ -98,6 +99,7 @@ export default function EditEventPage() {
     description: string;
     eventDate: string;
     eventEndDate: string;
+    isAllDay: boolean;
     location: string;
     capacity: string;
     fee: string;
@@ -116,6 +118,7 @@ export default function EditEventPage() {
         description: formData.description || null,
         eventDate: new Date(formData.eventDate).toISOString(),
         eventEndDate: formData.eventEndDate ? new Date(formData.eventEndDate).toISOString() : null,
+        isAllDay: formData.isAllDay,
         location: formData.location || null,
         capacity: formData.capacity ? parseInt(formData.capacity) : null,
         fee: formData.fee ? parseInt(formData.fee) : null,
@@ -159,6 +162,7 @@ export default function EditEventPage() {
                 description: event.description || "",
                 eventDate: formatDateForInput(event.eventDate),
                 eventEndDate: event.eventEndDate ? formatDateForInput(event.eventEndDate) : "",
+                isAllDay: event.isAllDay,
                 location: event.location || "",
                 capacity: event.capacity?.toString() || "",
                 fee: event.fee?.toString() || "",
