@@ -79,6 +79,14 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
+    // 回答開始日時前のチェック
+    if (event.respondStartAt && new Date(event.respondStartAt) > new Date()) {
+      return NextResponse.json(
+        { success: false, error: { code: "NOT_OPEN", message: "回答受付開始前です" } },
+        { status: 400 }
+      );
+    }
+
     const userId = session.user.id;
     const existingAttendance = await prisma.attendance.findUnique({
       where: { userId_eventId: { userId, eventId } },

@@ -169,6 +169,7 @@ model Event {
   feeVisible      Boolean   @default(false) // 参加費を表示するか
   deadline        DateTime? // 締め切り日時
   deadlineEnabled Boolean   @default(false) // 締め切りを有効にするか
+  respondStartAt  DateTime? // 回答開始日時 (null なら制限なし。前は回答不可)
 
   // イベント種別 (タグ)
   categoryId      String?

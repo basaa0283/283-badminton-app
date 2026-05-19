@@ -22,6 +22,7 @@ interface EventData {
   feeVisible: boolean;
   deadline: string | null;
   deadlineEnabled: boolean;
+  respondStartAt: string | null;
   category: { id: string; name: string; color: string | null } | null;
   minViewRole: "guest" | "visitor" | "member";
   minRespondRole: "visitor" | "member";
@@ -106,6 +107,8 @@ export default function EditEventPage() {
     feeVisible: boolean;
     deadline: string;
     deadlineEnabled: boolean;
+    respondStartAt: string;
+    respondStartEnabled: boolean;
     categoryId: string;
     minViewRole: "guest" | "visitor" | "member";
     minRespondRole: "visitor" | "member";
@@ -125,6 +128,10 @@ export default function EditEventPage() {
         feeVisible: formData.feeVisible,
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
         deadlineEnabled: formData.deadlineEnabled,
+        respondStartAt:
+          formData.respondStartEnabled && formData.respondStartAt
+            ? new Date(formData.respondStartAt).toISOString()
+            : null,
         categoryId: formData.categoryId || null,
         minViewRole: formData.minViewRole,
         minRespondRole: formData.minRespondRole,
@@ -169,6 +176,8 @@ export default function EditEventPage() {
                 feeVisible: event.feeVisible,
                 deadline: event.deadline ? formatDateForInput(event.deadline) : "",
                 deadlineEnabled: event.deadlineEnabled,
+                respondStartAt: event.respondStartAt ? formatDateForInput(event.respondStartAt) : "",
+                respondStartEnabled: !!event.respondStartAt,
                 categoryId: event.category?.id || "",
                 minViewRole: event.minViewRole,
                 minRespondRole: event.minRespondRole,

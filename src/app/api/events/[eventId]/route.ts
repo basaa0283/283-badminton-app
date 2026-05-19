@@ -127,6 +127,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         feeVisible: event.feeVisible,
         deadline: event.deadline,
         deadlineEnabled: event.deadlineEnabled,
+        respondStartAt: event.respondStartAt,
         category: event.category
           ? { id: event.category.id, name: event.category.name, color: event.category.color }
           : null,
@@ -260,6 +261,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.deadline !== undefined)
       updateData.deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
     if (parsed.data.deadlineEnabled !== undefined) updateData.deadlineEnabled = parsed.data.deadlineEnabled;
+    if (parsed.data.respondStartAt !== undefined)
+      updateData.respondStartAt = parsed.data.respondStartAt ? new Date(parsed.data.respondStartAt) : null;
     if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
     if (parsed.data.minViewRole !== undefined) updateData.minViewRole = parsed.data.minViewRole;
     if (parsed.data.minRespondRole !== undefined) updateData.minRespondRole = parsed.data.minRespondRole;

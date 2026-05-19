@@ -175,6 +175,7 @@ export async function POST(request: NextRequest) {
         feeVisible: parsed.data.feeVisible,
         deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
         deadlineEnabled: parsed.data.deadlineEnabled,
+        respondStartAt: parsed.data.respondStartAt ? new Date(parsed.data.respondStartAt) : null,
         categoryId: parsed.data.categoryId ?? null,
         minViewRole: parsed.data.minViewRole ?? "visitor",
         minRespondRole: parsed.data.minRespondRole ?? "visitor",

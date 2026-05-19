@@ -16,6 +16,8 @@ interface EventFormData {
   feeVisible: boolean;
   deadline: string;
   deadlineEnabled: boolean;
+  respondStartAt: string;
+  respondStartEnabled: boolean;
   notifyMembers: boolean;
   categoryId: string;
   minViewRole: "guest" | "visitor" | "member";
@@ -114,6 +116,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [feeVisible, setFeeVisible] = useState(initialData?.feeVisible || false);
   const [deadline, setDeadline] = useState(initialData?.deadline || "");
   const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
+  const [respondStartAt, setRespondStartAt] = useState(initialData?.respondStartAt || "");
+  const [respondStartEnabled, setRespondStartEnabled] = useState(initialData?.respondStartEnabled || false);
   const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
   const [minViewRole, setMinViewRole] = useState<"guest" | "visitor" | "member">(
@@ -183,6 +187,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       feeVisible,
       deadline,
       deadlineEnabled,
+      respondStartAt,
+      respondStartEnabled,
       notifyMembers,
       categoryId,
       minViewRole,
@@ -531,6 +537,39 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
               onChange={(e) => setDeadline(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="respondStartEnabled"
+            checked={respondStartEnabled}
+            onChange={(e) => setRespondStartEnabled(e.target.checked)}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="respondStartEnabled" className="text-sm font-medium text-gray-700">
+            回答開始日時を設定する
+          </label>
+        </div>
+
+        {respondStartEnabled && (
+          <div>
+            <label htmlFor="respondStartAt" className="block text-sm font-medium text-gray-700 mb-1">
+              回答開始日時
+            </label>
+            <input
+              type="datetime-local"
+              id="respondStartAt"
+              value={respondStartAt}
+              onChange={(e) => setRespondStartAt(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              この日時より前は出欠回答ができません (閲覧は可能)。
+            </p>
           </div>
         )}
       </div>

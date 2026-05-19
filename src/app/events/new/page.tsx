@@ -47,6 +47,8 @@ export default function NewEventPage() {
     isAllDay: boolean;
     deadline: string;
     deadlineEnabled: boolean;
+    respondStartAt: string;
+    respondStartEnabled: boolean;
     notifyMembers: boolean;
     categoryId: string;
     minViewRole: "guest" | "visitor" | "member";
@@ -67,6 +69,10 @@ export default function NewEventPage() {
         feeVisible: formData.feeVisible,
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : undefined,
         deadlineEnabled: formData.deadlineEnabled,
+        respondStartAt:
+          formData.respondStartEnabled && formData.respondStartAt
+            ? new Date(formData.respondStartAt).toISOString()
+            : null,
         notifyMembers: formData.notifyMembers,
         categoryId: formData.categoryId || null,
         minViewRole: formData.minViewRole,

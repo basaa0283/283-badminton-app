@@ -13,6 +13,7 @@ export const createEventSchema = z.object({
   feeVisible: z.boolean().default(false),
   deadline: z.string().datetime().optional().nullable(),
   deadlineEnabled: z.boolean().default(false),
+  respondStartAt: z.string().datetime().optional().nullable(),
   notifyMembers: z.boolean().default(true),
   // 種別タグ
   categoryId: z.string().optional().nullable(),
