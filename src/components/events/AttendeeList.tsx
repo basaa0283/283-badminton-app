@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AttendanceStatusBadge } from "@/components/ui/Badge";
 
 interface Attendee {
@@ -69,11 +70,13 @@ function AttendeeSection({
       <h4 className="text-sm font-medium text-gray-700 mb-2">{title}</h4>
       <div className="space-y-2">
         {attendees.map((attendee) => (
-          <div
+          <Link
             key={attendee.id}
-            className={`flex items-center gap-3 p-2 rounded-lg ${getGenderBgClass(attendee.user.gender)}`}
+            href={`/members/${attendee.user.id}`}
+            className={`flex items-center gap-3 p-2 rounded-lg hover:brightness-95 ${getGenderBgClass(attendee.user.gender)}`}
           >
             {attendee.user.profileImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={attendee.user.profileImageUrl}
                 alt=""
@@ -98,7 +101,7 @@ function AttendeeSection({
               )}
             </div>
             <AttendanceStatusBadge status={attendee.status} />
-          </div>
+          </Link>
         ))}
       </div>
     </div>
