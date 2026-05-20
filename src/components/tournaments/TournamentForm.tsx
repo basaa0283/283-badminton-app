@@ -163,11 +163,13 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">開催日 *</label>
+        {/* Safari/iOS で <input type="date"> が親より広く描画されて枠をはみ出すため、
+            min-w-0 / max-w-full / block を明示して収める。 */}
         <input
           type="date"
           value={values.heldAt}
           onChange={(e) => update("heldAt", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+          className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg"
           required
         />
       </div>
