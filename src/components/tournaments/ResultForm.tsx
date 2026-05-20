@@ -99,9 +99,19 @@ export function ResultForm({
     });
   };
 
+  // この種目にクラスが存在し、かつクラス分けが「ない」(name=null) 1 行だけの構成
+  // ではない (= 1部/2部 のような実在クラスが並んでいる) 場合はクラス選択必須。
+  // 集計時に Tier を引けなくなる事故を防ぐため。
+  const namedClassExists = filteredClasses.some((c) => c.name !== null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (namedClassExists && !values.tournamentClassId) {
+      setError("クラス (部) を選択してください。クラス分けがない大会のみ未選択で OK です。");
+      return;
+    }
 
     // 結果欄: select が "その他" なら自由入力テキスト、空なら未入力、それ以外は select の値
     const rank =
@@ -154,19 +164,26 @@ export function ResultForm({
 
       {filteredClasses.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">クラス (部)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            クラス (部){namedClassExists ? " *" : ""}
+          </label>
           <select
             value={values.tournamentClassId}
             onChange={(e) => update("tournamentClassId", e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
           >
-            <option value="">選択しない</option>
+            <option value="">{namedClassExists ? "選択してください" : "選択しない"}</option>
             {filteredClasses.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name ?? "クラス分けなし"}
               </option>
             ))}
           </select>
+          {namedClassExists && (
+            <p className="text-xs text-gray-500 mt-1">
+              この大会にはクラス分けがあるので、該当する部を選んでください。
+            </p>
+          )}
         </div>
       )}
 
