@@ -6,6 +6,7 @@ import {
   TOURNAMENT_CATEGORIES,
   TOURNAMENT_CATEGORY_LABEL,
   TournamentCategory,
+  rankOptionsFor,
 } from "@/lib/tournament-meta";
 
 export interface ClassOption {
@@ -25,30 +26,61 @@ export interface ResultFormValues {
 interface Props {
   initial?: Partial<ResultFormValues>;
   classOptions: ClassOption[]; // 大会に紐づくクラス全て
+  tournamentFormat: string;    // tournament / league / league_then_tournament / other
   submitLabel: string;
   onSubmit: (values: ResultFormValues) => Promise<void>;
   onCancel?: () => void;
 }
 
-export function ResultForm({ initial, classOptions, submitLabel, onSubmit, onCancel }: Props) {
-  const [values, setValues] = useState<ResultFormValues>({
-    category: (initial?.category as TournamentCategory) ?? "MS",
+const RANK_OTHER = "__other__";
+
+export function ResultForm({
+  initial,
+  classOptions,
+  tournamentFormat,
+  submitLabel,
+  onSubmit,
+  onCancel,
+}: Props) {
+  // 大会に登録された種目だけを許す。何も登録されていない場合は空配列。
+  const availableCategories = useMemo(
+    () =>
+      TOURNAMENT_CATEGORIES.filter((cat) =>
+        classOptions.some((c) => c.category === cat)
+      ),
+    [classOptions]
+  );
+
+  const defaultCategory =
+    (initial?.category as TournamentCategory | undefined) ??
+    (availableCategories[0] ?? "MS");
+
+  const rankOptions = rankOptionsFor(tournamentFormat);
+
+  // 初期値の rank が候補リストに一致するか判定し、しなければ「その他」を選んで入力欄に出す。
+  const initialRank = initial?.rank ?? "";
+  const initialRankIsOption = initialRank !== "" && (rankOptions as readonly string[]).includes(initialRank);
+  const [rankSelect, setRankSelect] = useState<string>(
+    initialRank === "" ? "" : initialRankIsOption ? initialRank : RANK_OTHER
+  );
+  const [rankOther, setRankOther] = useState<string>(
+    initialRank === "" || initialRankIsOption ? "" : initialRank
+  );
+
+  const [values, setValues] = useState<Omit<ResultFormValues, "rank">>({
+    category: defaultCategory,
     tournamentClassId: initial?.tournamentClassId ?? "",
-    rank: initial?.rank ?? "",
     partnerName: initial?.partnerName ?? "",
     note: initial?.note ?? "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const update = <K extends keyof ResultFormValues>(k: K, v: ResultFormValues[K]) =>
+  const update = <K extends keyof typeof values>(k: K, v: (typeof values)[K]) =>
     setValues((prev) => ({ ...prev, [k]: v }));
 
   const isDoubles = ["MD", "WD", "XD"].includes(values.category);
 
-  // 種目 (category) が一致するクラスのみ select に出す。
-  // 同一種目内に name=null (クラス分け無し) と name 有り (1部/2部) が混在することは
-  // 運用上想定しないが、混ざっていてもそのまま表示する。
   const filteredClasses = useMemo(
     () => classOptions.filter((c) => c.category === values.category),
     [classOptions, values.category]
@@ -69,16 +101,39 @@ export function ResultForm({ initial, classOptions, submitLabel, onSubmit, onCan
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
     setError(null);
+
+    // 結果欄: select が "その他" なら自由入力テキスト、空なら未入力、それ以外は select の値
+    const rank =
+      rankSelect === ""
+        ? ""
+        : rankSelect === RANK_OTHER
+          ? rankOther.trim()
+          : rankSelect;
+
+    setSubmitting(true);
     try {
-      await onSubmit(values);
+      await onSubmit({
+        category: values.category,
+        tournamentClassId: values.tournamentClassId,
+        rank,
+        partnerName: values.partnerName,
+        note: values.note,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (availableCategories.length === 0) {
+    return (
+      <p className="text-sm text-gray-600">
+        この大会には登録された種目がありません。先に「種目・クラスの追加申請」から種目を追加してください。
+      </p>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -89,7 +144,7 @@ export function ResultForm({ initial, classOptions, submitLabel, onSubmit, onCan
           onChange={(e) => handleCategoryChange(e.target.value as TournamentCategory)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
         >
-          {TOURNAMENT_CATEGORIES.map((c) => (
+          {availableCategories.map((c) => (
             <option key={c} value={c}>
               {TOURNAMENT_CATEGORY_LABEL[c]}
             </option>
@@ -117,13 +172,28 @@ export function ResultForm({ initial, classOptions, submitLabel, onSubmit, onCan
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">成績</label>
-        <input
-          type="text"
-          value={values.rank}
-          onChange={(e) => update("rank", e.target.value)}
-          placeholder="例: 優勝 / 準優勝 / ベスト4 / 1回戦敗退"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-        />
+        <select
+          value={rankSelect}
+          onChange={(e) => setRankSelect(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+        >
+          <option value="">選択しない</option>
+          {rankOptions.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+          <option value={RANK_OTHER}>その他 (自由入力)</option>
+        </select>
+        {rankSelect === RANK_OTHER && (
+          <input
+            type="text"
+            value={rankOther}
+            onChange={(e) => setRankOther(e.target.value)}
+            placeholder="例: 3位 / ベスト6 / 棄権"
+            className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg"
+          />
+        )}
       </div>
 
       {isDoubles && (

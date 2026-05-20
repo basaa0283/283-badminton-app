@@ -481,6 +481,7 @@ export default function TournamentDetailPage() {
               <div className="mb-4 p-3 border border-gray-200 rounded-lg">
                 <ResultForm
                   classOptions={classOptionsForResults}
+                  tournamentFormat={data.format}
                   submitLabel="追加"
                   onSubmit={handleCreateResult}
                   onCancel={() => setAddingResult(false)}
@@ -500,6 +501,7 @@ export default function TournamentDetailPage() {
                       {editing ? (
                         <ResultForm
                           classOptions={classOptionsForResults}
+                          tournamentFormat={data.format}
                           initial={{
                             category: r.category as TournamentCategory,
                             tournamentClassId: r.tournamentClassId ?? "",

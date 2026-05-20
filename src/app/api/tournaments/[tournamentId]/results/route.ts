@@ -59,7 +59,12 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const body = await request.json();
     const isAdmin = permissions.canAccessAdmin(role);
-    const schema = isAdmin
+    // admin の場合でも、body に userId が含まれている時だけ「他人の成績登録」モード。
+    // 含まれていなければ自分用なので通常スキーマで検証する (admin が自分の成績を
+    // 追加するときに userId 必須エラーになるのを防ぐ)。
+    const hasExplicitUserId =
+      isAdmin && typeof body?.userId === "string" && body.userId.length > 0;
+    const schema = hasExplicitUserId
       ? adminTournamentResultInputSchema
       : tournamentResultInputSchema;
     const parsed = schema.safeParse(body);

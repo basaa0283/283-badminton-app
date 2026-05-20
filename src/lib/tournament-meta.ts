@@ -47,3 +47,42 @@ export const TOURNAMENT_CATEGORY_LABEL: Record<TournamentCategory, string> = {
   XD: "ミックスダブルス",
   other: "その他",
 };
+
+// 成績 (rank) の候補リスト。format に応じて切り替える。
+// 「その他」を選ぶと自由入力に切り替わる UI を前提に、各リスト末尾に other は含めない。
+// 自由入力テキストの保存は変えていないので、過去の任意テキストもそのまま読める。
+export const RANK_OPTIONS_TOURNAMENT = [
+  "優勝",
+  "準優勝",
+  "ベスト4",
+  "ベスト8",
+  "ベスト16",
+  "ベスト32",
+  "1回戦敗退",
+  "2回戦敗退",
+  "3回戦敗退",
+] as const;
+
+export const RANK_OPTIONS_LEAGUE = [
+  "1位",
+  "2位",
+  "3位",
+  "4位",
+  "5位以下",
+  "予選敗退",
+] as const;
+
+export const RANK_OPTIONS_LEAGUE_THEN_TOURNAMENT = [
+  "優勝",
+  "準優勝",
+  "ベスト4",
+  "ベスト8",
+  "予選リーグ敗退",
+] as const;
+
+export function rankOptionsFor(format: string): readonly string[] {
+  if (format === "league") return RANK_OPTIONS_LEAGUE;
+  if (format === "league_then_tournament") return RANK_OPTIONS_LEAGUE_THEN_TOURNAMENT;
+  if (format === "tournament") return RANK_OPTIONS_TOURNAMENT;
+  return RANK_OPTIONS_TOURNAMENT;
+}
