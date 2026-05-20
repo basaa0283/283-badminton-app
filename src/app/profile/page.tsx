@@ -23,6 +23,7 @@ interface Profile {
   profileImageUrl: string | null;
   comment: string | null;
   role: string;
+  tournamentResultsPublic: boolean;
 }
 
 function isoToDay(iso: string | null): string {
@@ -49,6 +50,7 @@ export default function ProfilePage() {
     birthdate: "",
     ageVisible: true,
     comment: "",
+    tournamentResultsPublic: false,
   });
 
   useEffect(() => {
@@ -77,6 +79,7 @@ export default function ProfilePage() {
           birthdate: isoToDay(data.data.birthdate),
           ageVisible: data.data.ageVisible ?? true,
           comment: data.data.comment || "",
+          tournamentResultsPublic: data.data.tournamentResultsPublic ?? false,
         });
       }
     } catch (error) {
@@ -116,6 +119,7 @@ export default function ProfilePage() {
             : null,
           ageVisible: formData.ageVisible,
           comment: formData.comment || null,
+          tournamentResultsPublic: formData.tournamentResultsPublic,
         }),
       });
 
@@ -285,6 +289,22 @@ export default function ProfilePage() {
                 <div className="text-xs text-gray-500 text-right mt-1">
                   {formData.comment.length}/500
                 </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-3">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="tournamentResultsPublic"
+                    checked={formData.tournamentResultsPublic}
+                    onChange={handleChange}
+                    className="w-4 h-4"
+                  />
+                  <span>大会実績をサークル内に公開する</span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  オフの場合、他のメンバーからはあなたの大会実績が一切見えません (本人と管理者は常に閲覧可能)。オンにしても「公開」設定にした成績だけが見え、未公開のものは見えません。
+                </p>
               </div>
 
               {success && (

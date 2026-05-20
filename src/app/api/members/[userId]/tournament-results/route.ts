@@ -29,10 +29,22 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }
 
     const { userId } = await params;
-    // approved な大会の成績だけを返す。
-    // 公開フラグ: 本人と admin 以外には isPublic=true のみ返す。
     const isAdmin = permissions.canAccessAdmin(role);
     const isSelf = session.user.id === userId;
+
+    // 大会実績の全体公開スイッチ: OFF なら他メンバーには一切返さない (admin / 本人は例外)
+    if (!isAdmin && !isSelf) {
+      const owner = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { tournamentResultsPublic: true },
+      });
+      if (!owner || !owner.tournamentResultsPublic) {
+        return NextResponse.json({ success: true, data: [] });
+      }
+    }
+
+    // approved な大会の成績だけを返す。
+    // 公開フラグ: 本人と admin 以外には isPublic=true のみ返す。
     const publicFilter = isAdmin || isSelf ? {} : { isPublic: true };
     const results = await prisma.tournamentResult.findMany({
       where: {

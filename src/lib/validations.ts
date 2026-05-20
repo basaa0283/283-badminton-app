@@ -57,6 +57,8 @@ export const updateProfileSchema = z.object({
   birthdate: z.string().datetime({ message: "有効な生年月日を入力してください" }).optional().nullable(),
   ageVisible: z.boolean().default(true),
   comment: z.string().max(500).optional().nullable(),
+  // 大会実績の全体公開スイッチ。OFF なら他メンバーには大会実績を見せない。
+  tournamentResultsPublic: z.boolean().optional(),
 });
 
 // メンバー権限更新スキーマ

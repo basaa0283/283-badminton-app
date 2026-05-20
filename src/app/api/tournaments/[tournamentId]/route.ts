@@ -42,7 +42,12 @@ export async function GET(_request: NextRequest, { params }: Params) {
           orderBy: [{ category: "asc" }, { createdAt: "asc" }],
           include: {
             user: {
-              select: { id: true, nickname: true, profileImageUrl: true },
+              select: {
+                id: true,
+                nickname: true,
+                profileImageUrl: true,
+                tournamentResultsPublic: true,
+              },
             },
             tournamentClass: {
               select: {
@@ -79,15 +84,30 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }
 
     // 公開フラグ: admin と本人以外には非公開の結果を返さない。
-    // (canAccessAdmin = admin / subadmin はサークル運営として全件閲覧可能)
+    // また、結果の所有者が「大会実績の全体公開スイッチ」を OFF にしている場合も
+    // 他人からは見えない (admin / 本人は例外)。
     const isAdmin = permissions.canAccessAdmin(role);
     if (!isAdmin) {
-      tournament.results = tournament.results.filter(
-        (r) => r.isPublic || r.userId === session.user.id
-      );
+      tournament.results = tournament.results.filter((r) => {
+        if (r.userId === session.user.id) return true;
+        if (!r.user.tournamentResultsPublic) return false;
+        return r.isPublic;
+      });
     }
 
-    return NextResponse.json({ success: true, data: tournament });
+    // クライアントには tournamentResultsPublic は不要なので落とす
+    type ResultRow = (typeof tournament.results)[number];
+    const sanitized = {
+      ...tournament,
+      results: tournament.results.map((r: ResultRow) => {
+        const { user, ...rest } = r;
+        const { tournamentResultsPublic: _, ...userPublic } = user;
+        void _;
+        return { ...rest, user: userPublic };
+      }),
+    };
+
+    return NextResponse.json({ success: true, data: sanitized });
   } catch (error) {
     console.error("Tournament GET error:", error);
     return NextResponse.json(
