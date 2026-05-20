@@ -36,7 +36,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       include: {
         createdBy: { select: { id: true, nickname: true } },
         classes: {
-          orderBy: [{ gender: "asc" }, { order: "asc" }, { name: "asc" }],
+          orderBy: [{ category: "asc" }, { order: "asc" }, { name: "asc" }],
         },
         results: {
           orderBy: [{ category: "asc" }, { createdAt: "asc" }],
@@ -45,7 +45,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
               select: { id: true, nickname: true, profileImageUrl: true },
             },
             tournamentClass: {
-              select: { id: true, gender: true, name: true, order: true },
+              select: { id: true, category: true, name: true, order: true, approvalStatus: true },
             },
           },
         },
@@ -135,8 +135,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const resetApproval = !isApprover && existing.approvalStatus === "approved";
 
     const updated = await prisma.$transaction(async (tx) => {
-      // クラスを丸ごと差し替え。既存 result の tournamentClassId は SetNull で
-      // 自動的に外れる (Prisma リレーション設定による)。
+      // クラスを丸ごと差し替え。既存 result の tournamentClassId は外す。
       await tx.tournamentResult.updateMany({
         where: { tournamentId },
         data: { tournamentClassId: null },
@@ -145,9 +144,15 @@ export async function PUT(request: NextRequest, { params }: Params) {
       await tx.tournamentClass.createMany({
         data: (parsed.data.classes ?? []).map((c, idx) => ({
           tournamentId,
-          gender: c.gender,
-          name: c.name,
+          category: c.category,
+          name: c.name ?? null,
           order: c.order ?? idx,
+          // 大会本体の編集による class は、本体が pending に戻った場合も同様に approved。
+          // (本体が pending なら親が見えないので class の approved/pending は無関係)
+          // admin が編集した場合は本体 approved のままなので、新規 class はその時点で
+          // 確認済み扱いにしておく。
+          approvalStatus: "approved",
+          createdById: session.user.id,
         })),
       });
 

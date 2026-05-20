@@ -10,8 +10,8 @@ import {
 
 export interface ClassOption {
   id: string;
-  gender: "male" | "female" | "mixed";
-  name: string;
+  category: TournamentCategory;
+  name: string | null;
 }
 
 export interface ResultFormValues {
@@ -30,14 +30,6 @@ interface Props {
   onCancel?: () => void;
 }
 
-// 種目から想定される性別を引く。MS/MD は男子、WS/WD は女子、XD はミックス。
-function genderForCategory(c: TournamentCategory): "male" | "female" | "mixed" | null {
-  if (c === "MS" || c === "MD") return "male";
-  if (c === "WS" || c === "WD") return "female";
-  if (c === "XD") return "mixed";
-  return null;
-}
-
 export function ResultForm({ initial, classOptions, submitLabel, onSubmit, onCancel }: Props) {
   const [values, setValues] = useState<ResultFormValues>({
     category: (initial?.category as TournamentCategory) ?? "MS",
@@ -53,25 +45,20 @@ export function ResultForm({ initial, classOptions, submitLabel, onSubmit, onCan
     setValues((prev) => ({ ...prev, [k]: v }));
 
   const isDoubles = ["MD", "WD", "XD"].includes(values.category);
-  const genderHint = genderForCategory(values.category);
 
-  // 種目に応じてクラスを絞り込む。other は全部表示。
-  const filteredClasses = useMemo(() => {
-    if (!genderHint) return classOptions;
-    return classOptions.filter((c) => c.gender === genderHint);
-  }, [classOptions, genderHint]);
+  // 種目 (category) が一致するクラスのみ select に出す。
+  // 同一種目内に name=null (クラス分け無し) と name 有り (1部/2部) が混在することは
+  // 運用上想定しないが、混ざっていてもそのまま表示する。
+  const filteredClasses = useMemo(
+    () => classOptions.filter((c) => c.category === values.category),
+    [classOptions, values.category]
+  );
 
-  // 種目を変えたとき、現在選択中のクラスが filtered に含まれなければ未選択に戻す
   const handleCategoryChange = (next: TournamentCategory) => {
     setValues((prev) => {
-      const nextGender = genderForCategory(next);
       const stillValid =
         prev.tournamentClassId === "" ||
-        classOptions.some(
-          (c) =>
-            c.id === prev.tournamentClassId &&
-            (nextGender === null || c.gender === nextGender)
-        );
+        classOptions.some((c) => c.id === prev.tournamentClassId && c.category === next);
       return {
         ...prev,
         category: next,
@@ -121,7 +108,7 @@ export function ResultForm({ initial, classOptions, submitLabel, onSubmit, onCan
             <option value="">選択しない</option>
             {filteredClasses.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {c.name ?? "クラス分けなし"}
               </option>
             ))}
           </select>

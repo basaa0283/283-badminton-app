@@ -7,7 +7,7 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { TournamentForm, TournamentFormValues, ClassRow } from "@/components/tournaments/TournamentForm";
 import { permissions, UserRole } from "@/lib/permissions";
-import { TournamentTier, TournamentFormat } from "@/lib/tournament-meta";
+import { TournamentTier, TournamentFormat, TournamentCategory } from "@/lib/tournament-meta";
 
 interface TournamentDetail {
   id: string;
@@ -18,7 +18,12 @@ interface TournamentDetail {
   location: string | null;
   description: string | null;
   createdById: string;
-  classes: { gender: "male" | "female" | "mixed"; name: string; order: number }[];
+  classes: {
+    category: TournamentCategory;
+    name: string | null;
+    order: number;
+    approvalStatus: "approved" | "pending";
+  }[];
 }
 
 export default function EditTournamentPage() {
@@ -68,7 +73,7 @@ export default function EditTournamentPage() {
         location: values.location || null,
         description: values.description || null,
         classes: values.classes.map((c, idx) => ({
-          gender: c.gender,
+          category: c.category,
           name: c.name,
           order: idx,
         })),
@@ -88,9 +93,11 @@ export default function EditTournamentPage() {
   }
 
   const heldDay = data.heldAt.slice(0, 10);
+  // 編集 UI には approved な class のみ載せる。pending な追加申請は admin の個別承認待ち。
   const initialClasses: ClassRow[] = [...data.classes]
+    .filter((c) => c.approvalStatus === "approved")
     .sort((a, b) => a.order - b.order)
-    .map((c) => ({ gender: c.gender, name: c.name }));
+    .map((c) => ({ category: c.category, name: c.name }));
 
   return (
     <div className="min-h-screen bg-gray-100">

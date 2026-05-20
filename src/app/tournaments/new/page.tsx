@@ -34,7 +34,7 @@ export default function NewTournamentPage() {
         location: values.location || null,
         description: values.description || null,
         classes: values.classes.map((c, idx) => ({
-          gender: c.gender,
+          category: c.category,
           name: c.name,
           order: idx,
         })),

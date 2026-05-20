@@ -45,7 +45,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
           },
         },
         tournamentClass: {
-          select: { id: true, gender: true, name: true, order: true },
+          select: { id: true, category: true, name: true, order: true },
         },
       },
       orderBy: { tournament: { heldAt: "desc" } },

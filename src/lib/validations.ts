@@ -80,10 +80,21 @@ export const adminUpdateMemberSchema = z.object({
 });
 
 // 大会クラス入力 (大会作成・編集時にネストして送る)
+// name は null OK (= その種目にクラス分けは無い)
 export const tournamentClassInputSchema = z.object({
-  gender: z.enum(["male", "female", "mixed"]),
-  name: z.string().min(1, "クラス名は必須です").max(50, "クラス名は50文字以内"),
+  category: z.enum(TOURNAMENT_CATEGORIES),
+  name: z.string().max(50, "クラス名は50文字以内").optional().nullable(),
   order: z.number().int().min(0).max(999).optional(),
+});
+
+// 後から追加申請するときの入力 (proposalNote を任意に付ける)
+export const tournamentClassProposalSchema = tournamentClassInputSchema.extend({
+  proposalNote: z.string().max(500).optional().nullable(),
+});
+
+// クラス単体の承認/却下
+export const tournamentClassApprovalSchema = z.object({
+  action: z.enum(["approve", "reject"]),
 });
 
 // 大会マスター作成/更新スキーマ
@@ -126,6 +137,8 @@ export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export type AdminUpdateMemberInput = z.infer<typeof adminUpdateMemberSchema>;
 export type TournamentInput = z.infer<typeof tournamentInputSchema>;
 export type TournamentClassInput = z.infer<typeof tournamentClassInputSchema>;
+export type TournamentClassProposalInput = z.infer<typeof tournamentClassProposalSchema>;
+export type TournamentClassApprovalInput = z.infer<typeof tournamentClassApprovalSchema>;
 export type TournamentResultInput = z.infer<typeof tournamentResultInputSchema>;
 export type AdminTournamentResultInput = z.infer<typeof adminTournamentResultInputSchema>;
 export type TournamentApprovalInput = z.infer<typeof tournamentApprovalSchema>;

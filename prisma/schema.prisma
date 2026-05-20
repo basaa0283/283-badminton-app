@@ -316,21 +316,35 @@ model Tournament {
   @@index([approvalStatus])
 }
 
-// 大会のランク区分 (クラス)。男女別 + ミックスの 3 系統に対して、
-// 各部 (1部, 2部, ベテラン50 等) を行として登録する。
-// クラス無し大会 (例: XD のみ大会) は単純にこのテーブルに行を作らない。
+// 大会の種目 × クラス。1 行は「この大会の MD 1部」のような単位を表す。
+//   - category: 種目 (MS / WS / MD / WD / XD / other)
+//   - name:     部・クラス名 ("1部" "2部" 等)。null = 該当種目にクラス分け無し
+// 後から他のメンバーが「この大会には WD もあったはず」と気付いて追加できるよう、
+// 1 行ずつ独立した承認ステータスを持つ。大会本体の作成と同時に登録された行は
+// approvalStatus="approved" で入る (本体が approved になった瞬間に見える)。
+// 後から追加された行は "pending" で入り、admin が個別に承認/却下する。
 model TournamentClass {
-  id           String  @id @default(cuid())
-  tournamentId String
-  gender       String  // male / female / mixed
-  name         String  // "1部" "2部" "ベテラン50" 等
-  order        Int     @default(0) // 性別グループ内の並び順
+  id             String   @id @default(cuid())
+  tournamentId   String
+  category       String   // MS / WS / MD / WD / XD / other
+  name           String?  // null = この種目にクラス分け無し
+  order          Int      @default(0)
 
-  results      TournamentResult[]
+  approvalStatus String   @default("approved") // approved / pending
+  proposalNote   String?  // 追加申請時のコメント (例: "公式サイトに WD あり" 等)
+  createdById    String?  // 追加申請者。大会作成時に作られた行は null (= 大会作成者と同等扱い)
+  approvedById   String?
+  approvedAt     DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  results        TournamentResult[]
 
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
   @@index([tournamentId])
+  @@index([approvalStatus])
 }
 
 // 大会の個人成績。1 つの Tournament に対して N 個の Result。

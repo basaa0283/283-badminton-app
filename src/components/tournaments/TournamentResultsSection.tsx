@@ -27,8 +27,8 @@ interface ResultWithTournament {
   };
   tournamentClass: {
     id: string;
-    gender: "male" | "female" | "mixed";
-    name: string;
+    category: string;
+    name: string | null;
   } | null;
 }
 
@@ -92,7 +92,7 @@ export function TournamentResultsSection({ userId }: Props) {
                   </div>
                   <div className="text-sm text-gray-700 mt-1">
                     {TOURNAMENT_CATEGORY_LABEL[r.category as TournamentCategory] ?? r.category}
-                    {r.tournamentClass ? ` (${r.tournamentClass.name})` : ""}
+                    {r.tournamentClass?.name ? ` (${r.tournamentClass.name})` : ""}
                     {r.rank ? ` ・ ${r.rank}` : ""}
                   </div>
                   {r.partnerName && (

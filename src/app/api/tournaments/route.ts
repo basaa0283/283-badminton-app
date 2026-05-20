@@ -122,9 +122,12 @@ export async function POST(request: NextRequest) {
         approvalStatus: "pending",
         classes: {
           create: (parsed.data.classes ?? []).map((c, idx) => ({
-            gender: c.gender,
-            name: c.name,
+            category: c.category,
+            name: c.name ?? null,
             order: c.order ?? idx,
+            // 大会作成と同時に登録された行は approved 扱い (本体承認時に一緒に見える)
+            approvalStatus: "approved",
+            createdById: session.user.id,
           })),
         },
       },

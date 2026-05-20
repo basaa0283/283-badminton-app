@@ -312,19 +312,30 @@ model Tournament {
   @@index([approvalStatus])
 }
 
-// 大会のランク区分 (クラス)。男女別 + ミックスの 3 系統。
+// 大会の種目 × クラス。1 行は「この大会の MD 1部」を表す。
+// 追加申請を受け付けるため、行単位で approvalStatus を持つ。
 model TournamentClass {
-  id           String  @id @default(cuid())
-  tournamentId String
-  gender       String  @db.NVarChar(10)  // male / female / mixed
-  name         String  @db.NVarChar(50)  // "1部" "2部" 等
-  order        Int     @default(0)
+  id             String   @id @default(cuid())
+  tournamentId   String
+  category       String   @db.NVarChar(20)  // MS / WS / MD / WD / XD / other
+  name           String?  @db.NVarChar(50)  // "1部" "2部" 等、null = クラス分け無し
+  order          Int      @default(0)
 
-  results      TournamentResult[]
+  approvalStatus String   @default("approved") @db.NVarChar(20)
+  proposalNote   String?  @db.NVarChar(500)
+  createdById    String?
+  approvedById   String?
+  approvedAt     DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  results        TournamentResult[]
 
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
   @@index([tournamentId])
+  @@index([approvalStatus])
 }
 
 // 大会の個人成績。
