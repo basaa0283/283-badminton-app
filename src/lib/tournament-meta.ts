@@ -187,6 +187,17 @@ export const TOURNAMENT_CATEGORY_LABEL: Record<TournamentCategory, string> = {
   other: "その他",
 };
 
+// 種目タグの色 (Tier 色と被らないよう、性別寄りの色を当てている)。
+// 一覧で「この大会には何の種目があるか」を一目で見せるための pill 表示用。
+export const TOURNAMENT_CATEGORY_BADGE_CLASS: Record<TournamentCategory, string> = {
+  MS: "bg-blue-100 text-blue-800",
+  WS: "bg-pink-100 text-pink-800",
+  MD: "bg-indigo-100 text-indigo-800",
+  WD: "bg-rose-100 text-rose-800",
+  XD: "bg-violet-100 text-violet-800",
+  other: "bg-gray-100 text-gray-700",
+};
+
 // 成績 (rank) の候補リスト。format に応じて切り替える。
 // 「その他」を選ぶと自由入力に切り替わる UI を前提に、各リスト末尾に other は含めない。
 // 自由入力テキストの保存は変えていないので、過去の任意テキストもそのまま読める。

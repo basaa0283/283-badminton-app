@@ -28,9 +28,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get("status"); // optional: "pending" | "approved" | "rejected"
+    // 重複検出用: 指定日 (YYYY-MM-DD) と同じ heldAt の大会だけに絞る
+    const dateFilter = searchParams.get("date");
 
     const isApprover = permissions.canApproveTournaments(role);
-    const where = isApprover
+    const baseWhere: Record<string, unknown> = isApprover
       ? statusFilter
         ? { approvalStatus: statusFilter }
         : {}
@@ -42,12 +44,26 @@ export async function GET(request: NextRequest) {
           ],
         };
 
+    if (dateFilter && /^\d{4}-\d{2}-\d{2}$/.test(dateFilter)) {
+      // heldAt は UTC 00:00:00Z で保存しているので、丸 1 日の範囲で絞る
+      const start = new Date(`${dateFilter}T00:00:00Z`);
+      const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+      baseWhere.heldAt = { gte: start, lt: end };
+    }
+
+    const where = baseWhere;
+
     const tournaments = await prisma.tournament.findMany({
       where,
       orderBy: { heldAt: "desc" },
       include: {
         createdBy: { select: { id: true, nickname: true } },
         _count: { select: { results: true } },
+        // 一覧の種目タグ表示に使う。approved な class の category だけを集める。
+        classes: {
+          where: { approvalStatus: "approved" },
+          select: { category: true },
+        },
       },
     });
 
@@ -67,6 +83,8 @@ export async function GET(request: NextRequest) {
         rejectionReason: t.rejectionReason,
         createdBy: t.createdBy,
         resultCount: t._count.results,
+        // 重複を除いた category の一覧 (MS/WS/MD/WD/XD/other) を返す
+        categories: Array.from(new Set(t.classes.map((c) => c.category))),
         createdAt: t.createdAt,
       })),
     });

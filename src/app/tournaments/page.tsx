@@ -13,6 +13,9 @@ import {
   TournamentOpenness,
   PREFECTURE_LABEL,
   Prefecture,
+  TOURNAMENT_CATEGORIES,
+  TOURNAMENT_CATEGORY_BADGE_CLASS,
+  TournamentCategory,
 } from "@/lib/tournament-meta";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -29,6 +32,7 @@ interface TournamentItem {
   rejectionReason: string | null;
   createdBy: { id: string; nickname: string } | null;
   resultCount: number;
+  categories: string[];
 }
 
 const STATUS_BADGE: Record<TournamentItem["approvalStatus"], { label: string; className: string }> = {
@@ -127,6 +131,18 @@ export default function TournamentsPage() {
                         {t.prefecture ? ` ・ ${PREFECTURE_LABEL[t.prefecture as Prefecture] ?? t.prefecture}` : ""}
                         {t.location ? ` ・ ${t.location}` : ""}
                       </div>
+                      {t.categories.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {TOURNAMENT_CATEGORIES.filter((c) => t.categories.includes(c)).map((c) => (
+                            <span
+                              key={c}
+                              className={`text-xs px-1.5 py-0.5 rounded font-medium ${TOURNAMENT_CATEGORY_BADGE_CLASS[c as TournamentCategory]}`}
+                            >
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <div className="text-xs text-gray-500 mt-1">
                         {TOURNAMENT_OPENNESS_LABEL[t.openness as TournamentOpenness] ?? t.openness}
                         {" ・ "}
