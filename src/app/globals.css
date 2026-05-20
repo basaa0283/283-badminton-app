@@ -27,10 +27,20 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* iOS Safari の date/time 入力は -webkit-min-logical-width で固有の最小幅を持つので、
-   フォーム幅に追従できるようゼロに固定する。 */
+/* iOS / macOS Safari の date / time 入力は -webkit-min-logical-width で固有の
+   最小幅を持つほか、内部のカレンダーアイコンと年月日ラベルが折り返さずに
+   並ぶため、親より広く描画されて枠をはみ出すことがある。
+   - logical width 系を 0 に潰す
+   - width: 100% と box-sizing: border-box を強制して親幅に厳密に従わせる
+   - -webkit-appearance: none で内部レイアウトのデフォルトを外す
+     (iOS のカレンダーピッカーは appearance: none でも維持される) */
 input[type="date"],
 input[type="time"] {
   -webkit-min-logical-width: 0;
   min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
