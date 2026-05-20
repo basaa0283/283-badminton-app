@@ -27,6 +27,22 @@ export const TOURNAMENT_TIER_LABEL: Record<TournamentTier, string> = {
 // DB / API では null として保存・送信する。
 export const TOURNAMENT_TIER_UNSPECIFIED = "" as const;
 
+// Tier ごとのバッジ色 (Tailwind classes)。上位 (S/A) ほど目立つ寒色系、
+// メインターゲット (C〜E) は中性色、下位 (F/G) は穏やかな色にしている。
+export const TOURNAMENT_TIER_BADGE_CLASS: Record<TournamentTier, string> = {
+  S: "bg-purple-200 text-purple-900",
+  A: "bg-rose-200 text-rose-900",
+  B: "bg-orange-200 text-orange-900",
+  C: "bg-amber-200 text-amber-900",
+  D: "bg-lime-200 text-lime-900",
+  E: "bg-emerald-200 text-emerald-900",
+  F: "bg-sky-200 text-sky-900",
+  G: "bg-slate-200 text-slate-700",
+};
+
+export const TOURNAMENT_TIER_UNSPECIFIED_BADGE_CLASS =
+  "bg-gray-100 text-gray-500";
+
 // オープン / クローズ: 出場資格の有無
 //   open   = 誰でも参加できる
 //   closed = 在住・在勤・協会所属など、何らかの出場資格がある

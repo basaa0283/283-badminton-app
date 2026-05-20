@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import {
   TOURNAMENT_CATEGORY_LABEL,
   TournamentCategory,
+  TournamentTier,
+  TOURNAMENT_TIER_BADGE_CLASS,
+  TOURNAMENT_TIER_UNSPECIFIED_BADGE_CLASS,
   rankEmoji,
 } from "@/lib/tournament-meta";
 
@@ -87,10 +90,10 @@ export function TournamentResultsSection({ userId }: Props) {
                     </div>
                     {r.tournamentClass && (
                       <span
-                        className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                        className={`text-xs px-2 py-0.5 rounded-full shrink-0 font-medium ${
                           r.tournamentClass.tier
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-500"
+                            ? TOURNAMENT_TIER_BADGE_CLASS[r.tournamentClass.tier as TournamentTier]
+                            : TOURNAMENT_TIER_UNSPECIFIED_BADGE_CLASS
                         }`}
                       >
                         {r.tournamentClass.tier ? `Tier${r.tournamentClass.tier}` : "Tier未指定"}

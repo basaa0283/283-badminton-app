@@ -21,6 +21,8 @@ import {
   PREFECTURE_LABEL,
   Prefecture,
   TournamentTier,
+  TOURNAMENT_TIER_BADGE_CLASS,
+  TOURNAMENT_TIER_UNSPECIFIED_BADGE_CLASS,
   rankEmoji,
 } from "@/lib/tournament-meta";
 import { format } from "date-fns";
@@ -366,16 +368,28 @@ export default function TournamentDetailPage() {
                             <span className="text-gray-500 mr-1">
                               {TOURNAMENT_CATEGORY_LABEL[category]}:
                             </span>
-                            <span className="text-xs">
-                              {rows
-                                .map((r) => {
-                                  const baseName = r.name ?? "クラス分けなし";
-                                  const tierLabel = r.tier ? ` [Tier${r.tier}]` : "";
-                                  const pendingLabel =
-                                    r.approvalStatus === "pending" ? " (承認待ち)" : "";
-                                  return `${baseName}${tierLabel}${pendingLabel}`;
-                                })
-                                .join(" / ")}
+                            <span className="text-xs inline-flex flex-wrap gap-x-2 gap-y-1 items-center">
+                              {rows.map((r, i) => {
+                                const baseName = r.name ?? "クラス分けなし";
+                                const pendingLabel =
+                                  r.approvalStatus === "pending" ? " (承認待ち)" : "";
+                                return (
+                                  <span key={r.id} className="inline-flex items-center gap-1">
+                                    {i > 0 && <span className="text-gray-300">/</span>}
+                                    <span>
+                                      {baseName}
+                                      {pendingLabel}
+                                    </span>
+                                    {r.tier ? (
+                                      <span
+                                        className={`text-xs px-1.5 py-0.5 rounded font-medium ${TOURNAMENT_TIER_BADGE_CLASS[r.tier as TournamentTier]}`}
+                                      >
+                                        Tier{r.tier}
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                );
+                              })}
                             </span>
                           </li>
                         );
@@ -540,7 +554,11 @@ export default function TournamentDetailPage() {
                                 <span className="text-gray-500"> ({r.tournamentClass.name})</span>
                               )}
                               {r.tournamentClass?.tier && (
-                                <span className="text-xs text-blue-700 ml-1">[Tier{r.tournamentClass.tier}]</span>
+                                <span
+                                  className={`text-xs px-1.5 py-0.5 rounded font-medium ml-1 ${TOURNAMENT_TIER_BADGE_CLASS[r.tournamentClass.tier as TournamentTier]}`}
+                                >
+                                  Tier{r.tournamentClass.tier}
+                                </span>
                               )}
                             </div>
                             {r.rank && (
