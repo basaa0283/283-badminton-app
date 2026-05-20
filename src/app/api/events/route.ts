@@ -43,10 +43,21 @@ export async function GET(request: NextRequest) {
           : role === "visitor"
             ? ["guest", "visitor"]
             : ["guest"]; // guest / pending
-    const where =
+    const baseWhere =
       visibleRoleFilter === null
         ? dateWhere
         : { ...dateWhere, minViewRole: { in: visibleRoleFilter } };
+
+    // 過去イベント (upcoming=false) は管理者以外には「自分が参加したもの」のみ。
+    // 他人の過去履歴を眺めるユースケースが無いので一覧をシンプルに保つ。
+    const isAdmin = role === "admin" || role === "subadmin";
+    const where =
+      !upcoming && !isAdmin
+        ? {
+            ...baseWhere,
+            attendances: { some: { userId: session.user.id, status: "attending" } },
+          }
+        : baseWhere;
 
     const [events, total] = await Promise.all([
       prisma.event.findMany({
