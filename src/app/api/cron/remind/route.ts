@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
     });
 
     for (const event of events) {
+      // 終日イベントは 24h 前 (前日 00:00 = 深夜) では送らず、2h 前 (前日 22:00 ≒ 前日夜) のみ送る
+      if (event.isAllDay && window.hoursUntil >= 24) continue;
       for (const attendance of event.attendances) {
         if (!attendance.user.lineId) continue;
         try {

@@ -79,6 +79,14 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
+    // 回答開始日時前のチェック
+    if (event.respondStartAt && new Date(event.respondStartAt) > new Date()) {
+      return NextResponse.json(
+        { success: false, error: { code: "NOT_OPEN", message: "回答受付開始前です" } },
+        { status: 400 }
+      );
+    }
+
     const userId = session.user.id;
     const existingAttendance = await prisma.attendance.findUnique({
       where: { userId_eventId: { userId, eventId } },
@@ -182,6 +190,9 @@ export async function POST(request: NextRequest, { params }: Params) {
 }
 
 // キャンセル待ち繰り上げ処理
+// SystemSetting.waitlistPolicy で挙動を切り替える:
+//   "fifo" (デフォルト): position が最小 = 一番早くキャンセル待ちに入った人を繰り上げる
+//   "priority":          user.priorityScore が大きい順 → 同点は createdAt 昇順
 async function promoteFromWaitlist(eventId: string, capacity: number | null) {
   if (!capacity) return;
 
@@ -191,12 +202,30 @@ async function promoteFromWaitlist(eventId: string, capacity: number | null) {
 
   if (currentAttending >= capacity) return;
 
-  // 繰り上げ対象（position が最小のもの）
-  const nextInLine = await prisma.attendance.findFirst({
-    where: { eventId, status: "waitlist" },
-    orderBy: { position: "asc" },
-    include: { user: true },
+  const policyRow = await prisma.systemSetting.findUnique({
+    where: { key: "waitlistPolicy" },
   });
+  const policy = policyRow?.value === "priority" ? "priority" : "fifo";
+
+  // 繰り上げ対象を選ぶ
+  let nextInLine;
+  if (policy === "priority") {
+    // priorityScore desc → createdAt asc。Prisma の orderBy で複数キーを指定。
+    nextInLine = await prisma.attendance.findFirst({
+      where: { eventId, status: "waitlist" },
+      orderBy: [
+        { user: { priorityScore: "desc" } },
+        { createdAt: "asc" },
+      ],
+      include: { user: true },
+    });
+  } else {
+    nextInLine = await prisma.attendance.findFirst({
+      where: { eventId, status: "waitlist" },
+      orderBy: { position: "asc" },
+      include: { user: true },
+    });
+  }
 
   if (!nextInLine) return;
 
@@ -206,7 +235,9 @@ async function promoteFromWaitlist(eventId: string, capacity: number | null) {
     data: { status: "attending", position: null },
   });
 
-  // 残りのキャンセル待ちの position を更新
+  // 残りのキャンセル待ちの position を詰める。
+  // priority モードでも position は「キャンセル待ちに入った順」を保持しておく
+  // (画面表示・履歴用途)。繰り上がった人より後ろの position を decrement。
   await prisma.attendance.updateMany({
     where: {
       eventId,

@@ -15,12 +15,14 @@ interface EventData {
   description: string | null;
   eventDate: string;
   eventEndDate: string | null;
+  isAllDay: boolean;
   location: string | null;
   capacity: number | null;
   fee: number | null;
   feeVisible: boolean;
   deadline: string | null;
   deadlineEnabled: boolean;
+  respondStartAt: string | null;
   category: { id: string; name: string; color: string | null } | null;
   minViewRole: "guest" | "visitor" | "member";
   minRespondRole: "visitor" | "member";
@@ -98,12 +100,15 @@ export default function EditEventPage() {
     description: string;
     eventDate: string;
     eventEndDate: string;
+    isAllDay: boolean;
     location: string;
     capacity: string;
     fee: string;
     feeVisible: boolean;
     deadline: string;
     deadlineEnabled: boolean;
+    respondStartAt: string;
+    respondStartEnabled: boolean;
     categoryId: string;
     minViewRole: "guest" | "visitor" | "member";
     minRespondRole: "visitor" | "member";
@@ -116,12 +121,17 @@ export default function EditEventPage() {
         description: formData.description || null,
         eventDate: new Date(formData.eventDate).toISOString(),
         eventEndDate: formData.eventEndDate ? new Date(formData.eventEndDate).toISOString() : null,
+        isAllDay: formData.isAllDay,
         location: formData.location || null,
         capacity: formData.capacity ? parseInt(formData.capacity) : null,
         fee: formData.fee ? parseInt(formData.fee) : null,
         feeVisible: formData.feeVisible,
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
         deadlineEnabled: formData.deadlineEnabled,
+        respondStartAt:
+          formData.respondStartEnabled && formData.respondStartAt
+            ? new Date(formData.respondStartAt).toISOString()
+            : null,
         categoryId: formData.categoryId || null,
         minViewRole: formData.minViewRole,
         minRespondRole: formData.minRespondRole,
@@ -159,12 +169,15 @@ export default function EditEventPage() {
                 description: event.description || "",
                 eventDate: formatDateForInput(event.eventDate),
                 eventEndDate: event.eventEndDate ? formatDateForInput(event.eventEndDate) : "",
+                isAllDay: event.isAllDay,
                 location: event.location || "",
                 capacity: event.capacity?.toString() || "",
                 fee: event.fee?.toString() || "",
                 feeVisible: event.feeVisible,
                 deadline: event.deadline ? formatDateForInput(event.deadline) : "",
                 deadlineEnabled: event.deadlineEnabled,
+                respondStartAt: event.respondStartAt ? formatDateForInput(event.respondStartAt) : "",
+                respondStartEnabled: !!event.respondStartAt,
                 categoryId: event.category?.id || "",
                 minViewRole: event.minViewRole,
                 minRespondRole: event.minRespondRole,

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
 import { BirthdateInput } from "@/components/ui/BirthdateInput";
+import { TournamentResultsSection } from "@/components/tournaments/TournamentResultsSection";
+import { permissions, UserRole } from "@/lib/permissions";
 
 interface Profile {
   id: string;
@@ -297,6 +299,13 @@ export default function ProfilePage() {
             </form>
           </CardContent>
         </Card>
+
+        {session?.user &&
+          permissions.canViewTournaments(session.user.role as UserRole) && (
+            <div className="mt-4">
+              <TournamentResultsSection userId={session.user.id} />
+            </div>
+          )}
       </main>
     </div>
   );

@@ -23,12 +23,14 @@ interface EventDetail {
   description: string | null;
   eventDate: string;
   eventEndDate: string | null;
+  isAllDay: boolean;
   location: string | null;
   capacity: number | null;
   fee: number | null;
   feeVisible: boolean;
   deadline: string | null;
   deadlineEnabled: boolean;
+  respondStartAt: string | null;
   category: { id: string; name: string; color: string | null } | null;
   cancelledAt: string | null;
   cancelReason: string | null;
@@ -197,9 +199,15 @@ export default function EventDetailPage() {
   const canViewExpenses = permissions.canAccessAdmin(role);
   const canRespond = permissions.canRespondToEvent(role);
   const eventDate = new Date(event.eventDate);
+  // 終日イベントは「その日 24:00」までを開催中扱い (isPast 判定を時刻で誤らせない)
+  const effectiveEndForPast = event.isAllDay
+    ? new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate() + 1)
+    : eventDate;
   const isDeadlinePassed =
     event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date();
-  const isPast = eventDate < new Date();
+  const isBeforeRespondStart =
+    !!event.respondStartAt && new Date(event.respondStartAt) > new Date();
+  const isPast = effectiveEndForPast < new Date();
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -275,8 +283,15 @@ export default function EventDetailPage() {
                   />
                 </svg>
                 <span>
-                  {format(eventDate, "yyyy年M月d日(E) HH:mm", { locale: ja })}
-                  {event.eventEndDate && ` 〜 ${format(new Date(event.eventEndDate), "HH:mm", { locale: ja })}`}
+                  {format(eventDate, "yyyy年M月d日(E)", { locale: ja })}
+                  {event.isAllDay
+                    ? " 終日"
+                    : (
+                      <>
+                        {` ${format(eventDate, "HH:mm", { locale: ja })}`}
+                        {event.eventEndDate && ` 〜 ${format(new Date(event.eventEndDate), "HH:mm", { locale: ja })}`}
+                      </>
+                    )}
                 </span>
               </div>
 
@@ -374,12 +389,20 @@ export default function EventDetailPage() {
               <h2 className="font-semibold text-gray-900">出欠登録</h2>
             </CardHeader>
             <CardContent>
-              <AttendanceForm
-                eventId={eventId}
-                currentAttendance={event.myAttendance}
-                isDeadlinePassed={!!isDeadlinePassed}
-                onSubmit={handleAttendanceSubmit}
-              />
+              {isBeforeRespondStart ? (
+                <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm rounded-lg px-3 py-2">
+                  この出欠は <span className="font-medium">
+                    {format(new Date(event.respondStartAt!), "M月d日(E) HH:mm", { locale: ja })}
+                  </span> から受付開始です。それまでお待ちください。
+                </div>
+              ) : (
+                <AttendanceForm
+                  eventId={eventId}
+                  currentAttendance={event.myAttendance}
+                  isDeadlinePassed={!!isDeadlinePassed}
+                  onSubmit={handleAttendanceSubmit}
+                />
+              )}
             </CardContent>
           </Card>
         )}

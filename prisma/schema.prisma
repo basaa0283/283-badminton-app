@@ -32,6 +32,7 @@ model User {
   // 管理者専用フィールド（一般ユーザーには見えない）
   skillLevel      Int?      // スキルレベル: 1-10
   adminNote       String?   // 管理者メモ
+  priorityScore   Int       @default(0) // キャンセル待ち繰り上げ優先度 (大きいほど先に繰り上げ)
 
   // 利用規約・プライバシーポリシーへの同意
   termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
@@ -54,6 +55,9 @@ model User {
 
   announcements   Announcement[] @relation("AnnouncementCreator")
   announcementReads AnnouncementRead[]
+
+  createdTournaments Tournament[]       @relation("TournamentCreator")
+  tournamentResults  TournamentResult[]
 }
 
 // NextAuth Account
@@ -162,12 +166,14 @@ model Event {
   description     String?   // 説明
   eventDate       DateTime  // 開催日時
   eventEndDate    DateTime? // 終了日時（任意）
+  isAllDay        Boolean   @default(false) // 終日イベント (時刻無視、表示は「終日」)
   location        String?   // 場所
   capacity        Int?      // 定員（nullなら無制限）
   fee             Int?      // 参加費（nullなら非表示）
   feeVisible      Boolean   @default(false) // 参加費を表示するか
   deadline        DateTime? // 締め切り日時
   deadlineEnabled Boolean   @default(false) // 締め切りを有効にするか
+  respondStartAt  DateTime? // 回答開始日時 (null なら制限なし。前は回答不可)
 
   // イベント種別 (タグ)
   categoryId      String?
@@ -275,4 +281,99 @@ model Message {
   // リレーション
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   sender      User     @relation("MessageSender", fields: [senderId], references: [id])
+}
+
+// 大会マスター。一般 (member) 以上が自分の出場した大会を登録する。
+// 登録された大会はサービス管理者の承認 (approvalStatus = approved) を経て
+// 一般メンバーから閲覧できるようになる。現状は同じサークル admin が承認するが、
+// 将来は上位の「サービス管理者」ロールに権限を切り替える前提で
+// approvalStatus / approvedById / approvedAt を別フィールドにしておく。
+model Tournament {
+  id          String   @id @default(cuid())
+  name        String   // 大会名 (例: "足立区民バドミントン大会 2026春")
+  heldAt      DateTime // 開催日
+  // tier は TournamentClass 側に移動 (同じ大会でも 1部/2部 で Tier が変わる運用のため)
+  openness    String   @default("open") // open / closed (参加区分: 出場資格の有無)
+  prefecture  String?  // 47 都道府県 + overseas + other (開催地・都道府県)
+  format      String   // tournament / league / league_then_tournament / other
+  location    String?  // 会場 (自由テキスト)
+  description String?  // 自由メモ
+  createdById String
+
+  // 承認ステータス: pending / approved / rejected
+  approvalStatus String    @default("pending")
+  approvedById   String?   // 承認した管理者の userId
+  approvedAt     DateTime?
+  rejectionReason String?  // 却下した場合の理由
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User                @relation("TournamentCreator", fields: [createdById], references: [id])
+  classes   TournamentClass[]
+  results   TournamentResult[]
+
+  @@index([heldAt])
+  @@index([createdById])
+  @@index([approvalStatus])
+}
+
+// 大会の種目 × クラス。1 行は「この大会の MD 1部」のような単位を表す。
+//   - category: 種目 (MS / WS / MD / WD / XD / other)
+//   - name:     部・クラス名 ("1部" "2部" 等)。null = 該当種目にクラス分け無し
+// 後から他のメンバーが「この大会には WD もあったはず」と気付いて追加できるよう、
+// 1 行ずつ独立した承認ステータスを持つ。大会本体の作成と同時に登録された行は
+// approvalStatus="approved" で入る (本体が approved になった瞬間に見える)。
+// 後から追加された行は "pending" で入り、admin が個別に承認/却下する。
+model TournamentClass {
+  id             String   @id @default(cuid())
+  tournamentId   String
+  category       String   // MS / WS / MD / WD / XD / other
+  name           String?  // null = この種目にクラス分け無し
+  // Tier はこのクラスに対する実質的な強さの指標 (S / A / B / C / D / E / F / G)。
+  // null は「分からない / 未指定」を意味し、admin が後で補完する想定。
+  tier           String?
+  order          Int      @default(0)
+
+  approvalStatus String   @default("approved") // approved / pending
+  proposalNote   String?  // 追加申請時のコメント (例: "公式サイトに WD あり" 等)
+  createdById    String?  // 追加申請者。大会作成時に作られた行は null (= 大会作成者と同等扱い)
+  approvedById   String?
+  approvedAt     DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  results        TournamentResult[]
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([approvalStatus])
+}
+
+// 大会の個人成績。1 つの Tournament に対して N 個の Result。
+// ダブルス・混合の相方はサークル外の人もあるので User FK にはせず文字列で保持。
+// クラス分けがある大会では tournamentClassId を必ず指定する。
+// クラス無し (例: XD のみ大会) のときだけ null を許容する。
+model TournamentResult {
+  id                String   @id @default(cuid())
+  tournamentId      String
+  tournamentClassId String?
+  userId            String
+  category          String   // MS / WS / MD / WD / XD / other
+  rank              String?  // 自由テキスト: "優勝" "ベスト4" "1回戦敗退" など
+  partnerName       String?  // ダブルス相方 (サークル外可)
+  note              String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tournament      Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentClass TournamentClass? @relation(fields: [tournamentClassId], references: [id], onDelete: SetNull)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tournamentId])
+  @@index([tournamentClassId])
 }

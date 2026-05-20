@@ -26,12 +26,20 @@ interface Event {
   } | null;
 }
 
+const PAST_INITIAL_MONTHS = 3;
+const PAST_LOAD_MORE_STEP = 3; // 1 回押すごとに広げる月数
+const PAST_MAX_MONTHS = 240; // 上限 20 年 (API と合わせる)
+
 export default function EventsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
+  const [pastMonthsBack, setPastMonthsBack] = useState(PAST_INITIAL_MONTHS);
+  // 「もっと前を見る」ボタンの直前カウント。広げて再取得したのに件数が増えなかったら
+  // 「これより前のイベントは無い」と判断してボタンを隠す。
+  const [pastReachedEnd, setPastReachedEnd] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -39,18 +47,36 @@ export default function EventsPage() {
     }
   }, [status, router]);
 
+  // タブを切り替えたら past の状態と表示中の events をリセット
+  useEffect(() => {
+    setEvents([]);
+    if (tab === "past") {
+      setPastMonthsBack(PAST_INITIAL_MONTHS);
+      setPastReachedEnd(false);
+    }
+  }, [tab]);
+
   useEffect(() => {
     if (status === "authenticated") {
       fetchEvents();
     }
-  }, [status, tab]);
+    // pastMonthsBack を依存に入れて「もっと前を見る」で再取得する
+  }, [status, tab, pastMonthsBack]);
 
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/events?upcoming=${tab === "upcoming"}`);
+      const qs =
+        tab === "upcoming"
+          ? "upcoming=true"
+          : `upcoming=false&monthsBack=${pastMonthsBack}`;
+      const res = await fetch(`/api/events?${qs}`);
       const data = await res.json();
       if (data.success) {
+        if (tab === "past") {
+          // 同じ件数なら、それ以上前は無いと判断
+          setPastReachedEnd(data.data.length === events.length && pastMonthsBack > PAST_INITIAL_MONTHS);
+        }
         setEvents(data.data);
       }
     } catch (error) {
@@ -58,6 +84,10 @@ export default function EventsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMorePast = () => {
+    setPastMonthsBack((m) => Math.min(m + PAST_LOAD_MORE_STEP, PAST_MAX_MONTHS));
   };
 
   if (status === "loading" || !session) {
@@ -126,6 +156,20 @@ export default function EventsPage() {
             {events.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
+          </div>
+        )}
+
+        {tab === "past" && !loading && (
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <div className="text-xs text-gray-500">直近 {pastMonthsBack} か月分を表示中</div>
+            {!pastReachedEnd && pastMonthsBack < PAST_MAX_MONTHS && (
+              <Button size="sm" variant="secondary" onClick={loadMorePast}>
+                もっと前を見る (+{PAST_LOAD_MORE_STEP}か月)
+              </Button>
+            )}
+            {pastReachedEnd && (
+              <div className="text-xs text-gray-400">これより前のイベントはありません</div>
+            )}
           </div>
         )}
 

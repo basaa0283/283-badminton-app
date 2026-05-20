@@ -9,13 +9,17 @@ interface EventFormData {
   description: string;
   eventDate: string;
   eventEndDate: string;
+  isAllDay: boolean;
   location: string;
   capacity: string;
   fee: string;
   feeVisible: boolean;
   deadline: string;
   deadlineEnabled: boolean;
+  respondStartAt: string;
+  respondStartEnabled: boolean;
   notifyMembers: boolean;
+  announceOnCreate: boolean;
   categoryId: string;
   minViewRole: "guest" | "visitor" | "member";
   minRespondRole: "visitor" | "member";
@@ -98,6 +102,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [eventDay, setEventDay] = useState(initStart.day || today);
   const [startTime, setStartTime] = useState(initStart.time);
   const [endTime, setEndTime] = useState(initEnd.time);
+  const [isAllDay, setIsAllDay] = useState(initialData?.isAllDay ?? false);
   // 既存データが 30分刻みでない場合は最初から細かいモードに
   const isFineInitial =
     (initStart.time && !/(00|30)$/.test(initStart.time)) ||
@@ -112,7 +117,11 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [feeVisible, setFeeVisible] = useState(initialData?.feeVisible || false);
   const [deadline, setDeadline] = useState(initialData?.deadline || "");
   const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
+  const [respondStartAt, setRespondStartAt] = useState(initialData?.respondStartAt || "");
+  const [respondStartEnabled, setRespondStartEnabled] = useState(initialData?.respondStartEnabled || false);
   const [notifyMembers, setNotifyMembers] = useState(initialData?.notifyMembers ?? false);
+  const [notifyTargetCount, setNotifyTargetCount] = useState<number | null>(null);
+  const [announceOnCreate, setAnnounceOnCreate] = useState(initialData?.announceOnCreate ?? false);
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
   const [minViewRole, setMinViewRole] = useState<"guest" | "visitor" | "member">(
     initialData?.minViewRole ?? "visitor"
@@ -142,35 +151,70 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       .catch(() => {});
   }, []);
 
+  // LINE 通知対象人数 (notifyMembers ON のときフォームに表示)
+  useEffect(() => {
+    if (!showNotifyOption) return;
+    fetch("/api/admin/line-notify-targets")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setNotifyTargetCount(json.data.count);
+      })
+      .catch(() => {});
+  }, [showNotifyOption]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // LINE 通知が ON のとき、確認ダイアログを出して誤爆を防ぐ
+    if (showNotifyOption && notifyMembers) {
+      const count = notifyTargetCount ?? "?";
+      const ok = window.confirm(
+        `LINE 通知が ${count} 人に送信されます。\n本当に作成してよろしいですか？`
+      );
+      if (!ok) return;
+    }
+
     setLoading(true);
     setError(null);
 
-    if (!eventDay || !startTime) {
-      setError("開催日と開始時刻は必須です");
+    if (!eventDay) {
+      setError("開催日は必須です");
       setLoading(false);
       return;
     }
 
-    if (endTime && endTime <= startTime) {
+    if (!isAllDay && !startTime) {
+      setError("開始時刻は必須です (終日の場合は「終日」をチェックしてください)");
+      setLoading(false);
+      return;
+    }
+
+    if (!isAllDay && endTime && endTime <= startTime) {
       setError("終了時刻は開始時刻より後に設定してください");
       setLoading(false);
       return;
     }
 
+    // 終日のときは開始/終了時刻を 00:00 に揃える (DB 上は DateTime のため、時刻部分を持つ)
+    const effectiveStartTime = isAllDay ? "00:00" : startTime;
+    const effectiveEndTime = isAllDay ? "" : endTime;
+
     const data: EventFormData = {
       title,
       description,
-      eventDate: combine(eventDay, startTime),
-      eventEndDate: endTime ? combine(eventDay, endTime) : "",
+      eventDate: combine(eventDay, effectiveStartTime),
+      eventEndDate: effectiveEndTime ? combine(eventDay, effectiveEndTime) : "",
+      isAllDay,
       location,
       capacity,
       fee,
       feeVisible,
       deadline,
       deadlineEnabled,
+      respondStartAt,
+      respondStartEnabled,
       notifyMembers,
+      announceOnCreate,
       categoryId,
       minViewRole,
       minRespondRole,
@@ -305,6 +349,22 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         </div>
       </div>
 
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <input
+            type="checkbox"
+            checked={isAllDay}
+            onChange={(e) => setIsAllDay(e.target.checked)}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          終日イベント
+        </label>
+        <p className="text-xs text-gray-500 mt-1 ml-6">
+          合宿の日や大会日など、特定時刻を持たないイベントに使います。
+        </p>
+      </div>
+
+      {!isAllDay && (
       <div className="space-y-3 min-w-0">
         <div className="min-w-0">
           <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">
@@ -374,6 +434,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           1分単位で指定する（オフ時は30分刻み）
         </label>
       </div>
+      )}
 
       <div>
         <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
@@ -505,6 +566,39 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         )}
       </div>
 
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="respondStartEnabled"
+            checked={respondStartEnabled}
+            onChange={(e) => setRespondStartEnabled(e.target.checked)}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="respondStartEnabled" className="text-sm font-medium text-gray-700">
+            回答開始日時を設定する
+          </label>
+        </div>
+
+        {respondStartEnabled && (
+          <div>
+            <label htmlFor="respondStartAt" className="block text-sm font-medium text-gray-700 mb-1">
+              回答開始日時
+            </label>
+            <input
+              type="datetime-local"
+              id="respondStartAt"
+              value={respondStartAt}
+              onChange={(e) => setRespondStartAt(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              この日時より前は出欠回答ができません (閲覧は可能)。
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="pt-2 space-y-3 border-t border-gray-100">
         <div>
           <label htmlFor="minViewRole" className="block text-sm font-medium text-gray-700 mb-1">
@@ -545,17 +639,46 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       </div>
 
       {showNotifyOption && (
-        <div className="flex items-center gap-3 pt-2">
-          <input
-            type="checkbox"
-            id="notifyMembers"
-            checked={notifyMembers}
-            onChange={(e) => setNotifyMembers(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-          <label htmlFor="notifyMembers" className="text-sm font-medium text-gray-700">
-            作成時にメンバーへLINE通知を送る
-          </label>
+        <div className="pt-2 space-y-2">
+          <div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="notifyMembers"
+                checked={notifyMembers}
+                onChange={(e) => setNotifyMembers(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="notifyMembers" className="text-sm font-medium text-gray-700">
+                作成時にメンバーへ LINE 通知を送る
+              </label>
+            </div>
+            {notifyMembers && (
+              <p className="text-xs text-amber-700 mt-1 ml-7">
+                現在 <span className="font-bold">{notifyTargetCount ?? "?"}</span> 人 (一般メンバー以上 + LINE 連携済み) に送信されます。
+                <br />
+                保存時に確認ダイアログが出ます。
+              </p>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="announceOnCreate"
+                checked={announceOnCreate}
+                onChange={(e) => setAnnounceOnCreate(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="announceOnCreate" className="text-sm font-medium text-gray-700">
+                お知らせにも投稿する
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 ml-7">
+              定型文 (タイトル + 日時 + 場所) でアプリ内のお知らせを 1 件作成します。後から <code>/admin/announcements</code> で編集可能。
+            </p>
+          </div>
         </div>
       )}
 

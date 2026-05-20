@@ -49,6 +49,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         lastActiveAt: true,
         skillLevel: true,
         adminNote: true,
+        priorityScore: true,
         createdAt: true,
         _count: {
           select: {
@@ -101,6 +102,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       responseData.lastName = user.lastName;
       responseData.skillLevel = user.skillLevel;
       responseData.adminNote = user.adminNote;
+      responseData.priorityScore = user.priorityScore;
       // 管理者には生年月日・年齢を常に表示
       responseData.birthdate = user.birthdate;
       responseData.age = computeAge(user.birthdate);
@@ -197,6 +199,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.role !== undefined) updateData.role = parsed.data.role;
     if (parsed.data.skillLevel !== undefined) updateData.skillLevel = parsed.data.skillLevel;
     if (parsed.data.adminNote !== undefined) updateData.adminNote = parsed.data.adminNote;
+    if (parsed.data.priorityScore !== undefined) updateData.priorityScore = parsed.data.priorityScore;
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -215,6 +218,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         comment: true,
         skillLevel: true,
         adminNote: true,
+        priorityScore: true,
       },
     });
 

@@ -32,6 +32,7 @@ model User {
   // 管理者専用フィールド（一般ユーザーには見えない）
   skillLevel      Int?      // スキルレベル: 1-10
   adminNote       String?   @db.NVarChar(2000) // 管理者メモ
+  priorityScore   Int       @default(0) // キャンセル待ち繰り上げ優先度 (大きいほど先に繰り上げ)
 
   // 利用規約・プライバシーポリシーへの同意
   termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
@@ -54,6 +55,9 @@ model User {
 
   announcements   Announcement[] @relation("AnnouncementCreator")
   announcementReads AnnouncementRead[]
+
+  createdTournaments Tournament[]       @relation("TournamentCreator")
+  tournamentResults  TournamentResult[]
 }
 
 // NextAuth Account
@@ -161,12 +165,14 @@ model Event {
   description     String?   @db.NVarChar(2000) // 説明
   eventDate       DateTime  // 開催日時
   eventEndDate    DateTime? // 終了日時（任意）
+  isAllDay        Boolean   @default(false) // 終日イベント
   location        String?   // 場所
   capacity        Int?      // 定員（nullなら無制限）
   fee             Int?      // 参加費（nullなら非表示）
   feeVisible      Boolean   @default(false) // 参加費を表示するか
   deadline        DateTime? // 締め切り日時
   deadlineEnabled Boolean   @default(false) // 締め切りを有効にするか
+  respondStartAt  DateTime? // 回答開始日時 (null なら制限なし)
 
   // イベント種別 (タグ)
   categoryId      String?
@@ -274,4 +280,87 @@ model Message {
   // リレーション（SQL Server循環参照対策: senderはNoAction）
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+// 大会マスター。一般 (member) 以上が自分の出場した大会を登録する。
+// 承認 (approvalStatus = approved) されるまで一般メンバーには見せない。
+model Tournament {
+  id          String   @id @default(cuid())
+  name        String   @db.NVarChar(200)
+  heldAt      DateTime
+  // tier は TournamentClass 側に移動
+  openness    String   @default("open") @db.NVarChar(20) // open / closed
+  prefecture  String?  @db.NVarChar(20)  // 47都道府県 / overseas / other
+  format      String   @db.NVarChar(50)
+  location    String?  @db.NVarChar(200)
+  description String?  @db.NVarChar(2000)
+  createdById String
+
+  approvalStatus  String    @default("pending") @db.NVarChar(20) // pending / approved / rejected
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?   @db.NVarChar(500)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // SQL Server の multi-cascade-path を避けるため createdBy / approvedBy は NoAction
+  createdBy User                @relation("TournamentCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  classes   TournamentClass[]
+  results   TournamentResult[]
+
+  @@index([heldAt])
+  @@index([createdById])
+  @@index([approvalStatus])
+}
+
+// 大会の種目 × クラス。1 行は「この大会の MD 1部」を表す。
+// 追加申請を受け付けるため、行単位で approvalStatus を持つ。
+model TournamentClass {
+  id             String   @id @default(cuid())
+  tournamentId   String
+  category       String   @db.NVarChar(20)  // MS / WS / MD / WD / XD / other
+  name           String?  @db.NVarChar(50)  // "1部" "2部" 等、null = クラス分け無し
+  tier           String?  @db.NVarChar(20)  // S / A / B / C / D / E / F / G、null = 未指定
+  order          Int      @default(0)
+
+  approvalStatus String   @default("approved") @db.NVarChar(20)
+  proposalNote   String?  @db.NVarChar(500)
+  createdById    String?
+  approvedById   String?
+  approvedAt     DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  results        TournamentResult[]
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([approvalStatus])
+}
+
+// 大会の個人成績。
+model TournamentResult {
+  id                String   @id @default(cuid())
+  tournamentId      String
+  tournamentClassId String?
+  userId            String
+  category          String   @db.NVarChar(20)
+  rank              String?  @db.NVarChar(100)
+  partnerName       String?  @db.NVarChar(100)
+  note              String?  @db.NVarChar(2000)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // tournament 側は Cascade、class / user は NoAction で multi-cascade-path を回避
+  tournament      Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentClass TournamentClass? @relation(fields: [tournamentClassId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user            User             @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([tournamentId])
+  @@index([tournamentClassId])
 }
