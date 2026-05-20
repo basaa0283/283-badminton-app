@@ -13,6 +13,8 @@ type AppSettings = {
   notifyWaitlistEnabled: boolean;
   contactEmail: string;
   officialLineUrl: string;
+  instagramUrl: string;
+  youtubeUrl: string;
   waitlistPolicy: string; // "fifo" | "priority"
 };
 
@@ -52,6 +54,12 @@ export default function AdminPage() {
   const [officialLineUrlInput, setOfficialLineUrlInput] = useState("");
   const [savingLine, setSavingLine] = useState(false);
   const [lineSaved, setLineSaved] = useState(false);
+  const [instagramUrlInput, setInstagramUrlInput] = useState("");
+  const [savingInstagram, setSavingInstagram] = useState(false);
+  const [instagramSaved, setInstagramSaved] = useState(false);
+  const [youtubeUrlInput, setYoutubeUrlInput] = useState("");
+  const [savingYoutube, setSavingYoutube] = useState(false);
+  const [youtubeSaved, setYoutubeSaved] = useState(false);
   const [savingPolicy, setSavingPolicy] = useState(false);
 
   useEffect(() => {
@@ -74,6 +82,8 @@ export default function AdminPage() {
             setSettings(json.data);
             setContactEmailInput(json.data.contactEmail || "");
             setOfficialLineUrlInput(json.data.officialLineUrl || "");
+            setInstagramUrlInput(json.data.instagramUrl || "");
+            setYoutubeUrlInput(json.data.youtubeUrl || "");
           }
         });
     }
@@ -122,6 +132,52 @@ export default function AdminPage() {
       }
     } finally {
       setSavingLine(false);
+    }
+  };
+
+  const handleSaveInstagram = async () => {
+    if (savingInstagram) return;
+    setSavingInstagram(true);
+    setInstagramSaved(false);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instagramUrl: instagramUrlInput.trim() }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettings((prev) =>
+          prev ? { ...prev, instagramUrl: instagramUrlInput.trim() } : prev
+        );
+        setInstagramSaved(true);
+        setTimeout(() => setInstagramSaved(false), 2000);
+      }
+    } finally {
+      setSavingInstagram(false);
+    }
+  };
+
+  const handleSaveYoutube = async () => {
+    if (savingYoutube) return;
+    setSavingYoutube(true);
+    setYoutubeSaved(false);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ youtubeUrl: youtubeUrlInput.trim() }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettings((prev) =>
+          prev ? { ...prev, youtubeUrl: youtubeUrlInput.trim() } : prev
+        );
+        setYoutubeSaved(true);
+        setTimeout(() => setYoutubeSaved(false), 2000);
+      }
+    } finally {
+      setSavingYoutube(false);
     }
   };
 
@@ -336,7 +392,7 @@ export default function AdminPage() {
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="text-sm font-semibold text-gray-700">公式 LINE</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              ゲスト (閲覧専用ロール) に表示する「お問い合わせはこちら」リンクの URL。空欄ならゲスト画面に CTA を出さない。
+              ゲスト (閲覧専用ロール) に表示する「お問い合わせはこちら」リンクの URL。TOP のリンクバナーにも使われる。空欄なら表示しない。
             </p>
           </div>
           <div className="px-4 py-3 flex items-center gap-2">
@@ -353,6 +409,56 @@ export default function AdminPage() {
               className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
             >
               {savingLine ? "保存中..." : lineSaved ? "保存しました" : "保存"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-700">Instagram</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              TOP のリンクバナーに表示する Instagram プロフィール URL。空欄なら表示しない。
+            </p>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-2">
+            <input
+              type="url"
+              value={instagramUrlInput}
+              onChange={(e) => setInstagramUrlInput(e.target.value)}
+              placeholder="例: https://www.instagram.com/your_account/"
+              className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <button
+              onClick={handleSaveInstagram}
+              disabled={savingInstagram || settings === null}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
+            >
+              {savingInstagram ? "保存中..." : instagramSaved ? "保存しました" : "保存"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-700">YouTube</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              TOP のリンクバナーに表示する YouTube チャンネルまたはプレイリスト URL。空欄なら表示しない。
+            </p>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-2">
+            <input
+              type="url"
+              value={youtubeUrlInput}
+              onChange={(e) => setYoutubeUrlInput(e.target.value)}
+              placeholder="例: https://www.youtube.com/@your_channel"
+              className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <button
+              onClick={handleSaveYoutube}
+              disabled={savingYoutube || settings === null}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
+            >
+              {savingYoutube ? "保存中..." : youtubeSaved ? "保存しました" : "保存"}
             </button>
           </div>
         </div>

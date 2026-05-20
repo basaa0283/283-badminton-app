@@ -8,6 +8,8 @@ const BOOLEAN_KEYS = ["notifyReminderEnabled", "notifyWaitlistEnabled"] as const
 const STRING_KEYS = [
   "contactEmail",
   "officialLineUrl",
+  "instagramUrl",
+  "youtubeUrl",
   "aboutPageContent",
   // "fifo" (デフォルト・先着順) | "priority" (User.priorityScore 順)
   "waitlistPolicy",

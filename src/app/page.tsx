@@ -2,21 +2,39 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { AdminAlertsBanner } from "@/components/admin/AdminAlertsBanner";
+import { permissions, UserRole } from "@/lib/permissions";
+
+interface PublicLinks {
+  officialLineUrl: string;
+  instagramUrl: string;
+  youtubeUrl: string;
+}
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [links, setLinks] = useState<PublicLinks | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetch("/api/public-links")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setLinks(json.data);
+      })
+      .catch(() => {});
+  }, [status]);
 
   if (status === "loading") {
     return (
@@ -30,7 +48,9 @@ export default function Home() {
     return null;
   }
 
-  const isAdmin = session.user.role === "admin" || session.user.role === "subadmin";
+  const role = session.user.role as UserRole;
+  const isAdmin = role === "admin" || role === "subadmin";
+  const canViewTournaments = permissions.canViewTournaments(role);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -52,6 +72,17 @@ export default function Home() {
             <div className="font-medium">イベント一覧</div>
             <div className="text-sm text-gray-500">出欠を確認・登録</div>
           </Link>
+
+          {canViewTournaments && (
+            <Link
+              href="/tournaments"
+              className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+            >
+              <div className="text-2xl mb-2">🏆</div>
+              <div className="font-medium">大会</div>
+              <div className="text-sm text-gray-500">大会と成績の登録</div>
+            </Link>
+          )}
 
           {isAdmin && (
             <Link
@@ -85,6 +116,53 @@ export default function Home() {
           )}
         </div>
 
+        {/* リンクバナー (サークルについて / 公式 LINE / Instagram / YouTube)。
+            URL が未設定の外部リンクは出さない。サークルについては必ず表示。 */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">リンク</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Link
+              href="/about"
+              className="flex flex-col items-center justify-center text-center p-3 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors"
+            >
+              <div className="text-2xl mb-1">📖</div>
+              <div className="text-sm font-medium text-amber-900">サークルについて</div>
+            </Link>
+            {links?.officialLineUrl && (
+              <a
+                href={links.officialLineUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex flex-col items-center justify-center text-center p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors"
+              >
+                <div className="text-2xl mb-1">💬</div>
+                <div className="text-sm font-medium text-green-900">公式 LINE</div>
+              </a>
+            )}
+            {links?.instagramUrl && (
+              <a
+                href={links.instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex flex-col items-center justify-center text-center p-3 rounded-lg bg-pink-50 hover:bg-pink-100 transition-colors"
+              >
+                <div className="text-2xl mb-1">📷</div>
+                <div className="text-sm font-medium text-pink-900">Instagram</div>
+              </a>
+            )}
+            {links?.youtubeUrl && (
+              <a
+                href={links.youtubeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex flex-col items-center justify-center text-center p-3 rounded-lg bg-red-50 hover:bg-red-100 transition-colors"
+              >
+                <div className="text-2xl mb-1">▶️</div>
+                <div className="text-sm font-medium text-red-900">YouTube</div>
+              </a>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );
