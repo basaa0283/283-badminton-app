@@ -7,12 +7,14 @@ import {
   TOURNAMENT_CATEGORY_LABEL,
   TournamentCategory,
   rankOptionsFor,
+  tierRank,
 } from "@/lib/tournament-meta";
 
 export interface ClassOption {
   id: string;
   category: TournamentCategory;
   name: string | null;
+  tier?: string | null;
 }
 
 export interface ResultFormValues {
@@ -84,7 +86,15 @@ export function ResultForm({
   const isDoubles = ["MD", "WD", "XD"].includes(values.category);
 
   const filteredClasses = useMemo(
-    () => classOptions.filter((c) => c.category === values.category),
+    () =>
+      classOptions
+        .filter((c) => c.category === values.category)
+        // Tier 高い順 (S が上)。同 Tier は name 昇順でフォールバック。
+        .sort(
+          (a, b) =>
+            tierRank(a.tier ?? null) - tierRank(b.tier ?? null) ||
+            (a.name ?? "").localeCompare(b.name ?? "")
+        ),
     [classOptions, values.category]
   );
 

@@ -43,6 +43,14 @@ export const TOURNAMENT_TIER_BADGE_CLASS: Record<TournamentTier, string> = {
 export const TOURNAMENT_TIER_UNSPECIFIED_BADGE_CLASS =
   "bg-gray-100 text-gray-500";
 
+// 表示用に Tier を「高い順」(S=0, A=1, ..., G=7, null=最後) の数値に置き換える。
+// 同 Tier 内のフォールバックは呼び出し側で order や name を使う想定。
+export function tierRank(tier: string | null | undefined): number {
+  if (!tier) return 999;
+  const idx = (TOURNAMENT_TIERS as readonly string[]).indexOf(tier);
+  return idx < 0 ? 999 : idx;
+}
+
 // クラス (大会 × 部) の「openness × 何部か」から Tier を推定する。
 // メインターゲット (区市町村大会クラス) を細かく刻むために、
 // オープンとクローズで 1 段ずらして対応させる。
