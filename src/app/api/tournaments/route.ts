@@ -49,6 +49,19 @@ export async function GET(request: NextRequest) {
       const start = new Date(`${dateFilter}T00:00:00Z`);
       const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
       baseWhere.heldAt = { gte: start, lt: end };
+    } else {
+      // 一覧表示時のデフォルト遡及期間 (月数)。
+      // 大会は月数件想定なので、12 か月をデフォルト。
+      // 「もっと前を見る」で広げる。dateFilter (重複検出) と同時には使わない。
+      const monthsBackParam = Number(searchParams.get("monthsBack"));
+      const monthsBack =
+        Number.isFinite(monthsBackParam) && monthsBackParam > 0
+          ? Math.min(Math.floor(monthsBackParam), 240) // 上限 20 年
+          : 12;
+      const now = new Date();
+      const pastStart = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
+      // 未来の大会も含めて返したいので gte だけにする (lt は付けない)
+      baseWhere.heldAt = { gte: pastStart };
     }
 
     const where = baseWhere;

@@ -41,10 +41,17 @@ const STATUS_BADGE: Record<TournamentItem["approvalStatus"], { label: string; cl
   rejected: { label: "却下", className: "bg-red-100 text-red-800" },
 };
 
+const INITIAL_MONTHS = 12;
+const LOAD_MORE_STEP = 12;
+const MAX_MONTHS = 240; // 上限 20 年 (API と合わせる)
+
 export default function TournamentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [tournaments, setTournaments] = useState<TournamentItem[] | null>(null);
+  const [monthsBack, setMonthsBack] = useState(INITIAL_MONTHS);
+  const [reachedEnd, setReachedEnd] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -57,13 +64,28 @@ export default function TournamentsPage() {
       router.push("/");
       return;
     }
-    fetch("/api/tournaments")
+    setLoadingMore(true);
+    fetch(`/api/tournaments?monthsBack=${monthsBack}`)
       .then((r) => r.json())
       .then((json) => {
-        if (json.success) setTournaments(json.data);
-        else setTournaments([]);
-      });
-  }, [session, router]);
+        if (json.success) {
+          // 同じ件数なら、それ以上前は無いと判断 (初回は除外)
+          if (tournaments !== null && json.data.length === tournaments.length && monthsBack > INITIAL_MONTHS) {
+            setReachedEnd(true);
+          }
+          setTournaments(json.data);
+        } else {
+          setTournaments([]);
+        }
+      })
+      .finally(() => setLoadingMore(false));
+    // tournaments を依存に入れると無限ループになるので意図的に除外
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, router, monthsBack]);
+
+  const loadMore = () => {
+    setMonthsBack((m) => Math.min(m + LOAD_MORE_STEP, MAX_MONTHS));
+  };
 
   if (status === "loading" || !session) {
     return (
@@ -157,6 +179,22 @@ export default function TournamentsPage() {
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {tournaments !== null && tournaments.length > 0 && (
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <div className="text-xs text-gray-500">
+              直近 {monthsBack} か月分 + 今後の大会を表示中
+            </div>
+            {!reachedEnd && monthsBack < MAX_MONTHS && (
+              <Button size="sm" variant="secondary" onClick={loadMore} loading={loadingMore}>
+                もっと前を見る (+{LOAD_MORE_STEP}か月)
+              </Button>
+            )}
+            {reachedEnd && (
+              <div className="text-xs text-gray-400">これより前の大会はありません</div>
+            )}
           </div>
         )}
       </main>
