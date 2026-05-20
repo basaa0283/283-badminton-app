@@ -21,13 +21,19 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const upcoming = searchParams.get("upcoming") !== "false";
+    // 過去イベント取得時の遡及期間 (月数)。デフォルト 3 か月。
+    // フロントの「もっと前を見る」が押されるたびに増やして再取得する。
+    const monthsBackParam = Number(searchParams.get("monthsBack"));
+    const monthsBack =
+      Number.isFinite(monthsBackParam) && monthsBackParam > 0
+        ? Math.min(Math.floor(monthsBackParam), 240) // 上限 20 年
+        : 3;
 
     const now = new Date();
-    // 過去イベントは「当月＋先月」のみ表示する。それ以前は管理者画面から見る。
-    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const pastStart = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
     const dateWhere = upcoming
       ? { eventDate: { gte: now } }
-      : { eventDate: { gte: startOfPrevMonth, lt: now } };
+      : { eventDate: { gte: pastStart, lt: now } };
 
     // 閾値方式: 各イベントの minViewRole に対し、現在のロールが届いているもののみ。
     //   - admin / subadmin は閾値に関わらず常に全件
