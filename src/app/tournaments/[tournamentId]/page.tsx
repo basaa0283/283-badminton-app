@@ -21,6 +21,7 @@ import {
   PREFECTURE_LABEL,
   Prefecture,
   TournamentTier,
+  rankEmoji,
 } from "@/lib/tournament-meta";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -542,7 +543,11 @@ export default function TournamentDetailPage() {
                                 <span className="text-xs text-blue-700 ml-1">[Tier{r.tournamentClass.tier}]</span>
                               )}
                             </div>
-                            {r.rank && <div className="text-sm text-gray-700 mt-0.5">成績: {r.rank}</div>}
+                            {r.rank && (
+                              <div className="text-sm text-gray-700 mt-0.5">
+                                成績: {rankEmoji(r.rank)}{r.rank}
+                              </div>
+                            )}
                             {r.partnerName && (
                               <div className="text-xs text-gray-500 mt-0.5">相方: {r.partnerName}</div>
                             )}

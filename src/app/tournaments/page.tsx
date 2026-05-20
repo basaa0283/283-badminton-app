@@ -110,7 +110,7 @@ export default function TournamentsPage() {
               const badge = STATUS_BADGE[t.approvalStatus];
               return (
                 <Link key={t.id} href={`/tournaments/${t.id}`}>
-                  <Card hover>
+                  <Card hover className="mb-3">
                     <CardContent>
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <h2 className="font-semibold text-gray-900">{t.name}</h2>

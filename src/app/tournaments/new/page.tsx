@@ -28,7 +28,9 @@ export default function NewTournamentPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: values.name,
-        heldAt: new Date(`${values.heldAt}T00:00:00`).toISOString(),
+        // T00:00:00Z (UTC) で保存して TZ ズレを避ける。表示側は日付だけ使うので
+        // 時刻はゼロ固定で問題ない。
+        heldAt: new Date(`${values.heldAt}T00:00:00Z`).toISOString(),
         openness: values.openness,
         prefecture: values.prefecture || null,
         format: values.format,

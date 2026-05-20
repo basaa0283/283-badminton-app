@@ -169,3 +169,13 @@ export function rankOptionsFor(format: string): readonly string[] {
   if (format === "tournament") return RANK_OPTIONS_TOURNAMENT;
   return RANK_OPTIONS_TOURNAMENT;
 }
+
+// 成績テキストから表彰絵文字を引く。優勝🥇 / 準優勝🥈 / ベスト4 (= 3位) 🥉。
+// マッチしなければ空文字。
+export function rankEmoji(rank: string | null | undefined): string {
+  if (!rank) return "";
+  if (rank === "優勝" || rank === "1位") return "🥇";
+  if (rank === "準優勝" || rank === "2位") return "🥈";
+  if (rank === "ベスト4" || rank === "3位") return "🥉";
+  return "";
+}

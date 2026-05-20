@@ -188,22 +188,6 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">開催地 (都道府県)</label>
-        <select
-          value={values.prefecture}
-          onChange={(e) => update("prefecture", e.target.value as Prefecture | "")}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
-        >
-          <option value="">未選択</option>
-          {PREFECTURES.map((p) => (
-            <option key={p} value={p}>
-              {PREFECTURE_LABEL[p]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">形式 *</label>
         <select
           value={values.format}
@@ -218,15 +202,33 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
         </select>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">会場</label>
-        <input
-          type="text"
-          value={values.location}
-          onChange={(e) => update("location", e.target.value)}
-          placeholder="例: 足立区総合スポーツセンター"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-        />
+      {/* 開催地 (都道府県) と 会場 (フリーテキスト) は同じ会場情報のセットなのでまとめる */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">開催地 (都道府県)</label>
+          <select
+            value={values.prefecture}
+            onChange={(e) => update("prefecture", e.target.value as Prefecture | "")}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+          >
+            <option value="">未選択</option>
+            {PREFECTURES.map((p) => (
+              <option key={p} value={p}>
+                {PREFECTURE_LABEL[p]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">会場</label>
+          <input
+            type="text"
+            value={values.location}
+            onChange={(e) => update("location", e.target.value)}
+            placeholder="例: 足立区総合スポーツセンター"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+          />
+        </div>
       </div>
 
       <div>

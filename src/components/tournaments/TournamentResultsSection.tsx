@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import {
   TOURNAMENT_CATEGORY_LABEL,
   TournamentCategory,
+  rankEmoji,
 } from "@/lib/tournament-meta";
 
 interface ResultWithTournament {
@@ -84,16 +85,22 @@ export function TournamentResultsSection({ userId }: Props) {
                         {format(new Date(r.tournament.heldAt), "yyyy年M月d日", { locale: ja })}
                       </div>
                     </div>
-                    {r.tournamentClass?.tier && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0">
-                        Tier{r.tournamentClass.tier}
+                    {r.tournamentClass && (
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                          r.tournamentClass.tier
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {r.tournamentClass.tier ? `Tier${r.tournamentClass.tier}` : "Tier未指定"}
                       </span>
                     )}
                   </div>
                   <div className="text-sm text-gray-700 mt-1">
                     {TOURNAMENT_CATEGORY_LABEL[r.category as TournamentCategory] ?? r.category}
                     {r.tournamentClass?.name ? ` (${r.tournamentClass.name})` : ""}
-                    {r.rank ? ` ・ ${r.rank}` : ""}
+                    {r.rank ? ` ・ ${rankEmoji(r.rank)}${r.rank}` : ""}
                   </div>
                   {r.partnerName && (
                     <div className="text-xs text-gray-500 mt-0.5">相方: {r.partnerName}</div>

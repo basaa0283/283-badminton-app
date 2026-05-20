@@ -75,7 +75,7 @@ export default function EditTournamentPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: values.name,
-        heldAt: new Date(`${values.heldAt}T00:00:00`).toISOString(),
+        heldAt: new Date(`${values.heldAt}T00:00:00Z`).toISOString(),
         openness: values.openness,
         prefecture: values.prefecture || null,
         format: values.format,
@@ -102,7 +102,10 @@ export default function EditTournamentPage() {
     );
   }
 
-  const heldDay = data.heldAt.slice(0, 10);
+  // ISO を JST に換算した上で YYYY-MM-DD を抜き出す。
+  // 旧データは ローカル TZ で保存されているため slice(0,10) だと 1 日前にズレることがある。
+  const jst = new Date(new Date(data.heldAt).getTime() + 9 * 60 * 60 * 1000);
+  const heldDay = jst.toISOString().slice(0, 10);
   // 編集 UI には approved な class のみ載せる。pending な追加申請は admin の個別承認待ち。
   const initialClasses: ClassRow[] = [...data.classes]
     .filter((c) => c.approvalStatus === "approved")
