@@ -7,13 +7,21 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { TournamentForm, TournamentFormValues, ClassRow } from "@/components/tournaments/TournamentForm";
 import { permissions, UserRole } from "@/lib/permissions";
-import { TournamentTier, TournamentFormat, TournamentCategory } from "@/lib/tournament-meta";
+import {
+  TournamentTier,
+  TournamentFormat,
+  TournamentCategory,
+  TournamentOpenness,
+  Prefecture,
+} from "@/lib/tournament-meta";
 
 interface TournamentDetail {
   id: string;
   name: string;
   heldAt: string;
   tier: string;
+  openness: string;
+  prefecture: string | null;
   format: string;
   location: string | null;
   description: string | null;
@@ -69,6 +77,8 @@ export default function EditTournamentPage() {
         name: values.name,
         heldAt: new Date(`${values.heldAt}T00:00:00`).toISOString(),
         tier: values.tier,
+        openness: values.openness,
+        prefecture: values.prefecture || null,
         format: values.format,
         location: values.location || null,
         description: values.description || null,
@@ -118,6 +128,8 @@ export default function EditTournamentPage() {
                 name: data.name,
                 heldAt: heldDay,
                 tier: data.tier as TournamentTier,
+                openness: (data.openness as TournamentOpenness) ?? "open",
+                prefecture: (data.prefecture as Prefecture | null) ?? "",
                 format: data.format as TournamentFormat,
                 location: data.location ?? "",
                 description: data.description ?? "",

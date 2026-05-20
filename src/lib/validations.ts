@@ -3,6 +3,8 @@ import {
   TOURNAMENT_TIERS,
   TOURNAMENT_FORMATS,
   TOURNAMENT_CATEGORIES,
+  TOURNAMENT_OPENNESS,
+  PREFECTURES,
 } from "./tournament-meta";
 
 // イベント作成スキーマ
@@ -102,6 +104,8 @@ export const tournamentInputSchema = z.object({
   name: z.string().min(1, "大会名は必須です").max(200, "大会名は200文字以内で入力してください"),
   heldAt: z.string().datetime({ message: "開催日を入力してください" }),
   tier: z.enum(TOURNAMENT_TIERS),
+  openness: z.enum(TOURNAMENT_OPENNESS).default("open"),
+  prefecture: z.enum(PREFECTURES).optional().nullable(),
   format: z.enum(TOURNAMENT_FORMATS),
   location: z.string().max(200).optional().nullable(),
   description: z.string().max(2000).optional().nullable(),

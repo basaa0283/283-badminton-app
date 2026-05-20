@@ -292,9 +292,11 @@ model Tournament {
   id          String   @id @default(cuid())
   name        String   // 大会名 (例: "足立区民バドミントン大会 2026春")
   heldAt      DateTime // 開催日
-  tier        String   // national / regional / prefectural / city / club / other
+  tier        String   // S / A / B / C / D / other (大会階級)
+  openness    String   @default("open") // open / closed (参加区分: 出場資格の有無)
+  prefecture  String?  // 47 都道府県 + overseas + other (開催地・都道府県)
   format      String   // tournament / league / league_then_tournament / other
-  location    String?  // 会場
+  location    String?  // 会場 (自由テキスト)
   description String?  // 自由メモ
   createdById String
 

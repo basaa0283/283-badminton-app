@@ -288,7 +288,9 @@ model Tournament {
   id          String   @id @default(cuid())
   name        String   @db.NVarChar(200)
   heldAt      DateTime
-  tier        String   @db.NVarChar(50)
+  tier        String   @db.NVarChar(20)  // S / A / B / C / D / other
+  openness    String   @default("open") @db.NVarChar(20) // open / closed
+  prefecture  String?  @db.NVarChar(20)  // 47都道府県 / overseas / other
   format      String   @db.NVarChar(50)
   location    String?  @db.NVarChar(200)
   description String?  @db.NVarChar(2000)

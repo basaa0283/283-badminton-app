@@ -40,6 +40,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
             name: true,
             heldAt: true,
             tier: true,
+            openness: true,
+            prefecture: true,
             format: true,
             location: true,
           },

@@ -18,6 +18,10 @@ import {
   TOURNAMENT_CATEGORY_LABEL,
   TournamentCategory,
   TOURNAMENT_CATEGORIES,
+  TOURNAMENT_OPENNESS_LABEL,
+  TournamentOpenness,
+  PREFECTURE_LABEL,
+  Prefecture,
 } from "@/lib/tournament-meta";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -49,6 +53,8 @@ interface TournamentDetail {
   name: string;
   heldAt: string;
   tier: string;
+  openness: string;
+  prefecture: string | null;
   format: string;
   location: string | null;
   description: string | null;
@@ -335,11 +341,18 @@ export default function TournamentDetailPage() {
             </div>
             <div className="text-sm text-gray-600 mt-1">
               {format(new Date(data.heldAt), "yyyy年M月d日(E)", { locale: ja })}
+              {data.prefecture ? ` ・ ${PREFECTURE_LABEL[data.prefecture as Prefecture] ?? data.prefecture}` : ""}
               {data.location ? ` ・ ${data.location}` : ""}
             </div>
           </CardHeader>
           <CardContent>
             <dl className="text-sm space-y-1">
+              <div>
+                <dt className="text-gray-500 inline mr-2">参加区分:</dt>
+                <dd className="inline">
+                  {TOURNAMENT_OPENNESS_LABEL[data.openness as TournamentOpenness] ?? data.openness}
+                </dd>
+              </div>
               <div>
                 <dt className="text-gray-500 inline mr-2">形式:</dt>
                 <dd className="inline">

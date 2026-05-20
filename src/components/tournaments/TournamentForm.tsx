@@ -9,9 +9,15 @@ import {
   TOURNAMENT_FORMAT_LABEL,
   TOURNAMENT_CATEGORIES,
   TOURNAMENT_CATEGORY_LABEL,
+  TOURNAMENT_OPENNESS,
+  TOURNAMENT_OPENNESS_LABEL,
+  PREFECTURES,
+  PREFECTURE_LABEL,
   TournamentTier,
   TournamentFormat,
   TournamentCategory,
+  TournamentOpenness,
+  Prefecture,
 } from "@/lib/tournament-meta";
 
 export interface ClassRow {
@@ -23,6 +29,8 @@ export interface TournamentFormValues {
   name: string;
   heldAt: string; // "YYYY-MM-DD"
   tier: TournamentTier;
+  openness: TournamentOpenness;
+  prefecture: Prefecture | "";
   format: TournamentFormat;
   location: string;
   description: string;
@@ -45,7 +53,9 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
   const [values, setValues] = useState<TournamentFormValues>({
     name: initial?.name ?? "",
     heldAt: initial?.heldAt ?? "",
-    tier: (initial?.tier as TournamentTier) ?? "city",
+    tier: (initial?.tier as TournamentTier) ?? "B",
+    openness: (initial?.openness as TournamentOpenness) ?? "open",
+    prefecture: (initial?.prefecture as Prefecture | "") ?? "",
     format: (initial?.format as TournamentFormat) ?? "tournament",
     location: initial?.location ?? "",
     description: initial?.description ?? "",
@@ -173,6 +183,38 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
           {TOURNAMENT_TIERS.map((t) => (
             <option key={t} value={t}>
               {TOURNAMENT_TIER_LABEL[t]}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-500 mt-1">S が最上位、D が下位。具体的な定義はサークル内ガイドを参照。</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">参加区分 *</label>
+        <select
+          value={values.openness}
+          onChange={(e) => update("openness", e.target.value as TournamentOpenness)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+        >
+          {TOURNAMENT_OPENNESS.map((o) => (
+            <option key={o} value={o}>
+              {TOURNAMENT_OPENNESS_LABEL[o]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">開催地 (都道府県)</label>
+        <select
+          value={values.prefecture}
+          onChange={(e) => update("prefecture", e.target.value as Prefecture | "")}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+        >
+          <option value="">未選択</option>
+          {PREFECTURES.map((p) => (
+            <option key={p} value={p}>
+              {PREFECTURE_LABEL[p]}
             </option>
           ))}
         </select>

@@ -8,7 +8,14 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { permissions, UserRole } from "@/lib/permissions";
-import { TOURNAMENT_TIER_LABEL, TournamentTier } from "@/lib/tournament-meta";
+import {
+  TOURNAMENT_TIER_LABEL,
+  TournamentTier,
+  TOURNAMENT_OPENNESS_LABEL,
+  TournamentOpenness,
+  PREFECTURE_LABEL,
+  Prefecture,
+} from "@/lib/tournament-meta";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 
@@ -17,6 +24,8 @@ interface TournamentItem {
   name: string;
   heldAt: string;
   tier: string;
+  openness: string;
+  prefecture: string | null;
   format: string;
   location: string | null;
   approvalStatus: "pending" | "approved" | "rejected";
@@ -121,9 +130,12 @@ export default function TournamentsPage() {
                       </div>
                       <div className="text-sm text-gray-600">
                         {format(new Date(t.heldAt), "yyyy年M月d日(E)", { locale: ja })}
+                        {t.prefecture ? ` ・ ${PREFECTURE_LABEL[t.prefecture as Prefecture] ?? t.prefecture}` : ""}
                         {t.location ? ` ・ ${t.location}` : ""}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
+                        {TOURNAMENT_OPENNESS_LABEL[t.openness as TournamentOpenness] ?? t.openness}
+                        {" ・ "}
                         成績登録: {t.resultCount}件
                         {t.createdBy ? ` ・ 登録者: ${t.createdBy.nickname}` : ""}
                       </div>

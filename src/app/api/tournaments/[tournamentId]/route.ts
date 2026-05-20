@@ -162,6 +162,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
           name: parsed.data.name,
           heldAt: new Date(parsed.data.heldAt),
           tier: parsed.data.tier,
+          openness: parsed.data.openness ?? "open",
+          prefecture: parsed.data.prefecture ?? null,
           format: parsed.data.format,
           location: parsed.data.location ?? null,
           description: parsed.data.description ?? null,
