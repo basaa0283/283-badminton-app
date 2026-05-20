@@ -2,20 +2,30 @@
 // 将来「全国マスター名寄せ」「派生レベル算出」を導入するときに、
 // この層を経由してロジックを差し替えられるようにしておく。
 
-// 大会階級 (tier): 大会のレベル感を表す。具体的な序列の定義はユーザーが別途指定する想定。
-// 暫定で S → A → B → C → D の 5 段階 + その他 を置いておく。
-// (中身は後でラベルだけ書き換えても DB スキーマ・コード構造は変えなくて良い設計)
-export const TOURNAMENT_TIERS = ["S", "A", "B", "C", "D", "other"] as const;
+// 大会階級 (tier): クラス (大会 × 部) 単位の「実質的な強さ」の指標。
+// 同じ大会でも 1部 / 2部 / 3部 で Tier が変わる運用。
+// 「足立区民1部 と 足立区オープン2部 が同じレベル」のような調整も
+// Tier を揃えて指定することで吸収する (open/closed は別軸)。
+//
+// 上位 (S/A) はざっくり、メインターゲット周辺 (C〜F) を細かく、
+// その下にサークル戦・初心者交流の G を 1 つ置く 8 段階。
+export const TOURNAMENT_TIERS = ["S", "A", "B", "C", "D", "E", "F", "G"] as const;
 export type TournamentTier = (typeof TOURNAMENT_TIERS)[number];
 
 export const TOURNAMENT_TIER_LABEL: Record<TournamentTier, string> = {
-  S: "S tier",
-  A: "A tier",
-  B: "B tier",
-  C: "C tier",
-  D: "D tier",
-  other: "その他",
+  S: "TierS (全日本クラス)",
+  A: "TierA (都道府県公式戦・地方ブロック)",
+  B: "TierB (区市町村オープン上位・特別区合同)",
+  C: "TierC (オープン2部級 ≒ 区民1部級)",
+  D: "TierD (オープン3部級 ≒ 区民2部級)",
+  E: "TierE (オープン4部級 ≒ 区民3部級)",
+  F: "TierF (オープン5部級 ≒ 区民4部級)",
+  G: "TierG (それ以下・サークル戦・初心者交流)",
 };
+
+// Tier select 等で「未指定」を表現するために使う sentinel 値。
+// DB / API では null として保存・送信する。
+export const TOURNAMENT_TIER_UNSPECIFIED = "" as const;
 
 // オープン / クローズ: 出場資格の有無
 //   open   = 誰でも参加できる

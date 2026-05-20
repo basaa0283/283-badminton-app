@@ -29,7 +29,6 @@ export default function NewTournamentPage() {
       body: JSON.stringify({
         name: values.name,
         heldAt: new Date(`${values.heldAt}T00:00:00`).toISOString(),
-        tier: values.tier,
         openness: values.openness,
         prefecture: values.prefecture || null,
         format: values.format,
@@ -38,6 +37,7 @@ export default function NewTournamentPage() {
         classes: values.classes.map((c, idx) => ({
           category: c.category,
           name: c.name,
+          tier: c.tier,
           order: idx,
         })),
       }),

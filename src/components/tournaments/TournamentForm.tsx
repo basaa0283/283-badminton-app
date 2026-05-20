@@ -22,13 +22,13 @@ import {
 
 export interface ClassRow {
   category: TournamentCategory;
-  name: string | null; // null = この種目はクラス分け無し
+  name: string | null; // null = クラス分け無し
+  tier: TournamentTier | null; // null = 未指定 (admin が後で補完)
 }
 
 export interface TournamentFormValues {
   name: string;
   heldAt: string; // "YYYY-MM-DD"
-  tier: TournamentTier;
   openness: TournamentOpenness;
   prefecture: Prefecture | "";
   format: TournamentFormat;
@@ -43,7 +43,6 @@ interface Props {
   onSubmit: (values: TournamentFormValues) => Promise<void>;
 }
 
-// その大会で実施されている種目 (= classes に存在する category) を抽出。
 function presentCategories(classes: ClassRow[]): TournamentCategory[] {
   const set = new Set(classes.map((c) => c.category));
   return TOURNAMENT_CATEGORIES.filter((c) => set.has(c));
@@ -53,7 +52,6 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
   const [values, setValues] = useState<TournamentFormValues>({
     name: initial?.name ?? "",
     heldAt: initial?.heldAt ?? "",
-    tier: (initial?.tier as TournamentTier) ?? "B",
     openness: (initial?.openness as TournamentOpenness) ?? "open",
     prefecture: (initial?.prefecture as Prefecture | "") ?? "",
     format: (initial?.format as TournamentFormat) ?? "tournament",
@@ -70,15 +68,13 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
 
   const present = presentCategories(values.classes);
 
-  // 「種目を追加」: その category の最初のクラスとして name="" の行を作る
-  // (ユーザーが name を入力するか、「クラス分け無し」をオンにして name=null にする)
   const addCategory = (category: TournamentCategory) => {
-    update("classes", [...values.classes, { category, name: "" }]);
+    update("classes", [...values.classes, { category, name: "", tier: null }]);
     setAddCategorySelect("");
   };
 
   const addClassRow = (category: TournamentCategory) => {
-    update("classes", [...values.classes, { category, name: "" }]);
+    update("classes", [...values.classes, { category, name: "", tier: null }]);
   };
 
   const removeRow = (index: number) => {
@@ -95,8 +91,13 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
     );
   };
 
-  // 種目内の「クラス分けなし」を切り替える: ON にすると同 category の行を 1 つだけ
-  // name=null に統合 / OFF にすると name="" の空行に変える
+  const updateRowTier = (index: number, tier: TournamentTier | null) => {
+    update(
+      "classes",
+      values.classes.map((c, i) => (i === index ? { ...c, tier } : c))
+    );
+  };
+
   const toggleNoClasses = (category: TournamentCategory) => {
     const rows = values.classes.filter((c) => c.category === category);
     const noneRow = rows.find((c) => c.name === null);
@@ -109,9 +110,9 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
         )
       );
     } else {
-      // この category の行をすべて 1 行 (name=null) に集約
+      // この category の行をすべて 1 行 (name=null) に集約 (tier はリセット)
       const others = values.classes.filter((c) => c.category !== category);
-      update("classes", [...others, { category, name: null }]);
+      update("classes", [...others, { category, name: null, tier: null }]);
     }
   };
 
@@ -125,7 +126,6 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
       setError("開催日を入力してください");
       return;
     }
-    // name="" のクラスは未入力 → 「クラス分けなし」か削除を促す
     if (values.classes.some((c) => c.name === "")) {
       setError("クラス名が空の行があります。クラス名を入れるか、「クラス分けなし」にしてください。");
       return;
@@ -133,7 +133,6 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      // name === "" は念のため null にしておく (defensive)
       const cleaned = values.classes.map((c) => ({
         ...c,
         name: c.name === "" ? null : c.name,
@@ -171,22 +170,6 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
           className="w-full px-3 py-2 border border-gray-300 rounded-lg"
           required
         />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">大会階級 *</label>
-        <select
-          value={values.tier}
-          onChange={(e) => update("tier", e.target.value as TournamentTier)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
-        >
-          {TOURNAMENT_TIERS.map((t) => (
-            <option key={t} value={t}>
-              {TOURNAMENT_TIER_LABEL[t]}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">S が最上位、D が下位。具体的な定義はサークル内ガイドを参照。</p>
       </div>
 
       <div>
@@ -261,7 +244,7 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
         <div>
           <h3 className="text-sm font-medium text-gray-700">種目とクラス</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            この大会で実施されていた種目を追加し、必要なら部 (1部 / 2部 等) を行追加で登録してください。クラス分けが無い種目は「クラス分けなし」にチェック。
+            この大会で実施されていた種目と部 (1部 / 2部 等) を登録し、各クラスに Tier を付けます。分からない部の Tier は空欄で OK (管理者が後で補完できます)。
           </p>
         </div>
 
@@ -297,40 +280,56 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
                 />
                 クラス分けなし
               </label>
+              {rows.length === 0 ? (
+                <p className="text-xs text-gray-400">クラス未登録</p>
+              ) : (
+                <ul className="space-y-2">
+                  {rows.map(({ c, idx }) => (
+                    <li key={idx} className="flex items-center gap-2 flex-wrap">
+                      {!hasNoClasses && (
+                        <input
+                          type="text"
+                          value={c.name ?? ""}
+                          onChange={(e) => updateRowName(idx, e.target.value)}
+                          placeholder="例: 1部 / ベテラン50"
+                          className="flex-1 min-w-[8rem] px-2 py-1 border border-gray-300 rounded text-sm"
+                        />
+                      )}
+                      <select
+                        value={c.tier ?? ""}
+                        onChange={(e) =>
+                          updateRowTier(idx, (e.target.value || null) as TournamentTier | null)
+                        }
+                        className="px-2 py-1 border border-gray-300 rounded text-sm bg-white min-w-[10rem]"
+                      >
+                        <option value="">Tier 未指定</option>
+                        {TOURNAMENT_TIERS.map((t) => (
+                          <option key={t} value={t}>
+                            {TOURNAMENT_TIER_LABEL[t]}
+                          </option>
+                        ))}
+                      </select>
+                      {!hasNoClasses && (
+                        <button
+                          type="button"
+                          onClick={() => removeRow(idx)}
+                          className="text-xs text-red-600 hover:underline shrink-0"
+                        >
+                          削除
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {!hasNoClasses && (
-                <>
-                  {rows.length === 0 ? (
-                    <p className="text-xs text-gray-400">クラス未登録</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {rows.map(({ c, idx }) => (
-                        <li key={idx} className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={c.name ?? ""}
-                            onChange={(e) => updateRowName(idx, e.target.value)}
-                            placeholder="例: 1部 / ベテラン50"
-                            className="flex-1 min-w-0 px-2 py-1 border border-gray-300 rounded text-sm"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeRow(idx)}
-                            className="text-xs text-red-600 hover:underline shrink-0"
-                          >
-                            削除
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => addClassRow(category)}
-                    className="mt-2 text-xs text-blue-600 hover:underline"
-                  >
-                    ＋クラスを追加
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => addClassRow(category)}
+                  className="mt-2 text-xs text-blue-600 hover:underline"
+                >
+                  ＋クラスを追加
+                </button>
               )}
             </div>
           );

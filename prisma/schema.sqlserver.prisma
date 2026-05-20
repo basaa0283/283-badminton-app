@@ -288,7 +288,7 @@ model Tournament {
   id          String   @id @default(cuid())
   name        String   @db.NVarChar(200)
   heldAt      DateTime
-  tier        String   @db.NVarChar(20)  // S / A / B / C / D / other
+  // tier は TournamentClass 側に移動
   openness    String   @default("open") @db.NVarChar(20) // open / closed
   prefecture  String?  @db.NVarChar(20)  // 47都道府県 / overseas / other
   format      String   @db.NVarChar(50)
@@ -321,6 +321,7 @@ model TournamentClass {
   tournamentId   String
   category       String   @db.NVarChar(20)  // MS / WS / MD / WD / XD / other
   name           String?  @db.NVarChar(50)  // "1部" "2部" 等、null = クラス分け無し
+  tier           String?  @db.NVarChar(20)  // S / A / B / C / D / E / F / G、null = 未指定
   order          Int      @default(0)
 
   approvalStatus String   @default("approved") @db.NVarChar(20)

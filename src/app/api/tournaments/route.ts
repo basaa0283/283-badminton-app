@@ -57,7 +57,6 @@ export async function GET(request: NextRequest) {
         id: t.id,
         name: t.name,
         heldAt: t.heldAt,
-        tier: t.tier,
         openness: t.openness,
         prefecture: t.prefecture,
         format: t.format,
@@ -116,7 +115,6 @@ export async function POST(request: NextRequest) {
       data: {
         name: parsed.data.name,
         heldAt: new Date(parsed.data.heldAt),
-        tier: parsed.data.tier,
         openness: parsed.data.openness ?? "open",
         prefecture: parsed.data.prefecture ?? null,
         format: parsed.data.format,
@@ -128,6 +126,7 @@ export async function POST(request: NextRequest) {
           create: (parsed.data.classes ?? []).map((c, idx) => ({
             category: c.category,
             name: c.name ?? null,
+            tier: c.tier ?? null,
             order: c.order ?? idx,
             // 大会作成と同時に登録された行は approved 扱い (本体承認時に一緒に見える)
             approvalStatus: "approved",

@@ -6,8 +6,6 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import {
-  TOURNAMENT_TIER_LABEL,
-  TournamentTier,
   TOURNAMENT_CATEGORY_LABEL,
   TournamentCategory,
 } from "@/lib/tournament-meta";
@@ -22,13 +20,13 @@ interface ResultWithTournament {
     id: string;
     name: string;
     heldAt: string;
-    tier: string;
     location: string | null;
   };
   tournamentClass: {
     id: string;
     category: string;
     name: string | null;
+    tier: string | null;
   } | null;
 }
 
@@ -86,9 +84,11 @@ export function TournamentResultsSection({ userId }: Props) {
                         {format(new Date(r.tournament.heldAt), "yyyy年M月d日", { locale: ja })}
                       </div>
                     </div>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0">
-                      {TOURNAMENT_TIER_LABEL[r.tournament.tier as TournamentTier] ?? r.tournament.tier}
-                    </span>
+                    {r.tournamentClass?.tier && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0">
+                        Tier{r.tournamentClass.tier}
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm text-gray-700 mt-1">
                     {TOURNAMENT_CATEGORY_LABEL[r.category as TournamentCategory] ?? r.category}

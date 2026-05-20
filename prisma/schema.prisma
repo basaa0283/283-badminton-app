@@ -292,7 +292,7 @@ model Tournament {
   id          String   @id @default(cuid())
   name        String   // 大会名 (例: "足立区民バドミントン大会 2026春")
   heldAt      DateTime // 開催日
-  tier        String   // S / A / B / C / D / other (大会階級)
+  // tier は TournamentClass 側に移動 (同じ大会でも 1部/2部 で Tier が変わる運用のため)
   openness    String   @default("open") // open / closed (参加区分: 出場資格の有無)
   prefecture  String?  // 47 都道府県 + overseas + other (開催地・都道府県)
   format      String   // tournament / league / league_then_tournament / other
@@ -330,6 +330,9 @@ model TournamentClass {
   tournamentId   String
   category       String   // MS / WS / MD / WD / XD / other
   name           String?  // null = この種目にクラス分け無し
+  // Tier はこのクラスに対する実質的な強さの指標 (S / A / B / C / D / E / F / G)。
+  // null は「分からない / 未指定」を意味し、admin が後で補完する想定。
+  tier           String?
   order          Int      @default(0)
 
   approvalStatus String   @default("approved") // approved / pending

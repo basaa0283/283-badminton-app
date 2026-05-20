@@ -9,8 +9,6 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { permissions, UserRole } from "@/lib/permissions";
 import {
-  TOURNAMENT_TIER_LABEL,
-  TournamentTier,
   TOURNAMENT_OPENNESS_LABEL,
   TournamentOpenness,
   PREFECTURE_LABEL,
@@ -23,7 +21,6 @@ interface TournamentItem {
   id: string;
   name: string;
   heldAt: string;
-  tier: string;
   openness: string;
   prefecture: string | null;
   format: string;
@@ -123,9 +120,6 @@ export default function TournamentsPage() {
                               {badge.label}
                             </span>
                           )}
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                            {TOURNAMENT_TIER_LABEL[t.tier as TournamentTier] ?? t.tier}
-                          </span>
                         </div>
                       </div>
                       <div className="text-sm text-gray-600">

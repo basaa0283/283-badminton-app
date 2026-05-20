@@ -11,8 +11,6 @@ import { ResultForm, ResultFormValues } from "@/components/tournaments/ResultFor
 import { ClassProposalForm } from "@/components/tournaments/ClassProposalForm";
 import { permissions, UserRole } from "@/lib/permissions";
 import {
-  TOURNAMENT_TIER_LABEL,
-  TournamentTier,
   TOURNAMENT_FORMAT_LABEL,
   TournamentFormat,
   TOURNAMENT_CATEGORY_LABEL,
@@ -22,6 +20,7 @@ import {
   TournamentOpenness,
   PREFECTURE_LABEL,
   Prefecture,
+  TournamentTier,
 } from "@/lib/tournament-meta";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -30,6 +29,7 @@ interface ClassRow {
   id: string;
   category: TournamentCategory;
   name: string | null;
+  tier: TournamentTier | null;
   order: number;
   approvalStatus: "approved" | "pending";
   proposalNote: string | null;
@@ -52,7 +52,6 @@ interface TournamentDetail {
   id: string;
   name: string;
   heldAt: string;
-  tier: string;
   openness: string;
   prefecture: string | null;
   format: string;
@@ -333,12 +332,7 @@ export default function TournamentDetailPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-start justify-between gap-2">
-              <h1 className="text-lg font-bold text-gray-900">{data.name}</h1>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0">
-                {TOURNAMENT_TIER_LABEL[data.tier as TournamentTier] ?? data.tier}
-              </span>
-            </div>
+            <h1 className="text-lg font-bold text-gray-900">{data.name}</h1>
             <div className="text-sm text-gray-600 mt-1">
               {format(new Date(data.heldAt), "yyyy年M月d日(E)", { locale: ja })}
               {data.prefecture ? ` ・ ${PREFECTURE_LABEL[data.prefecture as Prefecture] ?? data.prefecture}` : ""}
@@ -366,17 +360,22 @@ export default function TournamentDetailPage() {
                     <ul className="space-y-1">
                       {TOURNAMENT_CATEGORIES.filter((c) => groupedByCategory[c]).map((category) => {
                         const rows = [...groupedByCategory[category]].sort((a, b) => a.order - b.order);
-                        const labels = rows.map((r) => {
-                          const baseName = r.name ?? "クラス分けなし";
-                          if (r.approvalStatus === "pending") return `${baseName} (承認待ち)`;
-                          return baseName;
-                        });
                         return (
                           <li key={category} className="text-gray-800">
                             <span className="text-gray-500 mr-1">
                               {TOURNAMENT_CATEGORY_LABEL[category]}:
                             </span>
-                            {labels.join(" / ")}
+                            <span className="text-xs">
+                              {rows
+                                .map((r) => {
+                                  const baseName = r.name ?? "クラス分けなし";
+                                  const tierLabel = r.tier ? ` [Tier${r.tier}]` : "";
+                                  const pendingLabel =
+                                    r.approvalStatus === "pending" ? " (承認待ち)" : "";
+                                  return `${baseName}${tierLabel}${pendingLabel}`;
+                                })
+                                .join(" / ")}
+                            </span>
                           </li>
                         );
                       })}
@@ -429,6 +428,7 @@ export default function TournamentDetailPage() {
                   <li key={c.id} className="py-2">
                     <div className="text-sm text-gray-900">
                       {TOURNAMENT_CATEGORY_LABEL[c.category]} / {c.name ?? "クラス分けなし"}
+                      {c.tier ? ` / Tier${c.tier}` : " / Tier未指定"}
                     </div>
                     {c.proposalNote && (
                       <div className="text-xs text-gray-500 mt-0.5 whitespace-pre-wrap">
@@ -537,6 +537,9 @@ export default function TournamentDetailPage() {
                               </span>
                               {r.tournamentClass?.name && (
                                 <span className="text-gray-500"> ({r.tournamentClass.name})</span>
+                              )}
+                              {r.tournamentClass?.tier && (
+                                <span className="text-xs text-blue-700 ml-1">[Tier{r.tournamentClass.tier}]</span>
                               )}
                             </div>
                             {r.rank && <div className="text-sm text-gray-700 mt-0.5">成績: {r.rank}</div>}

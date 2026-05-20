@@ -67,6 +67,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         tournamentId,
         category: parsed.data.category,
         name: parsed.data.name ?? null,
+        tier: parsed.data.tier ?? null,
         order: parsed.data.order ?? 0,
         approvalStatus: isApprover ? "approved" : "pending",
         proposalNote: parsed.data.proposalNote ?? null,

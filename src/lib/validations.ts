@@ -83,9 +83,11 @@ export const adminUpdateMemberSchema = z.object({
 
 // 大会クラス入力 (大会作成・編集時にネストして送る)
 // name は null OK (= その種目にクラス分けは無い)
+// tier も null OK (= 登録者が判断できないので未指定、admin が後で補完する想定)
 export const tournamentClassInputSchema = z.object({
   category: z.enum(TOURNAMENT_CATEGORIES),
   name: z.string().max(50, "クラス名は50文字以内").optional().nullable(),
+  tier: z.enum(TOURNAMENT_TIERS).optional().nullable(),
   order: z.number().int().min(0).max(999).optional(),
 });
 
@@ -100,10 +102,10 @@ export const tournamentClassApprovalSchema = z.object({
 });
 
 // 大会マスター作成/更新スキーマ
+// tier はクラス側に移動したので、ここには無い
 export const tournamentInputSchema = z.object({
   name: z.string().min(1, "大会名は必須です").max(200, "大会名は200文字以内で入力してください"),
   heldAt: z.string().datetime({ message: "開催日を入力してください" }),
-  tier: z.enum(TOURNAMENT_TIERS),
   openness: z.enum(TOURNAMENT_OPENNESS).default("open"),
   prefecture: z.enum(PREFECTURES).optional().nullable(),
   format: z.enum(TOURNAMENT_FORMATS),

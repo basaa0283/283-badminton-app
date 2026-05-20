@@ -8,10 +8,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { TournamentForm, TournamentFormValues, ClassRow } from "@/components/tournaments/TournamentForm";
 import { permissions, UserRole } from "@/lib/permissions";
 import {
-  TournamentTier,
   TournamentFormat,
   TournamentCategory,
   TournamentOpenness,
+  TournamentTier,
   Prefecture,
 } from "@/lib/tournament-meta";
 
@@ -19,7 +19,6 @@ interface TournamentDetail {
   id: string;
   name: string;
   heldAt: string;
-  tier: string;
   openness: string;
   prefecture: string | null;
   format: string;
@@ -29,6 +28,7 @@ interface TournamentDetail {
   classes: {
     category: TournamentCategory;
     name: string | null;
+    tier: TournamentTier | null;
     order: number;
     approvalStatus: "approved" | "pending";
   }[];
@@ -76,7 +76,6 @@ export default function EditTournamentPage() {
       body: JSON.stringify({
         name: values.name,
         heldAt: new Date(`${values.heldAt}T00:00:00`).toISOString(),
-        tier: values.tier,
         openness: values.openness,
         prefecture: values.prefecture || null,
         format: values.format,
@@ -85,6 +84,7 @@ export default function EditTournamentPage() {
         classes: values.classes.map((c, idx) => ({
           category: c.category,
           name: c.name,
+          tier: c.tier,
           order: idx,
         })),
       }),
@@ -107,7 +107,7 @@ export default function EditTournamentPage() {
   const initialClasses: ClassRow[] = [...data.classes]
     .filter((c) => c.approvalStatus === "approved")
     .sort((a, b) => a.order - b.order)
-    .map((c) => ({ category: c.category, name: c.name }));
+    .map((c) => ({ category: c.category, name: c.name, tier: c.tier ?? null }));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -127,7 +127,6 @@ export default function EditTournamentPage() {
               initial={{
                 name: data.name,
                 heldAt: heldDay,
-                tier: data.tier as TournamentTier,
                 openness: (data.openness as TournamentOpenness) ?? "open",
                 prefecture: (data.prefecture as Prefecture | null) ?? "",
                 format: data.format as TournamentFormat,

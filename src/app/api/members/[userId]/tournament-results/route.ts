@@ -39,7 +39,6 @@ export async function GET(_request: NextRequest, { params }: Params) {
             id: true,
             name: true,
             heldAt: true,
-            tier: true,
             openness: true,
             prefecture: true,
             format: true,
@@ -47,7 +46,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
           },
         },
         tournamentClass: {
-          select: { id: true, category: true, name: true, order: true },
+          select: { id: true, category: true, name: true, tier: true, order: true },
         },
       },
       orderBy: { tournament: { heldAt: "desc" } },

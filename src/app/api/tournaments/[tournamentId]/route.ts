@@ -45,7 +45,14 @@ export async function GET(_request: NextRequest, { params }: Params) {
               select: { id: true, nickname: true, profileImageUrl: true },
             },
             tournamentClass: {
-              select: { id: true, category: true, name: true, order: true, approvalStatus: true },
+              select: {
+                id: true,
+                category: true,
+                name: true,
+                tier: true,
+                order: true,
+                approvalStatus: true,
+              },
             },
           },
         },
@@ -146,11 +153,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
           tournamentId,
           category: c.category,
           name: c.name ?? null,
+          tier: c.tier ?? null,
           order: c.order ?? idx,
-          // 大会本体の編集による class は、本体が pending に戻った場合も同様に approved。
-          // (本体が pending なら親が見えないので class の approved/pending は無関係)
-          // admin が編集した場合は本体 approved のままなので、新規 class はその時点で
-          // 確認済み扱いにしておく。
           approvalStatus: "approved",
           createdById: session.user.id,
         })),
@@ -161,7 +165,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
         data: {
           name: parsed.data.name,
           heldAt: new Date(parsed.data.heldAt),
-          tier: parsed.data.tier,
           openness: parsed.data.openness ?? "open",
           prefecture: parsed.data.prefecture ?? null,
           format: parsed.data.format,
