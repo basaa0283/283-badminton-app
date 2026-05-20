@@ -29,10 +29,17 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }
 
     const { userId } = await params;
-    // approved な大会の成績だけを返す。pending / rejected な大会は本人にも
-    // ここでは出さない (大会詳細ページ側で見られる前提)。
+    // approved な大会の成績だけを返す。
+    // 公開フラグ: 本人と admin 以外には isPublic=true のみ返す。
+    const isAdmin = permissions.canAccessAdmin(role);
+    const isSelf = session.user.id === userId;
+    const publicFilter = isAdmin || isSelf ? {} : { isPublic: true };
     const results = await prisma.tournamentResult.findMany({
-      where: { userId, tournament: { approvalStatus: "approved" } },
+      where: {
+        userId,
+        tournament: { approvalStatus: "approved" },
+        ...publicFilter,
+      },
       include: {
         tournament: {
           select: {

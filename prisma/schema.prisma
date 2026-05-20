@@ -365,6 +365,9 @@ model TournamentResult {
   rank              String?  // 自由テキスト: "優勝" "ベスト4" "1回戦敗退" など
   partnerName       String?  // ダブルス相方 (サークル外可)
   note              String?
+  // 公開フラグ: false = 本人と admin だけが見られる (デフォルト)
+  // true       = サークル内の他メンバーにも見える
+  isPublic          Boolean  @default(false)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

@@ -18,6 +18,7 @@ import {
   TournamentCategory,
   TournamentOpenness,
   Prefecture,
+  suggestTierForClass,
 } from "@/lib/tournament-meta";
 
 export interface ClassRow {
@@ -67,6 +68,24 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
     setValues((prev) => ({ ...prev, [k]: v }));
 
   const present = presentCategories(values.classes);
+
+  // 「Tier を自動推定で埋める」: openness と各 category 内の並び順から
+  // クラスの Tier をまとめて埋める。既に指定済みのものは触らない (上書きしない)。
+  const autofillTiers = () => {
+    // category ごとに、name 付きクラスの登場順を控える
+    const orderByCategory: Record<string, number> = {};
+    update(
+      "classes",
+      values.classes.map((c) => {
+        if (c.name === null) return c; // クラス分けなしは推定対象外
+        if (c.tier) return c; // 既に手動指定済みは触らない
+        const idx = orderByCategory[c.category] ?? 0;
+        orderByCategory[c.category] = idx + 1;
+        const suggested = suggestTierForClass(values.openness, c.name, idx);
+        return { ...c, tier: suggested };
+      })
+    );
+  };
 
   const addCategory = (category: TournamentCategory) => {
     update("classes", [...values.classes, { category, name: "", tier: null }]);
@@ -246,9 +265,18 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
 
       <div className="border-t border-gray-100 pt-4 space-y-3">
         <div>
-          <h3 className="text-sm font-medium text-gray-700">種目とクラス</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-gray-700">種目とクラス</h3>
+            <button
+              type="button"
+              onClick={autofillTiers}
+              className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Tier を自動推定
+            </button>
+          </div>
           <p className="text-xs text-gray-500 mt-0.5">
-            この大会で実施されていた種目と部 (1部 / 2部 等) を登録し、各クラスに Tier を付けます。分からない部の Tier は空欄で OK (管理者が後で補完できます)。
+            この大会で実施されていた種目と部 (1部 / 2部 等) を登録します。Tier は「Tier を自動推定」ボタンで参加区分 (オープン/クローズ) と部の順番から一括で埋められます。手動で変えた Tier は上書きされません。
           </p>
         </div>
 

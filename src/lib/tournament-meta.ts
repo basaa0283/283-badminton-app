@@ -16,10 +16,10 @@ export const TOURNAMENT_TIER_LABEL: Record<TournamentTier, string> = {
   S: "TierS (全日本クラス)",
   A: "TierA (都道府県公式戦・地方ブロック)",
   B: "TierB (区市町村オープン上位・特別区合同)",
-  C: "TierC (オープン2部級 ≒ 区民1部級)",
-  D: "TierD (オープン3部級 ≒ 区民2部級)",
-  E: "TierE (オープン4部級 ≒ 区民3部級)",
-  F: "TierF (オープン5部級 ≒ 区民4部級)",
+  C: "TierC (オープン2部級 ≒ 地域 (区民・市民) 1部級)",
+  D: "TierD (オープン3部級 ≒ 地域 (区民・市民) 2部級)",
+  E: "TierE (オープン4部級 ≒ 地域 (区民・市民) 3部級)",
+  F: "TierF (オープン5部級 ≒ 地域 (区民・市民) 4部級)",
   G: "TierG (それ以下・サークル戦・初心者交流)",
 };
 
@@ -42,6 +42,38 @@ export const TOURNAMENT_TIER_BADGE_CLASS: Record<TournamentTier, string> = {
 
 export const TOURNAMENT_TIER_UNSPECIFIED_BADGE_CLASS =
   "bg-gray-100 text-gray-500";
+
+// クラス (大会 × 部) の「openness × 何部か」から Tier を推定する。
+// メインターゲット (区市町村大会クラス) を細かく刻むために、
+// オープンとクローズで 1 段ずらして対応させる。
+//   open   : 1部=B, 2部=C, 3部=D, 4部=E, 5部=F, 6部以下=G
+//   closed : 1部=C, 2部=D, 3部=E, 4部=F, 5部以下=G
+//
+// クラス分け無し (name === null) の場合は、サークル単位の文脈が判断材料に
+// ならないので null (未指定) を返し、人間に決めさせる。
+// 全日本 (S) / 都道府県公式 (A) は主催側の情報なので推定では到達しない。
+// 必要なら登録者が手動で上書きする。
+export function suggestTierForClass(
+  openness: "open" | "closed",
+  className: string | null,
+  orderInCategory: number,
+): TournamentTier | null {
+  if (className === null) return null; // クラス分け無しは推定対象外
+  if (openness === "open") {
+    if (orderInCategory <= 0) return "B";
+    if (orderInCategory === 1) return "C";
+    if (orderInCategory === 2) return "D";
+    if (orderInCategory === 3) return "E";
+    if (orderInCategory === 4) return "F";
+    return "G";
+  }
+  // closed
+  if (orderInCategory <= 0) return "C";
+  if (orderInCategory === 1) return "D";
+  if (orderInCategory === 2) return "E";
+  if (orderInCategory === 3) return "F";
+  return "G";
+}
 
 // オープン / クローズ: 出場資格の有無
 //   open   = 誰でも参加できる

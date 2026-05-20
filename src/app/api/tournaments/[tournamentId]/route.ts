@@ -78,6 +78,15 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
+    // 公開フラグ: admin と本人以外には非公開の結果を返さない。
+    // (canAccessAdmin = admin / subadmin はサークル運営として全件閲覧可能)
+    const isAdmin = permissions.canAccessAdmin(role);
+    if (!isAdmin) {
+      tournament.results = tournament.results.filter(
+        (r) => r.isPublic || r.userId === session.user.id
+      );
+    }
+
     return NextResponse.json({ success: true, data: tournament });
   } catch (error) {
     console.error("Tournament GET error:", error);

@@ -20,6 +20,7 @@ interface ResultWithTournament {
   rank: string | null;
   partnerName: string | null;
   note: string | null;
+  isPublic: boolean;
   tournament: {
     id: string;
     name: string;
@@ -83,6 +84,11 @@ export function TournamentResultsSection({ userId }: Props) {
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-gray-900 line-clamp-1">
                         {r.tournament.name}
+                        {!r.isPublic && (
+                          <span className="text-xs text-gray-500 ml-2 px-1.5 py-0.5 rounded bg-gray-100 font-normal">
+                            非公開
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
                         {format(new Date(r.tournament.heldAt), "yyyy年M月d日", { locale: ja })}

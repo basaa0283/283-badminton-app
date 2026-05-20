@@ -107,6 +107,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         rank: parsed.data.rank ?? null,
         partnerName: parsed.data.partnerName ?? null,
         note: parsed.data.note ?? null,
+        isPublic: parsed.data.isPublic ?? false,
       },
     });
 
