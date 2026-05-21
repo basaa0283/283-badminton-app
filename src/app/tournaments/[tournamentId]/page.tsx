@@ -24,6 +24,7 @@ import {
   TOURNAMENT_TIER_BADGE_CLASS,
   TOURNAMENT_TIER_UNSPECIFIED_BADGE_CLASS,
   rankEmoji,
+  tierRank,
 } from "@/lib/tournament-meta";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -143,6 +144,7 @@ export default function TournamentDetailPage() {
     id: c.id,
     category: c.category,
     name: c.name,
+    tier: c.tier,
   }));
 
   const handleCreateResult = async (values: ResultFormValues) => {
@@ -362,7 +364,10 @@ export default function TournamentDetailPage() {
                   <dd>
                     <ul className="space-y-1">
                       {TOURNAMENT_CATEGORIES.filter((c) => groupedByCategory[c]).map((category) => {
-                        const rows = [...groupedByCategory[category]].sort((a, b) => a.order - b.order);
+                        // Tier 高い順 (S=最上位) でソート。同 Tier は order で安定化。
+                        const rows = [...groupedByCategory[category]].sort(
+                          (a, b) => tierRank(a.tier) - tierRank(b.tier) || a.order - b.order
+                        );
                         return (
                           <li key={category} className="text-gray-800">
                             <span className="text-gray-500 mr-1">

@@ -7,12 +7,14 @@ import {
   TOURNAMENT_CATEGORY_LABEL,
   TournamentCategory,
   rankOptionsFor,
+  tierRank,
 } from "@/lib/tournament-meta";
 
 export interface ClassOption {
   id: string;
   category: TournamentCategory;
   name: string | null;
+  tier?: string | null;
 }
 
 export interface ResultFormValues {
@@ -82,7 +84,15 @@ export function ResultForm({
   const isDoubles = ["MD", "WD", "XD"].includes(values.category);
 
   const filteredClasses = useMemo(
-    () => classOptions.filter((c) => c.category === values.category),
+    () =>
+      classOptions
+        .filter((c) => c.category === values.category)
+        // Tier 高い順 (S が上)。同 Tier は name 昇順でフォールバック。
+        .sort(
+          (a, b) =>
+            tierRank(a.tier ?? null) - tierRank(b.tier ?? null) ||
+            (a.name ?? "").localeCompare(b.name ?? "")
+        ),
     [classOptions, values.category]
   );
 
@@ -234,6 +244,12 @@ export function ResultForm({
           onChange={(e) => update("note", e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg"
         />
+      </div>
+
+      <div className="border-t border-gray-100 pt-3 text-xs text-gray-500">
+        サークル内へは「プロフィール → 大会実績を公開する」をオンにしたとき、
+        全成績の中から <strong>Tier × 順位が高い順に最大 5 件</strong> が自動で他メンバーに表示されます。
+        個別の公開設定はありません (登録した成績はすべて自動候補)。
       </div>
 
       {error && (

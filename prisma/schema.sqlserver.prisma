@@ -33,6 +33,7 @@ model User {
   skillLevel      Int?      // スキルレベル: 1-10
   adminNote       String?   @db.NVarChar(2000) // 管理者メモ
   priorityScore   Int       @default(0) // キャンセル待ち繰り上げ優先度 (大きいほど先に繰り上げ)
+  tournamentResultsPublic Boolean @default(false) // 大会実績の全体公開スイッチ
 
   // 利用規約・プライバシーポリシーへの同意
   termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
@@ -351,6 +352,7 @@ model TournamentResult {
   rank              String?  @db.NVarChar(100)
   partnerName       String?  @db.NVarChar(100)
   note              String?  @db.NVarChar(2000)
+  isPublic          Boolean  @default(false)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

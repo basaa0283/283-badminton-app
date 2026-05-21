@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
 import { BirthdateInput } from "@/components/ui/BirthdateInput";
 import { TournamentResultsSection } from "@/components/tournaments/TournamentResultsSection";
+import { TournamentSummarySection } from "@/components/tournaments/TournamentSummarySection";
 import { permissions, UserRole } from "@/lib/permissions";
 
 interface Profile {
@@ -23,6 +24,7 @@ interface Profile {
   profileImageUrl: string | null;
   comment: string | null;
   role: string;
+  tournamentResultsPublic: boolean;
 }
 
 function isoToDay(iso: string | null): string {
@@ -49,6 +51,7 @@ export default function ProfilePage() {
     birthdate: "",
     ageVisible: true,
     comment: "",
+    tournamentResultsPublic: false,
   });
 
   useEffect(() => {
@@ -77,6 +80,7 @@ export default function ProfilePage() {
           birthdate: isoToDay(data.data.birthdate),
           ageVisible: data.data.ageVisible ?? true,
           comment: data.data.comment || "",
+          tournamentResultsPublic: data.data.tournamentResultsPublic ?? false,
         });
       }
     } catch (error) {
@@ -116,6 +120,7 @@ export default function ProfilePage() {
             : null,
           ageVisible: formData.ageVisible,
           comment: formData.comment || null,
+          tournamentResultsPublic: formData.tournamentResultsPublic,
         }),
       });
 
@@ -287,6 +292,24 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              <div className="border-t border-gray-100 pt-3">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="tournamentResultsPublic"
+                    checked={formData.tournamentResultsPublic}
+                    onChange={handleChange}
+                    className="w-4 h-4"
+                  />
+                  <span>大会実績をサークル内に公開する</span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  オフ (デフォルト) の場合、他のメンバーからはあなたの大会実績が一切見えません (本人と管理者は常に閲覧可能)。
+                  オンにすると、登録した全成績の中から <strong>Tier × 順位が高い順に最大 5 件</strong> が自動でプロフィールに表示されます。
+                  個別の公開設定はなく、新しく高い成績を登録すれば自動で並び替わります。
+                </p>
+              </div>
+
               {success && (
                 <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm">
                   プロフィールを更新しました
@@ -302,9 +325,14 @@ export default function ProfilePage() {
 
         {session?.user &&
           permissions.canViewTournaments(session.user.role as UserRole) && (
-            <div className="mt-4">
-              <TournamentResultsSection userId={session.user.id} />
-            </div>
+            <>
+              <div className="mt-4">
+                <TournamentResultsSection userId={session.user.id} />
+              </div>
+              <div className="mt-4">
+                <TournamentSummarySection userId={session.user.id} />
+              </div>
+            </>
           )}
       </main>
     </div>

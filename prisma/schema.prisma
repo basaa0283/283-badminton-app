@@ -33,6 +33,9 @@ model User {
   skillLevel      Int?      // スキルレベル: 1-10
   adminNote       String?   // 管理者メモ
   priorityScore   Int       @default(0) // キャンセル待ち繰り上げ優先度 (大きいほど先に繰り上げ)
+  // 大会実績の「全体公開スイッチ」: false なら他メンバーには大会実績を一切見せない
+  // (本人と admin は常に見える)。
+  tournamentResultsPublic Boolean @default(false)
 
   // 利用規約・プライバシーポリシーへの同意
   termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
@@ -365,6 +368,9 @@ model TournamentResult {
   rank              String?  // 自由テキスト: "優勝" "ベスト4" "1回戦敗退" など
   partnerName       String?  // ダブルス相方 (サークル外可)
   note              String?
+  // 公開フラグ: false = 本人と admin だけが見られる (デフォルト)
+  // true       = サークル内の他メンバーにも見える
+  isPublic          Boolean  @default(false)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

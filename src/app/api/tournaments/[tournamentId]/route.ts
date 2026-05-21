@@ -42,7 +42,12 @@ export async function GET(_request: NextRequest, { params }: Params) {
           orderBy: [{ category: "asc" }, { createdAt: "asc" }],
           include: {
             user: {
-              select: { id: true, nickname: true, profileImageUrl: true },
+              select: {
+                id: true,
+                nickname: true,
+                profileImageUrl: true,
+                tournamentResultsPublic: true,
+              },
             },
             tournamentClass: {
               select: {
@@ -78,7 +83,30 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
-    return NextResponse.json({ success: true, data: tournament });
+    // 他メンバーの成績は「全体公開スイッチ ON のユーザー」のみ表示。
+    // 個別公開フラグ (isPublic) は廃止し、ユーザー単位の switch だけで制御する。
+    // 本人 / admin は無条件で全件見える。
+    const isAdmin = permissions.canAccessAdmin(role);
+    if (!isAdmin) {
+      tournament.results = tournament.results.filter((r) => {
+        if (r.userId === session.user.id) return true;
+        return r.user.tournamentResultsPublic;
+      });
+    }
+
+    // クライアントには tournamentResultsPublic は不要なので落とす
+    type ResultRow = (typeof tournament.results)[number];
+    const sanitized = {
+      ...tournament,
+      results: tournament.results.map((r: ResultRow) => {
+        const { user, ...rest } = r;
+        const { tournamentResultsPublic: _, ...userPublic } = user;
+        void _;
+        return { ...rest, user: userPublic };
+      }),
+    };
+
+    return NextResponse.json({ success: true, data: sanitized });
   } catch (error) {
     console.error("Tournament GET error:", error);
     return NextResponse.json(

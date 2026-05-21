@@ -16,6 +16,7 @@ const PROFILE_SELECT = {
   profileImageUrl: true,
   comment: true,
   role: true,
+  tournamentResultsPublic: true,
   createdAt: true,
 } as const;
 
@@ -93,6 +94,9 @@ export async function PUT(request: NextRequest) {
         birthdate: parsed.data.birthdate ? new Date(parsed.data.birthdate) : null,
         ageVisible: parsed.data.ageVisible,
         comment: parsed.data.comment,
+        ...(parsed.data.tournamentResultsPublic !== undefined && {
+          tournamentResultsPublic: parsed.data.tournamentResultsPublic,
+        }),
       },
       select: PROFILE_SELECT,
     });

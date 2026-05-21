@@ -26,6 +26,10 @@ export function BirthdateInput({ value, onChange, idPrefix = "birthdate" }: Birt
   //   サイレントに null 保存) するバグがあった。
   const [y, m, d] = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.split("-") : ["", "", ""];
 
+  // クリア導線は「年を空白に戻す」だけに統一。
+  // 過去は「月や日を空白に戻す → 全体クリア」にしていたが、ユーザーが他項目を
+  // 編集している最中にドロップダウンを誤操作してしまうと生年月日が黙って消える
+  // 事故があったため、月日のクリアでは触らない (=年が入っている限り保持) 設計に変更。
   const setY = (newY: string) => {
     if (!newY) {
       onChange("");
@@ -38,26 +42,20 @@ export function BirthdateInput({ value, onChange, idPrefix = "birthdate" }: Birt
     onChange(`${newY}-${mm}-${pad2(safeD)}`);
   };
   const setM = (newM: string) => {
-    if (!newM) {
-      // 月クリア = 生年月日全体をリセット (中途半端な状態を作らない)
-      onChange("");
-      return;
-    }
     const yy = y || String(NOW.getFullYear() - 30);
+    // 月空白に戻す操作は無視 (年クリアでのみ全体リセット)
+    const mm = newM || m || "01";
     const dd = d || "01";
-    const maxD = daysInMonth(Number(yy), Number(newM));
+    const maxD = daysInMonth(Number(yy), Number(mm));
     const safeD = Math.min(Number(dd), maxD);
-    onChange(`${yy}-${pad2(Number(newM))}-${pad2(safeD)}`);
+    onChange(`${yy}-${pad2(Number(mm))}-${pad2(safeD)}`);
   };
   const setD = (newD: string) => {
-    if (!newD) {
-      // 日クリア = 生年月日全体をリセット
-      onChange("");
-      return;
-    }
     const yy = y || String(NOW.getFullYear() - 30);
     const mm = m || "01";
-    onChange(`${yy}-${pad2(Number(mm))}-${pad2(Number(newD))}`);
+    // 日空白に戻す操作は無視 (年クリアでのみ全体リセット)
+    const dd = newD || d || "01";
+    onChange(`${yy}-${pad2(Number(mm))}-${pad2(Number(dd))}`);
   };
 
   const maxD = y && m ? daysInMonth(Number(y), Number(m)) : 31;

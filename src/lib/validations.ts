@@ -57,6 +57,8 @@ export const updateProfileSchema = z.object({
   birthdate: z.string().datetime({ message: "有効な生年月日を入力してください" }).optional().nullable(),
   ageVisible: z.boolean().default(true),
   comment: z.string().max(500).optional().nullable(),
+  // 大会実績の全体公開スイッチ。OFF なら他メンバーには大会実績を見せない。
+  tournamentResultsPublic: z.boolean().optional(),
 });
 
 // メンバー権限更新スキーマ
@@ -115,7 +117,8 @@ export const tournamentInputSchema = z.object({
 });
 
 // 大会成績作成/更新スキーマ
-// classCount→tournamentClassId 化に伴い className は廃止し、tournamentClassId を渡す
+// 個別の公開フラグは持たない。
+// プロフィール公開時は全体スイッチ ON のユーザーの「Tier × 順位」上位 5 件が自動選出される。
 export const tournamentResultInputSchema = z.object({
   category: z.enum(TOURNAMENT_CATEGORIES),
   tournamentClassId: z.string().optional().nullable(),
