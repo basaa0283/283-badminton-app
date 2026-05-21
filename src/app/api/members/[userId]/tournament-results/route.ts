@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { tierRankScore } from "@/lib/tournament-meta";
 
 interface Params {
   params: Promise<{ userId: string }>;
@@ -44,13 +45,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }
 
     // approved な大会の成績だけを返す。
-    // 公開フラグ: 本人と admin 以外には isPublic=true のみ返す。
-    const publicFilter = isAdmin || isSelf ? {} : { isPublic: true };
-    const results = await prisma.tournamentResult.findMany({
+    const all = await prisma.tournamentResult.findMany({
       where: {
         userId,
         tournament: { approvalStatus: "approved" },
-        ...publicFilter,
       },
       include: {
         tournament: {
@@ -71,7 +69,19 @@ export async function GET(_request: NextRequest, { params }: Params) {
       orderBy: { tournament: { heldAt: "desc" } },
     });
 
-    return NextResponse.json({ success: true, data: results });
+    // 他人ビュー (本人 / admin 以外) には「Tier × 順位」スコアが高い順で上位 5 件のみ返す。
+    // 公開ルール: tournamentResultsPublic=true なユーザーについて、
+    // 自動で上位 5 件が選出される (個別の公開フラグはなし)。
+    if (!isAdmin && !isSelf) {
+      const ranked = [...all].sort(
+        (a, b) =>
+          tierRankScore(a.tournamentClass?.tier, a.rank) -
+          tierRankScore(b.tournamentClass?.tier, b.rank)
+      );
+      return NextResponse.json({ success: true, data: ranked.slice(0, 5) });
+    }
+
+    return NextResponse.json({ success: true, data: all });
   } catch (error) {
     console.error("Member tournament-results GET error:", error);
     return NextResponse.json(

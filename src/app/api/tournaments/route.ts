@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { tournamentInputSchema } from "@/lib/validations";
+import { sendAdminNotification } from "@/lib/email";
 
 // GET /api/tournaments - 大会マスター一覧
 //   - 一般メンバー: approved のみ + 自分が登録した pending (本人にだけ可視)
@@ -166,6 +167,25 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // 管理者に承認依頼メール (fire-and-forget)。
+    // メール失敗で大会作成が落ちないように非同期で投げて log だけ取る。
+    const appUrl =
+      process.env.NEXTAUTH_URL ||
+      "https://prod-283-badminton-app-gsacfjcnezadeugd.japanwest-01.azurewebsites.net";
+    void sendAdminNotification({
+      subject: `[大会] 承認待ち: ${tournament.name}`,
+      body: [
+        `新しい大会が登録され、承認待ちになっています。`,
+        ``,
+        `大会名: ${tournament.name}`,
+        `開催日: ${new Date(tournament.heldAt).toISOString().slice(0, 10)}`,
+        `登録者: ${session.user.name ?? session.user.id}`,
+        ``,
+        `承認画面:`,
+        `${appUrl}/tournaments/${tournament.id}`,
+      ].join("\n"),
+    }).catch((err) => console.error("[tournaments] approval mail failed:", err));
 
     return NextResponse.json({ success: true, data: tournament }, { status: 201 });
   } catch (error) {

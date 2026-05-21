@@ -246,3 +246,50 @@ export function rankEmoji(rank: string | null | undefined): string {
   if (rank === "ベスト4" || rank === "3位") return "🥉";
   return "";
 }
+
+// 成績テキストを「上に行くほど好成績」の数値スコアに変換する (小さいほど上位)。
+// プロフィールの公開大会実績 (= 上位 5 件自動選出) に使う。
+// 未知のテキストは 999 を返して下位に倒す。
+export function rankScore(rank: string | null | undefined): number {
+  if (!rank) return 999;
+  switch (rank) {
+    case "優勝":
+    case "1位":
+      return 1;
+    case "準優勝":
+    case "2位":
+      return 2;
+    case "ベスト4":
+    case "3位":
+      return 3;
+    case "ベスト8":
+    case "4位":
+      return 4;
+    case "ベスト16":
+      return 5;
+    case "ベスト32":
+      return 6;
+    case "1回戦敗退":
+      return 11;
+    case "2回戦敗退":
+      return 12;
+    case "3回戦敗退":
+      return 13;
+    case "5位以下":
+      return 50;
+    case "予選敗退":
+    case "予選リーグ敗退":
+      return 60;
+    default:
+      return 999;
+  }
+}
+
+// 「Tier × 順位」の合成スコア。Tier を優先 (×1000)、その中で rank で並べる。
+// 小さいほど上位。
+export function tierRankScore(
+  tier: string | null | undefined,
+  rank: string | null | undefined,
+): number {
+  return tierRank(tier) * 1000 + rankScore(rank);
+}

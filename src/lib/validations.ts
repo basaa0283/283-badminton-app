@@ -117,15 +117,14 @@ export const tournamentInputSchema = z.object({
 });
 
 // 大会成績作成/更新スキーマ
-// classCount→tournamentClassId 化に伴い className は廃止し、tournamentClassId を渡す
-// isPublic はデフォルト false (= 本人と admin のみ閲覧可)
+// 個別の公開フラグは持たない。
+// プロフィール公開時は全体スイッチ ON のユーザーの「Tier × 順位」上位 5 件が自動選出される。
 export const tournamentResultInputSchema = z.object({
   category: z.enum(TOURNAMENT_CATEGORIES),
   tournamentClassId: z.string().optional().nullable(),
   rank: z.string().max(100).optional().nullable(),
   partnerName: z.string().max(100).optional().nullable(),
   note: z.string().max(2000).optional().nullable(),
-  isPublic: z.boolean().optional().default(false),
 });
 
 // 承認/却下入力

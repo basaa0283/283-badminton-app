@@ -48,7 +48,6 @@ interface ResultRow {
   rank: string | null;
   partnerName: string | null;
   note: string | null;
-  isPublic: boolean;
   user: { id: string; nickname: string; profileImageUrl: string | null };
   tournamentClass: ClassRow | null;
 }
@@ -158,7 +157,6 @@ export default function TournamentDetailPage() {
         rank: values.rank || null,
         partnerName: values.partnerName || null,
         note: values.note || null,
-        isPublic: values.isPublic,
       }),
     });
     const json = await res.json();
@@ -177,7 +175,6 @@ export default function TournamentDetailPage() {
         rank: values.rank || null,
         partnerName: values.partnerName || null,
         note: values.note || null,
-        isPublic: values.isPublic,
       }),
     });
     const json = await res.json();
@@ -544,7 +541,6 @@ export default function TournamentDetailPage() {
                             rank: r.rank ?? "",
                             partnerName: r.partnerName ?? "",
                             note: r.note ?? "",
-                            isPublic: r.isPublic,
                           }}
                           submitLabel="保存"
                           onSubmit={handleUpdateResult(r.id)}
@@ -555,11 +551,6 @@ export default function TournamentDetailPage() {
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-gray-900">
                               <span className="font-medium">{r.user.nickname}</span>
-                              {!r.isPublic && (
-                                <span className="text-xs text-gray-500 ml-2 px-1.5 py-0.5 rounded bg-gray-100">
-                                  非公開
-                                </span>
-                              )}
                               <span className="text-gray-500 mx-2">/</span>
                               <span>
                                 {TOURNAMENT_CATEGORY_LABEL[r.category as TournamentCategory] ?? r.category}

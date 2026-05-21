@@ -67,26 +67,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       }
     }
 
-    // 公開できる成績は 1 ユーザーあたり 5 件まで。
-    // 既に非公開 → 公開へ切り替える場合は 5 件枠を超えないかチェック。
-    if (parsed.data.isPublic && !existing.isPublic) {
-      const publicCount = await prisma.tournamentResult.count({
-        where: { userId: existing.userId, isPublic: true },
-      });
-      if (publicCount >= 5) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: "PUBLIC_LIMIT_REACHED",
-              message: "公開できる大会成績は5件までです。先に他の成績を非公開にしてください。",
-            },
-          },
-          { status: 400 }
-        );
-      }
-    }
-
+    // 個別公開フラグは廃止 (Tier×順位 上位 5 件で自動選出)。isPublic は更新しない。
     const result = await prisma.tournamentResult.update({
       where: { id: resultId },
       data: {
@@ -95,7 +76,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
         rank: parsed.data.rank ?? null,
         partnerName: parsed.data.partnerName ?? null,
         note: parsed.data.note ?? null,
-        isPublic: parsed.data.isPublic ?? false,
       },
     });
 

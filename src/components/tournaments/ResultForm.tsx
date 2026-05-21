@@ -23,7 +23,6 @@ export interface ResultFormValues {
   rank: string;
   partnerName: string;
   note: string;
-  isPublic: boolean; // true = サークル内に公開, false = 本人と管理者のみ閲覧可
 }
 
 interface Props {
@@ -75,7 +74,6 @@ export function ResultForm({
     tournamentClassId: initial?.tournamentClassId ?? "",
     partnerName: initial?.partnerName ?? "",
     note: initial?.note ?? "",
-    isPublic: initial?.isPublic ?? false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,7 +139,6 @@ export function ResultForm({
         rank,
         partnerName: values.partnerName,
         note: values.note,
-        isPublic: values.isPublic,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
@@ -249,20 +246,10 @@ export function ResultForm({
         />
       </div>
 
-      <div className="border-t border-gray-100 pt-3">
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={values.isPublic}
-            onChange={(e) => update("isPublic", e.target.checked)}
-            className="w-4 h-4"
-          />
-          <span>サークル内に公開する</span>
-        </label>
-        <p className="text-xs text-gray-500 mt-1">
-          公開すると、他のメンバーのプロフィール大会実績や大会詳細の成績一覧にあなたの結果が表示されます。
-          オフの場合は自分と管理者だけが閲覧できます (デフォルト)。
-        </p>
+      <div className="border-t border-gray-100 pt-3 text-xs text-gray-500">
+        サークル内へは「プロフィール → 大会実績を公開する」をオンにしたとき、
+        全成績の中から <strong>Tier × 順位が高い順に最大 5 件</strong> が自動で他メンバーに表示されます。
+        個別の公開設定はありません (登録した成績はすべて自動候補)。
       </div>
 
       {error && (

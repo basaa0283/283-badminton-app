@@ -83,15 +83,14 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
-    // 公開フラグ: admin と本人以外には非公開の結果を返さない。
-    // また、結果の所有者が「大会実績の全体公開スイッチ」を OFF にしている場合も
-    // 他人からは見えない (admin / 本人は例外)。
+    // 他メンバーの成績は「全体公開スイッチ ON のユーザー」のみ表示。
+    // 個別公開フラグ (isPublic) は廃止し、ユーザー単位の switch だけで制御する。
+    // 本人 / admin は無条件で全件見える。
     const isAdmin = permissions.canAccessAdmin(role);
     if (!isAdmin) {
       tournament.results = tournament.results.filter((r) => {
         if (r.userId === session.user.id) return true;
-        if (!r.user.tournamentResultsPublic) return false;
-        return r.isPublic;
+        return r.user.tournamentResultsPublic;
       });
     }
 
