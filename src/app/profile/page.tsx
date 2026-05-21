@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
 import { BirthdateInput } from "@/components/ui/BirthdateInput";
 import { TournamentResultsSection } from "@/components/tournaments/TournamentResultsSection";
+import { TournamentSummarySection } from "@/components/tournaments/TournamentSummarySection";
 import { permissions, UserRole } from "@/lib/permissions";
 
 interface Profile {
@@ -324,9 +325,14 @@ export default function ProfilePage() {
 
         {session?.user &&
           permissions.canViewTournaments(session.user.role as UserRole) && (
-            <div className="mt-4">
-              <TournamentResultsSection userId={session.user.id} />
-            </div>
+            <>
+              <div className="mt-4">
+                <TournamentResultsSection userId={session.user.id} />
+              </div>
+              <div className="mt-4">
+                <TournamentSummarySection userId={session.user.id} />
+              </div>
+            </>
           )}
       </main>
     </div>

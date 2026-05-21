@@ -8,6 +8,7 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
 import { TournamentResultsSection } from "@/components/tournaments/TournamentResultsSection";
+import { TournamentSummarySection } from "@/components/tournaments/TournamentSummarySection";
 import { permissions, UserRole } from "@/lib/permissions";
 
 interface MemberDetail {
@@ -163,7 +164,10 @@ export default function MemberViewPage() {
         </Card>
 
         {permissions.canViewTournaments(role) && (
-          <TournamentResultsSection userId={userId} />
+          <>
+            <TournamentResultsSection userId={userId} />
+            <TournamentSummarySection userId={userId} />
+          </>
         )}
       </main>
     </div>
