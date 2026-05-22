@@ -68,6 +68,9 @@ interface TournamentDetail {
   rejectionReason: string | null;
   classes: ClassRow[];
   results: ResultRow[];
+  // 非公開で隠した成績の件数 (admin / 本人視点では常に 0)。
+  hiddenCountByClass: Record<string, number>;
+  hiddenCountNoClass: number;
 }
 
 export default function TournamentDetailPage() {
@@ -378,6 +381,7 @@ export default function TournamentDetailPage() {
                                 const baseName = r.name ?? "クラス分けなし";
                                 const pendingLabel =
                                   r.approvalStatus === "pending" ? " (承認待ち)" : "";
+                                const hiddenCount = data.hiddenCountByClass?.[r.id] ?? 0;
                                 return (
                                   <span key={r.id} className="inline-flex items-center gap-1">
                                     {i > 0 && <span className="text-gray-300">/</span>}
@@ -392,6 +396,11 @@ export default function TournamentDetailPage() {
                                         Tier{r.tier}
                                       </span>
                                     ) : null}
+                                    {hiddenCount > 0 && (
+                                      <span className="text-xs text-gray-500">
+                                        (非公開 {hiddenCount}件)
+                                      </span>
+                                    )}
                                   </span>
                                 );
                               })}
@@ -522,7 +531,11 @@ export default function TournamentDetailPage() {
               </div>
             )}
             {data.results.length === 0 ? (
-              <p className="text-sm text-gray-600">まだ誰も成績を登録していません。</p>
+              <p className="text-sm text-gray-600">
+                {Object.keys(data.hiddenCountByClass ?? {}).length > 0 || data.hiddenCountNoClass > 0
+                  ? "公開されている成績はありません (非公開設定の成績が登録されています)。"
+                  : "まだ誰も成績を登録していません。"}
+              </p>
             ) : (
               <ul className="divide-y divide-gray-100">
                 {data.results.map((r) => {

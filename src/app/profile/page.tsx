@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
 import { BirthdateInput } from "@/components/ui/BirthdateInput";
+import Link from "next/link";
 import { TournamentResultsSection } from "@/components/tournaments/TournamentResultsSection";
 import { TournamentSummarySection } from "@/components/tournaments/TournamentSummarySection";
 import { permissions, UserRole } from "@/lib/permissions";
@@ -326,6 +327,14 @@ export default function ProfilePage() {
         {session?.user &&
           permissions.canViewTournaments(session.user.role as UserRole) && (
             <>
+              <div className="mt-4 text-sm">
+                <Link
+                  href={`/members/${session.user.id}?preview=1`}
+                  className="text-blue-600 hover:underline"
+                >
+                  外から見える状態を確認 →
+                </Link>
+              </div>
               <div className="mt-4">
                 <TournamentResultsSection userId={session.user.id} />
               </div>

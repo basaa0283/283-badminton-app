@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -41,7 +41,11 @@ export default function MemberViewPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const userId = params.userId as string;
+  // preview=1: 自分のプロフィールを「他人視点」で表示する。リダイレクトを抑制し、
+  // 子セクションにも preview=true を渡して API も他人視点で叩く。
+  const previewMode = searchParams.get("preview") === "1";
   const [member, setMember] = useState<MemberDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,8 +60,8 @@ export default function MemberViewPage() {
       router.push("/");
       return;
     }
-    // 自分自身なら /profile に集約
-    if (session.user.id === userId) {
+    // 自分自身なら /profile に集約 (preview=1 のときは「外から見える状態」を見せるので残す)
+    if (session.user.id === userId && !previewMode) {
       router.push("/profile");
       return;
     }
@@ -97,10 +101,27 @@ export default function MemberViewPage() {
   const role = session.user.role as UserRole;
   const isAdmin = permissions.canAccessAdmin(role);
 
+  const isPreviewingSelf = previewMode && session.user.id === userId;
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+        {isPreviewingSelf && (
+          <Card className="border-2 border-amber-300">
+            <CardContent>
+              <p className="text-sm text-amber-900">
+                <strong>プレビュー表示中</strong>: 他のメンバーから見たあなたのプロフィールです。
+                ここでは編集できません。
+              </p>
+              <div className="mt-2">
+                <Link href="/profile" className="text-xs text-blue-600 hover:underline">
+                  ← プロフィール編集に戻る
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -165,8 +186,8 @@ export default function MemberViewPage() {
 
         {permissions.canViewTournaments(role) && (
           <>
-            <TournamentResultsSection userId={userId} />
-            <TournamentSummarySection userId={userId} />
+            <TournamentResultsSection userId={userId} preview={previewMode} />
+            <TournamentSummarySection userId={userId} preview={previewMode} />
           </>
         )}
       </main>

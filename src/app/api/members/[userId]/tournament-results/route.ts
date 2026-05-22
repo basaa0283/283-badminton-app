@@ -12,7 +12,7 @@ interface Params {
 // GET /api/members/[userId]/tournament-results
 // 指定ユーザーの大会成績を、大会情報を含めた形で新しい順に返す。
 // member 以上のみ。
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -31,16 +31,21 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     const { userId } = await params;
     const isAdmin = permissions.canAccessAdmin(role);
-    const isSelf = session.user.id === userId;
+    // preview=1 のときは「他人視点」を強制 (= isSelf / isAdmin を無効化する)
+    const url = new URL(request.url);
+    const previewMode = url.searchParams.get("preview") === "1";
+    const isSelf = !previewMode && session.user.id === userId;
+    const effectivelyAdmin = !previewMode && isAdmin;
 
     // 大会実績の全体公開スイッチ: OFF なら他メンバーには一切返さない (admin / 本人は例外)
-    if (!isAdmin && !isSelf) {
+    if (!effectivelyAdmin && !isSelf) {
       const owner = await prisma.user.findUnique({
         where: { id: userId },
         select: { tournamentResultsPublic: true },
       });
       if (!owner || !owner.tournamentResultsPublic) {
-        return NextResponse.json({ success: true, data: [] });
+        // 「非公開のため空」を明示的に伝える meta を付ける
+        return NextResponse.json({ success: true, data: [], meta: { hidden: true, reason: "owner_private" } });
       }
     }
 
@@ -72,7 +77,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     // 他人ビュー (本人 / admin 以外) には「Tier × 順位」スコアが高い順で上位 5 件のみ返す。
     // 公開ルール: tournamentResultsPublic=true なユーザーについて、
     // 自動で上位 5 件が選出される (個別の公開フラグはなし)。
-    if (!isAdmin && !isSelf) {
+    if (!effectivelyAdmin && !isSelf) {
       const ranked = [...all].sort(
         (a, b) =>
           tierRankScore(a.tournamentClass?.tier, a.rank) -

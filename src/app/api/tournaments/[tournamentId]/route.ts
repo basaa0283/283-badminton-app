@@ -84,14 +84,28 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }
 
     // 他メンバーの成績は「全体公開スイッチ ON のユーザー」のみ表示。
-    // 個別公開フラグ (isPublic) は廃止し、ユーザー単位の switch だけで制御する。
-    // 本人 / admin は無条件で全件見える。
+    // ただし「非公開で隠した件数」をクラスごとに集計して返す → 詳細画面で
+    // 「○部に N 件 (非公開)」と数だけは伝える運用にする。
     const isAdmin = permissions.canAccessAdmin(role);
+    const hiddenCountByClass: Record<string, number> = {};
+    let hiddenCountNoClass = 0;
     if (!isAdmin) {
-      tournament.results = tournament.results.filter((r) => {
-        if (r.userId === session.user.id) return true;
-        return r.user.tournamentResultsPublic;
-      });
+      const kept: typeof tournament.results = [];
+      for (const r of tournament.results) {
+        const visible =
+          r.userId === session.user.id || r.user.tournamentResultsPublic;
+        if (visible) {
+          kept.push(r);
+        } else {
+          if (r.tournamentClassId) {
+            hiddenCountByClass[r.tournamentClassId] =
+              (hiddenCountByClass[r.tournamentClassId] ?? 0) + 1;
+          } else {
+            hiddenCountNoClass += 1;
+          }
+        }
+      }
+      tournament.results = kept;
     }
 
     // クライアントには tournamentResultsPublic は不要なので落とす
@@ -104,6 +118,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
         void _;
         return { ...rest, user: userPublic };
       }),
+      hiddenCountByClass,
+      hiddenCountNoClass,
     };
 
     return NextResponse.json({ success: true, data: sanitized });
