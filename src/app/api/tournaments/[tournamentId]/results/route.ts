@@ -85,9 +85,6 @@ export async function POST(request: NextRequest, { params }: Params) {
         ? adminBody.userId
         : session.user.id;
 
-    // 個別公開フラグは廃止。tier × 順位の上位 5 件を自動選出する仕組みに変更したため、
-    // ユーザー操作の上限ロジックは不要。
-
     // tournamentClassId が指定されている場合は、同じ大会のクラスかを検証
     if (parsed.data.tournamentClassId) {
       const cls = await prisma.tournamentClass.findUnique({
@@ -110,6 +107,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         rank: parsed.data.rank ?? null,
         partnerName: parsed.data.partnerName ?? null,
         note: parsed.data.note ?? null,
+        isPublic: parsed.data.isPublic ?? false,
       },
     });
 

@@ -23,6 +23,7 @@ export interface ResultFormValues {
   rank: string;
   partnerName: string;
   note: string;
+  isPublic: boolean; // この成績をサークル内に公開するか
 }
 
 interface Props {
@@ -74,6 +75,7 @@ export function ResultForm({
     tournamentClassId: initial?.tournamentClassId ?? "",
     partnerName: initial?.partnerName ?? "",
     note: initial?.note ?? "",
+    isPublic: initial?.isPublic ?? false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +141,7 @@ export function ResultForm({
         rank,
         partnerName: values.partnerName,
         note: values.note,
+        isPublic: values.isPublic,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
@@ -246,10 +249,21 @@ export function ResultForm({
         />
       </div>
 
-      <div className="border-t border-gray-100 pt-3 text-xs text-gray-500">
-        サークル内へは「プロフィール → 大会実績を公開する」をオンにしたとき、
-        全成績の中から <strong>Tier × 順位が高い順に最大 5 件</strong> が自動で他メンバーに表示されます。
-        個別の公開設定はありません (登録した成績はすべて自動候補)。
+      <div className="border-t border-gray-100 pt-3">
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={values.isPublic}
+            onChange={(e) => update("isPublic", e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span>この成績をサークル内に公開する</span>
+        </label>
+        <p className="text-xs text-gray-500 mt-1">
+          公開した成績は、他メンバーのプロフィール大会実績欄や、この大会の成績一覧に表示されます。
+          オフ (デフォルト) なら自分と管理者だけが閲覧できます。
+          別途プロフィールで「サマリ公開」をオンにすると、登録した <strong>全成績</strong> の集計 (Tier × 種目別のメダル数) も他メンバーに表示されます。
+        </p>
       </div>
 
       {error && (

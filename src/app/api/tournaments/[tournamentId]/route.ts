@@ -46,7 +46,6 @@ export async function GET(_request: NextRequest, { params }: Params) {
                 id: true,
                 nickname: true,
                 profileImageUrl: true,
-                tournamentResultsPublic: true,
               },
             },
             tournamentClass: {
@@ -83,17 +82,16 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
-    // 他メンバーの成績は「全体公開スイッチ ON のユーザー」のみ表示。
-    // ただし「非公開で隠した件数」をクラスごとに集計して返す → 詳細画面で
-    // 「○部に N 件 (非公開)」と数だけは伝える運用にする。
+    // 他メンバーの成績は「結果が isPublic=true」のものだけを表示。
+    // それ以外 (本人のみ非公開、admin は無条件で全件表示) は非公開件数として
+    // クラスごとに集計する → 詳細画面で「○部に N 件 (非公開)」を伝える。
     const isAdmin = permissions.canAccessAdmin(role);
     const hiddenCountByClass: Record<string, number> = {};
     let hiddenCountNoClass = 0;
     if (!isAdmin) {
       const kept: typeof tournament.results = [];
       for (const r of tournament.results) {
-        const visible =
-          r.userId === session.user.id || r.user.tournamentResultsPublic;
+        const visible = r.userId === session.user.id || r.isPublic;
         if (visible) {
           kept.push(r);
         } else {
@@ -108,16 +106,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
       tournament.results = kept;
     }
 
-    // クライアントには tournamentResultsPublic は不要なので落とす
-    type ResultRow = (typeof tournament.results)[number];
     const sanitized = {
       ...tournament,
-      results: tournament.results.map((r: ResultRow) => {
-        const { user, ...rest } = r;
-        const { tournamentResultsPublic: _, ...userPublic } = user;
-        void _;
-        return { ...rest, user: userPublic };
-      }),
       hiddenCountByClass,
       hiddenCountNoClass,
     };

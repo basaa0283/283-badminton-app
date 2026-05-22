@@ -104,7 +104,7 @@ export default function TournamentsPage() {
       <Header />
       <main className="max-w-2xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-gray-900">大会一覧</h1>
+          <h1 className="text-xl font-bold text-gray-900">大会記録</h1>
           <Link href="/tournaments/new">
             <Button size="sm">大会を登録</Button>
           </Link>
