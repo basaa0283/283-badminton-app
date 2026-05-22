@@ -153,13 +153,31 @@ export default function AdminAboutPage() {
                 placeholder={"# ２８ばど について\n\nサークルの紹介を Markdown で書いてください。\n\n## 練習の流れ\n- ...\n"}
               />
             )}
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
               {saved && <span className="text-sm text-green-700">保存しました</span>}
               <div className="flex-1" />
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    !confirm(
+                      "本文を、現在のアプリのデフォルト文面に置き換えますか？\n保存していない変更があれば失われます。"
+                    )
+                  )
+                    return;
+                  setContent(ABOUT_DEFAULT_MARKDOWN);
+                }}
+                className="text-xs text-gray-600 hover:text-gray-900 underline"
+              >
+                デフォルトに戻す
+              </button>
               <Button onClick={handleSave} loading={saving} disabled={!dirty}>
                 保存
               </Button>
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              「デフォルトに戻す」を押すとアプリ側で用意した最新のサークル紹介文がエディタに展開されます。そのまま「保存」を押すと公開ページにも反映されます。
+            </p>
           </CardContent>
         </Card>
 

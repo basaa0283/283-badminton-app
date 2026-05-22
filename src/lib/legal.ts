@@ -6,7 +6,7 @@
  *
  * 将来的に頻繁に変えるようになったら SystemSetting に移行する。
  */
-export const CURRENT_TERMS_VERSION = "2026-05-17.1";
+export const CURRENT_TERMS_VERSION = "2026-05-22.1";
 
 /**
  * ユーザーが現行バージョンに同意済みかどうか。
