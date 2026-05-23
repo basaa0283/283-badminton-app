@@ -8,13 +8,16 @@ import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 /**
  * オンボーディング系のガードを通さない (= 普通に描画する) パスのプレフィックス。
  * /onboarding 配下は終端ページ自体なので除外、/privacy /terms /invite /api は
- * ガード対象外。
+ * ガード対象外。/about (公開のサークル紹介) と /release-notes は未ログインでも
+ * 開ける公開ページなので、規約同意画面からのリンクで遷移可能にする。
  */
 const EXEMPT_PREFIXES = [
   "/login",
   "/onboarding",
   "/privacy",
   "/terms",
+  "/about",
+  "/release-notes",
   "/invite",
   "/api",
 ];
