@@ -49,12 +49,6 @@ export default function LoginPage() {
         <p className="text-gray-500 text-center text-sm mb-6">
           サークルの練習・イベントの出欠を簡単に
         </p>
-        <div className="text-center mb-6">
-          <span className="inline-block text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-bold">
-            ベータ版
-          </span>
-        </div>
-
         {status === "loading" ? (
           <div className="text-center text-gray-500">
             読み込み中...
