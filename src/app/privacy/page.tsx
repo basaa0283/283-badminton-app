@@ -54,14 +54,6 @@ export default async function PrivacyPage() {
         <article className="bg-white rounded-lg shadow p-6 space-y-4 text-sm text-gray-800 leading-relaxed">
           <h1 className="text-xl font-bold text-gray-900">プライバシーポリシー</h1>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-900 text-sm">
-            <p className="font-bold mb-1">本アプリは現在ベータ版です</p>
-            <p>
-              ベータ期間中はサービスの予告なき停止やデータの初期化・削除が発生する可能性があります。
-              ご了承の上ご利用ください。
-            </p>
-          </div>
-
           <p>
             本アプリ「２８ばど 出欠管理」（以下「本アプリ」）は、バドミントンサークル「２８ばど」（以下「当サークル」）
             のメンバー向け内部利用を目的としたサービスです。本ポリシーでは、本アプリで取得・利用する情報の取り扱いを定めます。
@@ -115,8 +107,7 @@ export default async function PrivacyPage() {
             <h2 className="font-bold">5. 情報の管理</h2>
             <p>
               情報は Microsoft Azure 上に保管し、必要な範囲のみアクセスできるよう管理します。
-              不要となった情報は削除します。なおベータ期間中は試験運用の都合により、
-              予告なくデータの初期化・削除を行う場合があります。
+              不要となった情報は削除します。
             </p>
           </section>
 
@@ -157,7 +148,7 @@ export default async function PrivacyPage() {
           </section>
 
           <p className="text-xs text-gray-500 pt-4">
-            最終更新日: 2026-05-22 / バージョン: {CURRENT_TERMS_VERSION}
+            最終更新日: 2026-05-23 / バージョン: {CURRENT_TERMS_VERSION}
           </p>
         </article>
       </main>

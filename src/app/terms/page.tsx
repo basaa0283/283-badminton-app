@@ -55,14 +55,6 @@ export default async function TermsPage() {
         <article className="bg-white rounded-lg shadow p-6 space-y-4 text-sm text-gray-800 leading-relaxed">
           <h1 className="text-xl font-bold text-gray-900">利用規約</h1>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-900 text-sm">
-            <p className="font-bold mb-1">本アプリは現在ベータ版です</p>
-            <p>
-              機能・仕様の予告なき変更、一時的な障害、データの消失等が発生する可能性があります。
-              ご了承の上ご利用ください。
-            </p>
-          </div>
-
           <p>
             本利用規約は、バドミントンサークル「２８ばど」（以下「当サークル」）が提供する
             「２８ばど 出欠管理」アプリ（以下「本アプリ」）の利用条件を定めるものです。
@@ -118,7 +110,7 @@ export default async function TermsPage() {
             <p>
               本アプリは当サークル運営の便宜のため提供されるものであり、可用性・正確性を保証するものではありません。
               本アプリの利用または利用不能によって生じた損害について、運営者は一切の責任を負いません。
-              特にベータ期間中はサービスの予告なき停止やデータの初期化が発生する可能性があります。
+              機能改善・障害対応のため、予告なくサービスを停止する場合があります。
             </p>
             <p>
               また、練習中の怪我、備品の紛失・破損、参加者間のトラブル等、本アプリの機能外で発生した事象についても、
@@ -154,7 +146,7 @@ export default async function TermsPage() {
           </section>
 
           <p className="text-xs text-gray-500 pt-4">
-            最終更新日: 2026-05-22 / バージョン: {CURRENT_TERMS_VERSION}
+            最終更新日: 2026-05-23 / バージョン: {CURRENT_TERMS_VERSION}
           </p>
         </article>
       </main>
