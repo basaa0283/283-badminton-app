@@ -48,6 +48,7 @@ interface ResultRow {
   rank: string | null;
   partnerName: string | null;
   note: string | null;
+  isPublic: boolean;
   user: { id: string; nickname: string; profileImageUrl: string | null };
   tournamentClass: ClassRow | null;
 }
@@ -68,6 +69,9 @@ interface TournamentDetail {
   rejectionReason: string | null;
   classes: ClassRow[];
   results: ResultRow[];
+  // 非公開で隠した成績の件数 (admin / 本人視点では常に 0)。
+  hiddenCountByClass: Record<string, number>;
+  hiddenCountNoClass: number;
 }
 
 export default function TournamentDetailPage() {
@@ -157,6 +161,7 @@ export default function TournamentDetailPage() {
         rank: values.rank || null,
         partnerName: values.partnerName || null,
         note: values.note || null,
+        isPublic: values.isPublic,
       }),
     });
     const json = await res.json();
@@ -175,6 +180,7 @@ export default function TournamentDetailPage() {
         rank: values.rank || null,
         partnerName: values.partnerName || null,
         note: values.note || null,
+        isPublic: values.isPublic,
       }),
     });
     const json = await res.json();
@@ -378,6 +384,7 @@ export default function TournamentDetailPage() {
                                 const baseName = r.name ?? "クラス分けなし";
                                 const pendingLabel =
                                   r.approvalStatus === "pending" ? " (承認待ち)" : "";
+                                const hiddenCount = data.hiddenCountByClass?.[r.id] ?? 0;
                                 return (
                                   <span key={r.id} className="inline-flex items-center gap-1">
                                     {i > 0 && <span className="text-gray-300">/</span>}
@@ -392,6 +399,11 @@ export default function TournamentDetailPage() {
                                         Tier{r.tier}
                                       </span>
                                     ) : null}
+                                    {hiddenCount > 0 && (
+                                      <span className="text-xs text-gray-500">
+                                        (非公開 {hiddenCount}件)
+                                      </span>
+                                    )}
                                   </span>
                                 );
                               })}
@@ -522,7 +534,11 @@ export default function TournamentDetailPage() {
               </div>
             )}
             {data.results.length === 0 ? (
-              <p className="text-sm text-gray-600">まだ誰も成績を登録していません。</p>
+              <p className="text-sm text-gray-600">
+                {Object.keys(data.hiddenCountByClass ?? {}).length > 0 || data.hiddenCountNoClass > 0
+                  ? "公開されている成績はありません (非公開設定の成績が登録されています)。"
+                  : "まだ誰も成績を登録していません。"}
+              </p>
             ) : (
               <ul className="divide-y divide-gray-100">
                 {data.results.map((r) => {
@@ -541,6 +557,7 @@ export default function TournamentDetailPage() {
                             rank: r.rank ?? "",
                             partnerName: r.partnerName ?? "",
                             note: r.note ?? "",
+                            isPublic: r.isPublic,
                           }}
                           submitLabel="保存"
                           onSubmit={handleUpdateResult(r.id)}
@@ -551,6 +568,11 @@ export default function TournamentDetailPage() {
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-gray-900">
                               <span className="font-medium">{r.user.nickname}</span>
+                              {!r.isPublic && (
+                                <span className="text-xs text-gray-500 ml-2 px-1.5 py-0.5 rounded bg-gray-100">
+                                  非公開
+                                </span>
+                              )}
                               <span className="text-gray-500 mx-2">/</span>
                               <span>
                                 {TOURNAMENT_CATEGORY_LABEL[r.category as TournamentCategory] ?? r.category}

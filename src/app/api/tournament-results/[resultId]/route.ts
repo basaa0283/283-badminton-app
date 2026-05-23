@@ -67,7 +67,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
       }
     }
 
-    // 個別公開フラグは廃止 (Tier×順位 上位 5 件で自動選出)。isPublic は更新しない。
     const result = await prisma.tournamentResult.update({
       where: { id: resultId },
       data: {
@@ -76,6 +75,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         rank: parsed.data.rank ?? null,
         partnerName: parsed.data.partnerName ?? null,
         note: parsed.data.note ?? null,
+        isPublic: parsed.data.isPublic ?? false,
       },
     });
 

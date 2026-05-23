@@ -46,7 +46,6 @@ export async function GET(_request: NextRequest, { params }: Params) {
                 id: true,
                 nickname: true,
                 profileImageUrl: true,
-                tournamentResultsPublic: true,
               },
             },
             tournamentClass: {
@@ -83,27 +82,34 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
-    // 他メンバーの成績は「全体公開スイッチ ON のユーザー」のみ表示。
-    // 個別公開フラグ (isPublic) は廃止し、ユーザー単位の switch だけで制御する。
-    // 本人 / admin は無条件で全件見える。
+    // 他メンバーの成績は「結果が isPublic=true」のものだけを表示。
+    // それ以外 (本人のみ非公開、admin は無条件で全件表示) は非公開件数として
+    // クラスごとに集計する → 詳細画面で「○部に N 件 (非公開)」を伝える。
     const isAdmin = permissions.canAccessAdmin(role);
+    const hiddenCountByClass: Record<string, number> = {};
+    let hiddenCountNoClass = 0;
     if (!isAdmin) {
-      tournament.results = tournament.results.filter((r) => {
-        if (r.userId === session.user.id) return true;
-        return r.user.tournamentResultsPublic;
-      });
+      const kept: typeof tournament.results = [];
+      for (const r of tournament.results) {
+        const visible = r.userId === session.user.id || r.isPublic;
+        if (visible) {
+          kept.push(r);
+        } else {
+          if (r.tournamentClassId) {
+            hiddenCountByClass[r.tournamentClassId] =
+              (hiddenCountByClass[r.tournamentClassId] ?? 0) + 1;
+          } else {
+            hiddenCountNoClass += 1;
+          }
+        }
+      }
+      tournament.results = kept;
     }
 
-    // クライアントには tournamentResultsPublic は不要なので落とす
-    type ResultRow = (typeof tournament.results)[number];
     const sanitized = {
       ...tournament,
-      results: tournament.results.map((r: ResultRow) => {
-        const { user, ...rest } = r;
-        const { tournamentResultsPublic: _, ...userPublic } = user;
-        void _;
-        return { ...rest, user: userPublic };
-      }),
+      hiddenCountByClass,
+      hiddenCountNoClass,
     };
 
     return NextResponse.json({ success: true, data: sanitized });

@@ -79,8 +79,8 @@ export default function Home() {
               className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
             >
               <div className="text-2xl mb-2">🏆</div>
-              <div className="font-medium">大会</div>
-              <div className="text-sm text-gray-500">大会と成績の登録</div>
+              <div className="font-medium">大会記録</div>
+              <div className="text-sm text-gray-500">過去の大会と成績の登録</div>
             </Link>
           )}
 

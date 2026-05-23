@@ -85,7 +85,7 @@ export function Header() {
         <nav className="flex gap-1 mt-3 -mx-2 overflow-x-auto">
           <NavLink href="/events">イベント一覧</NavLink>
           <NavLink href="/announcements">お知らせ</NavLink>
-          {canViewTournaments && <NavLink href="/tournaments">大会</NavLink>}
+          {canViewTournaments && <NavLink href="/tournaments">大会記録</NavLink>}
           {isAdmin && <NavLink href="/members">メンバー</NavLink>}
           {isAdmin && <NavLink href="/admin">管理</NavLink>}
         </nav>

@@ -20,6 +20,7 @@ interface ResultWithTournament {
   rank: string | null;
   partnerName: string | null;
   note: string | null;
+  isPublic: boolean;
   tournament: {
     id: string;
     name: string;
@@ -36,22 +37,27 @@ interface ResultWithTournament {
 
 interface Props {
   userId: string;
+  preview?: boolean; // true なら他人視点で取りに行く (?preview=1)
 }
 
 // メンバー詳細 / プロフィール画面の中に置く「大会実績」サマリ。
 // /api/members/[userId]/tournament-results を呼んで新しい順に並べる。
-export function TournamentResultsSection({ userId }: Props) {
+export function TournamentResultsSection({ userId, preview }: Props) {
   const [results, setResults] = useState<ResultWithTournament[] | null>(null);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/members/${userId}/tournament-results`)
+    const qs = preview ? "?preview=1" : "";
+    fetch(`/api/members/${userId}/tournament-results${qs}`)
       .then((r) => r.json())
       .then((json) => {
-        if (json.success) setResults(json.data);
-        else setResults([]);
+        if (json.success) {
+          setResults(json.data);
+          setHidden(Boolean(json.meta?.hidden));
+        } else setResults([]);
       })
       .catch(() => setResults([]));
-  }, [userId]);
+  }, [userId, preview]);
 
   return (
     <Card>
@@ -66,6 +72,10 @@ export function TournamentResultsSection({ userId }: Props) {
       <CardContent>
         {results === null ? (
           <p className="text-xs text-gray-500">読み込み中...</p>
+        ) : hidden ? (
+          <p className="text-sm text-gray-600">
+            このメンバーは登録した大会実績をすべて<strong>非公開</strong>に設定しています。
+          </p>
         ) : results.length === 0 ? (
           <p className="text-sm text-gray-600">
             まだ大会実績がありません。
@@ -83,6 +93,11 @@ export function TournamentResultsSection({ userId }: Props) {
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-gray-900 line-clamp-1">
                         {r.tournament.name}
+                        {!r.isPublic && (
+                          <span className="text-xs text-gray-500 ml-2 px-1.5 py-0.5 rounded bg-gray-100 font-normal">
+                            非公開
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
                         {format(new Date(r.tournament.heldAt), "yyyy年M月d日", { locale: ja })}

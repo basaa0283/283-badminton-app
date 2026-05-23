@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { RoleBadge } from "@/components/ui/Badge";
 import { BirthdateInput } from "@/components/ui/BirthdateInput";
+import Link from "next/link";
 import { TournamentResultsSection } from "@/components/tournaments/TournamentResultsSection";
 import { TournamentSummarySection } from "@/components/tournaments/TournamentSummarySection";
 import { permissions, UserRole } from "@/lib/permissions";
@@ -301,12 +302,11 @@ export default function ProfilePage() {
                     onChange={handleChange}
                     className="w-4 h-4"
                   />
-                  <span>大会実績をサークル内に公開する</span>
+                  <span>大会実績サマリをサークル内に公開する</span>
                 </label>
                 <p className="text-xs text-gray-500 mt-1">
-                  オフ (デフォルト) の場合、他のメンバーからはあなたの大会実績が一切見えません (本人と管理者は常に閲覧可能)。
-                  オンにすると、登録した全成績の中から <strong>Tier × 順位が高い順に最大 5 件</strong> が自動でプロフィールに表示されます。
-                  個別の公開設定はなく、新しく高い成績を登録すれば自動で並び替わります。
+                  オン (デフォルト OFF) にすると、登録した <strong>全成績</strong> の集計 (種目 × Tier × メダル数 のサマリ) が、他のメンバーのプロフィール画面で見えるようになります。
+                  個別の大会成績の公開は、成績ごとに別途「この成績を公開する」のチェックで設定します。
                 </p>
               </div>
 
@@ -326,6 +326,14 @@ export default function ProfilePage() {
         {session?.user &&
           permissions.canViewTournaments(session.user.role as UserRole) && (
             <>
+              <div className="mt-4 text-sm">
+                <Link
+                  href={`/members/${session.user.id}?preview=1`}
+                  className="text-blue-600 hover:underline"
+                >
+                  外から見える状態を確認 →
+                </Link>
+              </div>
               <div className="mt-4">
                 <TournamentResultsSection userId={session.user.id} />
               </div>

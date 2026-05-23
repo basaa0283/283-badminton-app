@@ -15,7 +15,7 @@ interface Params {
 //   - 本人 / admin: 常に閲覧可
 //   - 他人: User.tournamentResultsPublic = true のときのみ
 // 集計対象は approved な大会の成績のうち、Tier 指定済みのもの。
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -34,15 +34,22 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     const { userId } = await params;
     const isAdmin = permissions.canAccessAdmin(role);
-    const isSelf = session.user.id === userId;
+    const url = new URL(request.url);
+    const previewMode = url.searchParams.get("preview") === "1";
+    const isSelf = !previewMode && session.user.id === userId;
+    const effectivelyAdmin = !previewMode && isAdmin;
 
-    if (!isAdmin && !isSelf) {
+    if (!effectivelyAdmin && !isSelf) {
       const owner = await prisma.user.findUnique({
         where: { id: userId },
         select: { tournamentResultsPublic: true },
       });
       if (!owner || !owner.tournamentResultsPublic) {
-        return NextResponse.json({ success: true, data: {} });
+        return NextResponse.json({
+          success: true,
+          data: {},
+          meta: { hidden: true, reason: "owner_private" },
+        });
       }
     }
 

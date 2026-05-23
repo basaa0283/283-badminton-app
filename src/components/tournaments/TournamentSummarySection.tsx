@@ -14,26 +14,32 @@ import type { PodiumCount, TournamentSummary } from "@/lib/tournament-summary";
 
 interface Props {
   userId: string;
+  preview?: boolean;
 }
 
 // プロフィール / メンバー詳細に表示する「大会実績サマリ」セクション。
-// API 側で空オブジェクトが返ってきたら何も描画しない (= 公開 OFF / 集計対象なし)。
-export function TournamentSummarySection({ userId }: Props) {
+// API 側で空オブジェクトが返ってきたら、非公開時のみ枠ごと出して説明。
+export function TournamentSummarySection({ userId, preview }: Props) {
   const [summary, setSummary] = useState<TournamentSummary | null>(null);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/members/${userId}/tournament-results/summary`)
+    const qs = preview ? "?preview=1" : "";
+    fetch(`/api/members/${userId}/tournament-results/summary${qs}`)
       .then((r) => r.json())
       .then((json) => {
-        if (json.success) setSummary(json.data ?? {});
-        else setSummary({});
+        if (json.success) {
+          setSummary(json.data ?? {});
+          setHidden(Boolean(json.meta?.hidden));
+        } else setSummary({});
       })
       .catch(() => setSummary({}));
-  }, [userId]);
+  }, [userId, preview]);
 
   if (summary === null) return null;
   const presentCategories = TOURNAMENT_CATEGORIES.filter((c) => summary[c]);
-  if (presentCategories.length === 0) return null;
+  // 非公開のとき以外は、サマリが空なら描画しない (実績ゼロ等のケースで枠が出るのを避ける)
+  if (presentCategories.length === 0 && !hidden) return null;
 
   return (
     <Card>
@@ -45,15 +51,17 @@ export function TournamentSummarySection({ userId }: Props) {
         </p>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {presentCategories.map((c) => (
-            <CategoryBlock
-              key={c}
-              category={c}
-              byTier={summary[c] ?? {}}
-            />
-          ))}
-        </div>
+        {hidden ? (
+          <p className="text-sm text-gray-600">
+            このメンバーは大会実績を<strong>非公開</strong>に設定しています。
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {presentCategories.map((c) => (
+              <CategoryBlock key={c} category={c} byTier={summary[c] ?? {}} />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
