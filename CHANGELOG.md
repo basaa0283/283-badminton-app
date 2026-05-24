@@ -3,6 +3,13 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [3.2.2] - 2026-05-25
+
+### Fixed
+- iOS Safari / LINE 内ブラウザで、大会登録の「開催日」プルダウンの選択肢をタップしても値が反映されず、「次へ」が活性化しなかった問題を修正。原因は (1) ドロップダウン option を `<li onClick>` で実装していたため iOS でタップが発火しなかった、(2) 外側クリック検出用のオーバーレイ div が iOS の stacking context で option リストの上に重なってタップを奪っていた、(3) DateInput が親から渡される `value` を毎回 parse する形だったため、年だけ選んだ時点で親 value="" に戻り表示も "年" に戻ってしまった、の 3 点
+- 上記対応として、Select の option を `<button>` 化 / オーバーレイを撤去して document.click を `setTimeout(0)` で遅延登録 / DateInput が年・月・日 を内部 state で個別保持するよう変更
+- 大会登録 DateInput の操作回帰テストを E2E に追加 (chromium / mobile-safari / mobile-chrome 3 プロジェクトで実行されるため、今後 iOS/Android のデグレを検知できる)
+
 ## [3.2.1] - 2026-05-24
 
 ### Fixed
@@ -497,6 +504,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[3.2.2]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.1...v3.2.2
 [3.2.1]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.0.1...v3.1.0
