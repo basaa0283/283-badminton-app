@@ -59,6 +59,18 @@ export default function TournamentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<TournamentCategory[]>([]);
   const [selectedPrefecture, setSelectedPrefecture] = useState<Prefecture | "">("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
+
+  // 表示中の大会データから開催年だけ抽出して新しい順に並べる
+  const yearOptions = useMemo(() => {
+    if (!tournaments) return [] as string[];
+    const years = new Set<string>();
+    tournaments.forEach((t) => {
+      const y = t.heldAt.slice(0, 4);
+      if (y) years.add(y);
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [tournaments]);
 
   const filtered = useMemo(() => {
     if (!tournaments) return null;
@@ -73,9 +85,12 @@ export default function TournamentsPage() {
       if (selectedPrefecture && t.prefecture !== selectedPrefecture) {
         return false;
       }
+      if (selectedYear && !t.heldAt.startsWith(selectedYear)) {
+        return false;
+      }
       return true;
     });
-  }, [tournaments, searchQuery, selectedCategories, selectedPrefecture]);
+  }, [tournaments, searchQuery, selectedCategories, selectedPrefecture, selectedYear]);
 
   const toggleCategory = (c: TournamentCategory) => {
     setSelectedCategories((prev) =>
@@ -86,7 +101,8 @@ export default function TournamentsPage() {
   const hasActiveFilter =
     searchQuery.trim().length > 0 ||
     selectedCategories.length > 0 ||
-    selectedPrefecture.length > 0;
+    selectedPrefecture.length > 0 ||
+    selectedYear.length > 0;
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -188,20 +204,37 @@ export default function TournamentsPage() {
                     })}
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">都道府県</div>
-                  <Select
-                    value={selectedPrefecture}
-                    onChange={(v) => setSelectedPrefecture(v as Prefecture | "")}
-                    options={[
-                      { value: "", label: "すべて" },
-                      ...PREFECTURES.map((p) => ({
-                        value: p,
-                        label: PREFECTURE_LABEL[p],
-                      })),
-                    ]}
-                    placeholder="すべて"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">開催時期</div>
+                    <Select
+                      value={selectedYear}
+                      onChange={setSelectedYear}
+                      options={[
+                        { value: "", label: "すべての年" },
+                        ...yearOptions.map((y) => ({
+                          value: y,
+                          label: `${y}年`,
+                        })),
+                      ]}
+                      placeholder="すべての年"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">都道府県</div>
+                    <Select
+                      value={selectedPrefecture}
+                      onChange={(v) => setSelectedPrefecture(v as Prefecture | "")}
+                      options={[
+                        { value: "", label: "すべて" },
+                        ...PREFECTURES.map((p) => ({
+                          value: p,
+                          label: PREFECTURE_LABEL[p],
+                        })),
+                      ]}
+                      placeholder="すべて"
+                    />
+                  </div>
                 </div>
                 {hasActiveFilter && (
                   <div className="flex items-center justify-between">
@@ -214,6 +247,7 @@ export default function TournamentsPage() {
                         setSearchQuery("");
                         setSelectedCategories([]);
                         setSelectedPrefecture("");
+                        setSelectedYear("");
                       }}
                       className="text-xs text-blue-600 hover:underline"
                     >
