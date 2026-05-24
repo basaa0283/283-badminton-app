@@ -3,6 +3,11 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [3.2.1] - 2026-05-24
+
+### Fixed
+- ユーザー向け「更新履歴」(/release-notes) に v3.1.0 / v3.2.0 のエントリが反映されていなかったので追記 (CHANGELOG.md だけ更新されていた)
+
 ## [3.2.0] - 2026-05-24
 
 ログイン無限ループのトラブルシュート導線、利用状況把握用の操作ログ基盤、
@@ -492,6 +497,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[3.2.1]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.0.1...v3.1.0
 [2.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v2.0.0...v2.1.0
