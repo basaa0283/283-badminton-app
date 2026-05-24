@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/Card";
 import { AttendanceStatusBadge } from "@/components/ui/Badge";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 interface EventCardProps {
   event: {
@@ -19,7 +20,12 @@ interface EventCardProps {
     waitlistCount: number;
     deadline: Date | string | null;
     deadlineEnabled: boolean;
-    category?: { id: string; name: string; color: string | null } | null;
+    category?: {
+      id: string;
+      name: string;
+      description?: string | null;
+      color: string | null;
+    } | null;
     cancelledAt?: string | Date | null;
     myAttendance?: {
       status: string;
@@ -49,12 +55,14 @@ export function EventCard({ event }: EventCardProps) {
                 </span>
               )}
               {event.category && (
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full font-medium text-white shrink-0"
-                  style={{ backgroundColor: event.category.color ?? "#6B7280" }}
-                >
-                  {event.category.name}
-                </span>
+                <Tooltip content={event.category.description}>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-medium text-white shrink-0 inline-block"
+                    style={{ backgroundColor: event.category.color ?? "#6B7280" }}
+                  >
+                    {event.category.name}
+                  </span>
+                </Tooltip>
               )}
             </div>
             {event.myAttendance && (

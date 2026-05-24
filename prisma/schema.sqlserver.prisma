@@ -171,7 +171,8 @@ model AnnouncementRead {
 model EventCategory {
   id              String   @id @default(cuid())
   name            String   @unique
-  color           String?  // 例: "#3B82F6"
+  description     String?  @db.NVarChar(Max) // タグの説明文 (ホバー/タップで表示)
+  color           String?
   order           Int      @default(0)
   createdAt       DateTime @default(now())
 

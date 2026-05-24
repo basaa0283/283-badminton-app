@@ -14,6 +14,7 @@ import { AdminAttendanceManager } from "@/components/events/AdminAttendanceManag
 import { ExpensesCard } from "@/components/events/ExpensesCard";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { permissions, UserRole } from "@/lib/permissions";
 
@@ -31,7 +32,12 @@ interface EventDetail {
   deadline: string | null;
   deadlineEnabled: boolean;
   respondStartAt: string | null;
-  category: { id: string; name: string; color: string | null } | null;
+  category: {
+    id: string;
+    name: string;
+    description?: string | null;
+    color: string | null;
+  } | null;
   cancelledAt: string | null;
   cancelReason: string | null;
   createdBy: string;
@@ -226,12 +232,14 @@ export default function EventDetailPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-bold text-gray-900">{event.title}</h1>
                 {event.category && (
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
-                    style={{ backgroundColor: event.category.color ?? "#6B7280" }}
-                  >
-                    {event.category.name}
-                  </span>
+                  <Tooltip content={event.category.description}>
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-medium text-white inline-block"
+                      style={{ backgroundColor: event.category.color ?? "#6B7280" }}
+                    >
+                      {event.category.name}
+                    </span>
+                  </Tooltip>
                 )}
               </div>
               {canEdit && (

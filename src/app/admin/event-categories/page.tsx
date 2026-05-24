@@ -12,6 +12,7 @@ import { permissions, UserRole } from "@/lib/permissions";
 interface EventCategory {
   id: string;
   name: string;
+  description: string | null;
   color: string | null;
   order: number;
 }
@@ -28,7 +29,10 @@ export default function EventCategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [color, setColor] = useState(COLOR_PRESETS[0]);
+  const [editingDescId, setEditingDescId] = useState<string | null>(null);
+  const [editingDesc, setEditingDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submitRef = useRef(false);
@@ -65,7 +69,11 @@ export default function EventCategoriesPage() {
       const res = await fetch("/api/admin/event-categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), color }),
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim() || null,
+          color,
+        }),
       });
       const data = await res.json();
       if (!data.success) {
@@ -73,6 +81,7 @@ export default function EventCategoriesPage() {
         return;
       }
       setName("");
+      setDescription("");
       setShowForm(false);
       await fetchCategories();
     } finally {
@@ -99,6 +108,21 @@ export default function EventCategoriesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ color: newColor }),
     });
+    await fetchCategories();
+  };
+
+  const startEditDesc = (c: EventCategory) => {
+    setEditingDescId(c.id);
+    setEditingDesc(c.description ?? "");
+  };
+
+  const saveDesc = async (id: string) => {
+    await fetch(`/api/admin/event-categories/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: editingDesc.trim() || null }),
+    });
+    setEditingDescId(null);
     await fetchCategories();
   };
 
@@ -163,6 +187,20 @@ export default function EventCategoriesPage() {
                   />
                 </div>
                 <div>
+                  <label htmlFor="cat-desc" className="block text-xs text-gray-600 mb-1">
+                    説明文 <span className="text-gray-400">(任意)</span>
+                  </label>
+                  <textarea
+                    id="cat-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    maxLength={500}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="このタグの意味や対象を簡潔に。ホバー / タップで表示されます。"
+                  />
+                </div>
+                <div>
                   <label className="block text-xs text-gray-600 mb-1">色</label>
                   <div className="flex flex-wrap gap-2">
                     {COLOR_PRESETS.map((c) => (
@@ -180,7 +218,7 @@ export default function EventCategoriesPage() {
                   </div>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button variant="secondary" className="flex-1 text-sm" onClick={() => { setShowForm(false); setName(""); setError(null); }} disabled={submitting}>
+                  <Button variant="secondary" className="flex-1 text-sm" onClick={() => { setShowForm(false); setName(""); setDescription(""); setError(null); }} disabled={submitting}>
                     キャンセル
                   </Button>
                   <Button className="flex-1 text-sm" onClick={handleAdd} loading={submitting} disabled={!name.trim()}>
@@ -198,9 +236,9 @@ export default function EventCategoriesPage() {
           <div className="space-y-2">
             {categories.map((c) => (
               <Card key={c.id}>
-                <CardContent className="py-3">
+                <CardContent className="py-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span
                         className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
                         style={{ backgroundColor: c.color ?? "#6B7280" }}
@@ -227,6 +265,40 @@ export default function EventCategoriesPage() {
                       削除
                     </button>
                   </div>
+
+                  {editingDescId === c.id ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={editingDesc}
+                        onChange={(e) => setEditingDesc(e.target.value)}
+                        maxLength={500}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        placeholder="このタグの意味や対象を簡潔に"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => setEditingDescId(null)}>
+                          キャンセル
+                        </Button>
+                        <Button size="sm" onClick={() => saveDesc(c.id)}>
+                          保存
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between gap-2">
+                      <p className={`text-xs ${c.description ? "text-gray-700" : "text-gray-400 italic"} whitespace-pre-wrap flex-1`}>
+                        {c.description || "(説明未設定)"}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => startEditDesc(c)}
+                        className="text-xs text-blue-600 hover:underline shrink-0"
+                      >
+                        編集
+                      </button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

@@ -7,6 +7,7 @@ import { z } from "zod";
 
 const createSchema = z.object({
   name: z.string().min(1, "名称は必須です").max(50, "名称は50文字以内"),
+  description: z.string().max(500, "説明は500文字以内").optional().nullable(),
   color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "色は #RRGGBB 形式")
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
     const created = await prisma.eventCategory.create({
       data: {
         name: parsed.data.name,
+        description: parsed.data.description ?? null,
         color: parsed.data.color ?? null,
         order,
       },
