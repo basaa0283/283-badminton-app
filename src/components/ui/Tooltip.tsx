@@ -25,9 +25,10 @@ export function Tooltip({ content, children, className = "" }: Props) {
 
   return (
     <span className={`relative inline-block ${className}`}>
-      <span
-        role="button"
-        tabIndex={0}
+      {/* iOS Safari は <span onClick> を発火しないことがあるため、トリガーは
+         必ず <button> で実装する。 */}
+      <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -36,17 +37,20 @@ export function Tooltip({ content, children, className = "" }: Props) {
         className="cursor-pointer"
       >
         {children}
-      </span>
+      </button>
       {open && (
         <>
-          {/* タップで閉じるためのオーバーレイ (PC のホバー操作には mouseLeave が効くので問題なし) */}
-          <span
-            className="fixed inset-0 z-40"
+          {/* タップで閉じるためのオーバーレイ。iOS Safari でも反応するよう
+             <button> 化。 */}
+          <button
+            type="button"
+            className="fixed inset-0 z-40 cursor-default"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
             }}
             aria-hidden="true"
+            tabIndex={-1}
           />
           <span
             role="tooltip"

@@ -81,21 +81,23 @@ export function Select<T extends string = string>({
             {options.map((option) => {
               const isSelected = option.value === value;
               return (
-                <li
-                  key={option.value}
-                  role="option"
-                  aria-selected={isSelected}
-                  onClick={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                  className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${
-                    isSelected
-                      ? "bg-blue-50 text-blue-900 font-medium"
-                      : "text-gray-900"
-                  }`}
-                >
-                  {option.label}
+                <li key={option.value} role="option" aria-selected={isSelected}>
+                  {/* iOS Safari は <li> や <div> の onClick を発火しないことが
+                     あるため、option は必ず <button> でラップする。 */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                      isSelected
+                        ? "bg-blue-50 text-blue-900 font-medium"
+                        : "text-gray-900"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
                 </li>
               );
             })}
