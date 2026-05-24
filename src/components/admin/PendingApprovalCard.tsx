@@ -48,7 +48,7 @@ export function PendingApprovalCard({ pendingMembers, onChanged }: PendingApprov
         const data = await res.json();
         if (data.success) {
           const list: MergeCandidate[] = (data.data as MergeCandidate[])
-            .filter((m) => m.role === "visitor")
+            .filter((m) => m.role === "visitor" || m.role === "member")
             .filter((m) => !pendingMembers.some((p) => p.id === m.id));
           setCandidates(list);
         }
@@ -130,7 +130,7 @@ function PendingMemberRow({
     if (
       !confirm(
         `${member.nickname} さんを既存の仮アカウント「${target?.nickname ?? "?"}」とマージします。\n` +
-          "・出欠履歴、プロフィール、ロール (visitor) を引き継ぎます\n" +
+          `・出欠履歴、プロフィール、ロール (${target?.role ?? "?"}) を引き継ぎます\n` +
           "・仮アカウント側のレコードは削除されます\n" +
           "実行しますか？"
       )
@@ -258,7 +258,7 @@ function PendingMemberRow({
             <option value="">選択してください</option>
             {candidates.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.nickname}
+                {c.nickname} ({c.role === "visitor" ? "ビジター" : "メンバー"})
               </option>
             ))}
           </select>
