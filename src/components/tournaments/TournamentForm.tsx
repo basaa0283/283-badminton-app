@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
+import { DateInput } from "@/components/ui/DateInput";
 import {
   TOURNAMENT_TIERS,
   TOURNAMENT_TIER_LABEL,
@@ -182,63 +184,49 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">開催日 *</label>
-        {/* Safari/iOS で <input type="date"> が親より広く描画されて枠をはみ出すため、
-            min-w-0 / max-w-full / block を明示して収める。 */}
-        <input
-          type="date"
-          value={values.heldAt}
-          onChange={(e) => update("heldAt", e.target.value)}
-          className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg"
-          required
-        />
+        <DateInput value={values.heldAt} onChange={(v) => update("heldAt", v)} />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">参加区分 *</label>
-        <select
+        <Select
           value={values.openness}
-          onChange={(e) => update("openness", e.target.value as TournamentOpenness)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
-        >
-          {TOURNAMENT_OPENNESS.map((o) => (
-            <option key={o} value={o}>
-              {TOURNAMENT_OPENNESS_LABEL[o]}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => update("openness", v as TournamentOpenness)}
+          options={TOURNAMENT_OPENNESS.map((o) => ({
+            value: o,
+            label: TOURNAMENT_OPENNESS_LABEL[o],
+          }))}
+        />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">形式 *</label>
-        <select
+        <Select
           value={values.format}
-          onChange={(e) => update("format", e.target.value as TournamentFormat)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
-        >
-          {TOURNAMENT_FORMATS.map((f) => (
-            <option key={f} value={f}>
-              {TOURNAMENT_FORMAT_LABEL[f]}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => update("format", v as TournamentFormat)}
+          options={TOURNAMENT_FORMATS.map((f) => ({
+            value: f,
+            label: TOURNAMENT_FORMAT_LABEL[f],
+          }))}
+        />
       </div>
 
       {/* 開催地 (都道府県) と 会場 (フリーテキスト) は同じ会場情報のセットなのでまとめる */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">開催地 (都道府県)</label>
-          <select
+          <Select
             value={values.prefecture}
-            onChange={(e) => update("prefecture", e.target.value as Prefecture | "")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
-          >
-            <option value="">未選択</option>
-            {PREFECTURES.map((p) => (
-              <option key={p} value={p}>
-                {PREFECTURE_LABEL[p]}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => update("prefecture", v as Prefecture | "")}
+            options={[
+              { value: "", label: "未選択" },
+              ...PREFECTURES.map((p) => ({
+                value: p,
+                label: PREFECTURE_LABEL[p],
+              })),
+            ]}
+            placeholder="未選択"
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">会場</label>
@@ -327,20 +315,21 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
                           className="flex-1 min-w-[8rem] px-2 py-1 border border-gray-300 rounded text-sm"
                         />
                       )}
-                      <select
-                        value={c.tier ?? ""}
-                        onChange={(e) =>
-                          updateRowTier(idx, (e.target.value || null) as TournamentTier | null)
-                        }
-                        className="px-2 py-1 border border-gray-300 rounded text-sm bg-white min-w-[10rem]"
-                      >
-                        <option value="">Tier 未指定</option>
-                        {TOURNAMENT_TIERS.map((t) => (
-                          <option key={t} value={t}>
-                            {TOURNAMENT_TIER_LABEL[t]}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="min-w-[10rem]">
+                        <Select
+                          value={c.tier ?? ""}
+                          onChange={(v) =>
+                            updateRowTier(idx, (v || null) as TournamentTier | null)
+                          }
+                          options={[
+                            { value: "", label: "Tier 未指定" },
+                            ...TOURNAMENT_TIERS.map((t) => ({
+                              value: t,
+                              label: TOURNAMENT_TIER_LABEL[t],
+                            })),
+                          ]}
+                        />
+                      </div>
                       {!hasNoClasses && (
                         <button
                           type="button"
@@ -369,18 +358,20 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
 
         {availableToAdd.length > 0 && (
           <div className="flex items-center gap-2">
-            <select
-              value={addCategorySelect}
-              onChange={(e) => setAddCategorySelect(e.target.value as TournamentCategory)}
-              className="px-2 py-1 border border-gray-300 rounded text-sm bg-white"
-            >
-              <option value="">種目を選択...</option>
-              {availableToAdd.map((c) => (
-                <option key={c} value={c}>
-                  {TOURNAMENT_CATEGORY_LABEL[c]} ({c})
-                </option>
-              ))}
-            </select>
+            <div className="flex-1">
+              <Select
+                value={addCategorySelect}
+                onChange={(v) => setAddCategorySelect(v as TournamentCategory | "")}
+                options={[
+                  { value: "", label: "種目を選択..." },
+                  ...availableToAdd.map((c) => ({
+                    value: c,
+                    label: `${TOURNAMENT_CATEGORY_LABEL[c]} (${c})`,
+                  })),
+                ]}
+                placeholder="種目を選択..."
+              />
+            </div>
             <button
               type="button"
               disabled={!addCategorySelect}

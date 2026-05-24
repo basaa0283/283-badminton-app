@@ -3,6 +3,18 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [3.1.0] - 2026-05-24
+
+Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウンや
+`<input type="date">` のネイティブ日付ピッカーがタップで開かない問題
+への恒久対応 + 大会一覧の絞り込み UI 追加。
+
+### Added
+- **大会一覧の絞り込み UI**: 大会名フリーワード検索 / 種目タグの ON-OFF (複数 OR 検索) / 開催時期 (年) / 都道府県 を上部から指定可能に。「条件をクリア」で一括リセット。
+
+### Fixed
+- **Android LINE WebView でドロップダウンが開かない問題を回避**: 大会登録 (開催日)・大会フォーム (Tier / 参加区分 / 形式 / 都道府県 / Tier 等) / 成績登録 (種目 / クラス / 順位) / プロフィール (生年月日 / 性別) を、HTML 標準の `<select>` / `<input type="date">` から自前の `Select` / `DateInput` コンポーネントに置き換え。ネイティブピッカーに依存せず動作する。
+
 ## [3.0.1] - 2026-05-23
 
 ### Fixed
@@ -465,6 +477,7 @@
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[3.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.0.1...v3.1.0
 [2.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.4.0...v2.0.0
 [1.4.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.3.1...v1.4.0

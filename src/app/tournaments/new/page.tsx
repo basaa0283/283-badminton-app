@@ -8,6 +8,7 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { TournamentForm, TournamentFormValues } from "@/components/tournaments/TournamentForm";
+import { DateInput } from "@/components/ui/DateInput";
 import { permissions, UserRole } from "@/lib/permissions";
 
 interface ExistingTournament {
@@ -102,12 +103,7 @@ export default function NewTournamentPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     開催日 *
                   </label>
-                  <input
-                    type="date"
-                    value={heldDay}
-                    onChange={(e) => setHeldDay(e.target.value)}
-                    className="block w-full min-w-0 max-w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
+                  <DateInput value={heldDay} onChange={setHeldDay} />
                 </div>
                 <Button onClick={handleDateNext} loading={checking} disabled={!heldDay} className="w-full">
                   次へ

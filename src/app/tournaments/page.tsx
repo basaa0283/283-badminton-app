@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { permissions, UserRole } from "@/lib/permissions";
 import {
   TOURNAMENT_OPENNESS_LABEL,
   TournamentOpenness,
   PREFECTURE_LABEL,
+  PREFECTURES,
   Prefecture,
   TOURNAMENT_CATEGORIES,
   TOURNAMENT_CATEGORY_BADGE_CLASS,
@@ -52,6 +54,55 @@ export default function TournamentsPage() {
   const [monthsBack, setMonthsBack] = useState(INITIAL_MONTHS);
   const [reachedEnd, setReachedEnd] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // 絞り込み (クライアントサイド)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<TournamentCategory[]>([]);
+  const [selectedPrefecture, setSelectedPrefecture] = useState<Prefecture | "">("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
+
+  // 表示中の大会データから開催年だけ抽出して新しい順に並べる
+  const yearOptions = useMemo(() => {
+    if (!tournaments) return [] as string[];
+    const years = new Set<string>();
+    tournaments.forEach((t) => {
+      const y = t.heldAt.slice(0, 4);
+      if (y) years.add(y);
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [tournaments]);
+
+  const filtered = useMemo(() => {
+    if (!tournaments) return null;
+    return tournaments.filter((t) => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        if (!t.name.toLowerCase().includes(q)) return false;
+      }
+      if (selectedCategories.length > 0) {
+        if (!selectedCategories.some((c) => t.categories.includes(c))) return false;
+      }
+      if (selectedPrefecture && t.prefecture !== selectedPrefecture) {
+        return false;
+      }
+      if (selectedYear && !t.heldAt.startsWith(selectedYear)) {
+        return false;
+      }
+      return true;
+    });
+  }, [tournaments, searchQuery, selectedCategories, selectedPrefecture, selectedYear]);
+
+  const toggleCategory = (c: TournamentCategory) => {
+    setSelectedCategories((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+    );
+  };
+
+  const hasActiveFilter =
+    searchQuery.trim().length > 0 ||
+    selectedCategories.length > 0 ||
+    selectedPrefecture.length > 0 ||
+    selectedYear.length > 0;
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -120,6 +171,95 @@ export default function TournamentsPage() {
           </Card>
         )}
 
+        {tournaments !== null && tournaments.length > 0 && (
+          <Card className="mb-3">
+            <CardContent>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="大会名で検索"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">種目</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TOURNAMENT_CATEGORIES.map((c) => {
+                      const checked = selectedCategories.includes(c);
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => toggleCategory(c)}
+                          className={`text-xs px-2 py-1 rounded-full border ${
+                            checked
+                              ? "bg-blue-100 border-blue-400 text-blue-900 font-medium"
+                              : "bg-white border-gray-300 text-gray-700"
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">開催時期</div>
+                    <Select
+                      value={selectedYear}
+                      onChange={setSelectedYear}
+                      options={[
+                        { value: "", label: "すべての年" },
+                        ...yearOptions.map((y) => ({
+                          value: y,
+                          label: `${y}年`,
+                        })),
+                      ]}
+                      placeholder="すべての年"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">都道府県</div>
+                    <Select
+                      value={selectedPrefecture}
+                      onChange={(v) => setSelectedPrefecture(v as Prefecture | "")}
+                      options={[
+                        { value: "", label: "すべて" },
+                        ...PREFECTURES.map((p) => ({
+                          value: p,
+                          label: PREFECTURE_LABEL[p],
+                        })),
+                      ]}
+                      placeholder="すべて"
+                    />
+                  </div>
+                </div>
+                {hasActiveFilter && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">
+                      該当 {filtered?.length ?? 0} 件 / 全 {tournaments.length} 件
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSelectedCategories([]);
+                        setSelectedPrefecture("");
+                        setSelectedYear("");
+                      }}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      条件をクリア
+                    </button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {tournaments === null ? (
           <div className="text-gray-500 text-sm">読み込み中...</div>
         ) : tournaments.length === 0 ? (
@@ -130,9 +270,17 @@ export default function TournamentsPage() {
               </p>
             </CardContent>
           </Card>
+        ) : filtered && filtered.length === 0 ? (
+          <Card>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                条件に一致する大会がありません。条件を変えてみてください。
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-3">
-            {tournaments.map((t) => {
+            {(filtered ?? []).map((t) => {
               const badge = STATUS_BADGE[t.approvalStatus];
               return (
                 <Link key={t.id} href={`/tournaments/${t.id}`}>
