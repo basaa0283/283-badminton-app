@@ -55,14 +55,19 @@ export function EventCard({ event }: EventCardProps) {
                 </span>
               )}
               {event.category && (
-                <Tooltip content={event.category.description}>
+                <span className="inline-flex items-center gap-0.5 shrink-0">
                   <span
-                    className="text-xs px-2 py-0.5 rounded-full font-medium text-white shrink-0 inline-block"
+                    className="text-xs px-2 py-0.5 rounded-full font-medium text-white inline-block"
                     style={{ backgroundColor: event.category.color ?? "#6B7280" }}
                   >
                     {event.category.name}
                   </span>
-                </Tooltip>
+                  {event.category.description && (
+                    <Tooltip content={event.category.description}>
+                      <span className="text-gray-400 text-xs leading-none">ⓘ</span>
+                    </Tooltip>
+                  )}
+                </span>
               )}
             </div>
             {event.myAttendance && (

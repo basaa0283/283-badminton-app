@@ -8,10 +8,11 @@ type Props = {
   className?: string;
 };
 
-// タップ/ホバーで説明文を吹き出し表示するツールチップ。
+// タップで説明文を吹き出し表示するツールチップ。
 // - content が空なら children をそのまま返す (装飾なし)。
-// - スマホでは onClick で開閉。同じ要素をもう一度タップ or 画面の他の場所をタップで閉じる。
-// - PC では onMouseEnter / onMouseLeave でも開く (タップ操作と共存)。
+// - タップで開く。もう一度タップ or 画面の他の場所をタップで閉じる。
+// - ホバー対応はあえて入れない (モバイルで mouseEnter → click → mouseLeave が
+//   連続発火して「タップした瞬間に閉じる」現象が起きるため)。
 //
 // Android LINE WebView でも標準 onClick で動くシンプルな実装。
 // (Select と同様、document リスナーは使わずオーバーレイ div で閉じる)
@@ -32,9 +33,7 @@ export function Tooltip({ content, children, className = "" }: Props) {
           e.preventDefault();
           setOpen((v) => !v);
         }}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        className="cursor-help"
+        className="cursor-pointer"
       >
         {children}
       </span>
