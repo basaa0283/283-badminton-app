@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { tournamentResultInputSchema } from "@/lib/validations";
+import { logActivity } from "@/lib/activity-log";
 
 interface Params {
   params: Promise<{ resultId: string }>;
@@ -79,6 +80,18 @@ export async function PUT(request: NextRequest, { params }: Params) {
       },
     });
 
+    void logActivity({
+      userId: session.user.id,
+      action: "tournament_result.update",
+      entityType: "TournamentResult",
+      entityId: resultId,
+      metadata: {
+        tournamentId: existing.tournamentId,
+        targetUserId: existing.userId,
+        category: parsed.data.category,
+      },
+    });
+
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error("Tournament result PUT error:", error);
@@ -123,6 +136,19 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     }
 
     await prisma.tournamentResult.delete({ where: { id: resultId } });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "tournament_result.delete",
+      entityType: "TournamentResult",
+      entityId: resultId,
+      metadata: {
+        tournamentId: existing.tournamentId,
+        targetUserId: existing.userId,
+        category: existing.category,
+      },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Tournament result DELETE error:", error);

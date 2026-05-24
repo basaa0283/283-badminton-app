@@ -7,6 +7,7 @@ import {
   tournamentResultInputSchema,
   adminTournamentResultInputSchema,
 } from "@/lib/validations";
+import { logActivity } from "@/lib/activity-log";
 
 interface Params {
   params: Promise<{ tournamentId: string }>;
@@ -108,6 +109,20 @@ export async function POST(request: NextRequest, { params }: Params) {
         partnerName: parsed.data.partnerName ?? null,
         note: parsed.data.note ?? null,
         isPublic: parsed.data.isPublic ?? false,
+      },
+    });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "tournament_result.create",
+      entityType: "TournamentResult",
+      entityId: result.id,
+      metadata: {
+        tournamentId,
+        tournamentName: tournament.name,
+        category: parsed.data.category,
+        targetUserId,
+        isAdminInput: targetUserId !== session.user.id,
       },
     });
 

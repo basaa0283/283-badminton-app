@@ -259,6 +259,16 @@ export default function AdminPage() {
             </Card>
           </Link>
 
+          <Link href="/admin/activity-log">
+            <Card hover>
+              <CardContent className="py-6">
+                <div className="text-3xl mb-2">📝</div>
+                <h2 className="font-semibold text-gray-900">操作ログ</h2>
+                <p className="text-sm text-gray-500 mt-1">大会機能などの操作履歴を確認</p>
+              </CardContent>
+            </Card>
+          </Link>
+
           <Link href="/admin/expense-report">
             <Card hover>
               <CardContent className="py-6">

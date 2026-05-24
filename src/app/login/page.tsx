@@ -21,6 +21,7 @@ export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [showDevLogin, setShowDevLogin] = useState(false);
+  const [showTrouble, setShowTrouble] = useState(false);
 
   // 既にログイン済みの場合はホームにリダイレクト
   useEffect(() => {
@@ -74,6 +75,49 @@ export default function LoginPage() {
               </svg>
               LINEでログイン
             </button>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowTrouble((v) => !v)}
+                className="w-full text-xs text-gray-500 underline"
+              >
+                {showTrouble ? "閉じる" : "ログインできない場合は?"}
+              </button>
+              {showTrouble && (
+                <div className="mt-2 text-xs text-gray-700 space-y-3 bg-gray-50 p-3 rounded-lg leading-relaxed">
+                  <p>
+                    「LINEでログイン」を押してもログイン画面に戻ってしまう場合、端末のキャッシュをクリアしてから再度お試しください。
+                  </p>
+                  <div>
+                    <strong className="block text-gray-900 mb-0.5">
+                      ① LINE アプリのキャッシュ削除
+                    </strong>
+                    <p>
+                      LINE アプリ → 設定 → トーク → データの削除 → 「キャッシュ」にチェック → 削除
+                    </p>
+                  </div>
+                  <div>
+                    <strong className="block text-gray-900 mb-0.5">
+                      ② ブラウザのキャッシュ削除
+                    </strong>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>
+                        <span className="font-medium">iPhone (Safari):</span>{" "}
+                        設定 → Safari → 「履歴と Web サイトデータを消去」
+                      </li>
+                      <li>
+                        <span className="font-medium">Android (Chrome):</span>{" "}
+                        Chrome → 右上 ︙ → 履歴 → 「閲覧履歴データの削除」
+                      </li>
+                    </ul>
+                  </div>
+                  <p className="text-gray-600">
+                    上記でも解消しない場合は、公式 LINE アカウント宛にご連絡ください。
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* 開発環境のみ: テストユーザーでログイン */}
             {isDevelopment && (

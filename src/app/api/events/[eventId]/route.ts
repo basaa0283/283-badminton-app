@@ -129,7 +129,12 @@ export async function GET(request: NextRequest, { params }: Params) {
         deadlineEnabled: event.deadlineEnabled,
         respondStartAt: event.respondStartAt,
         category: event.category
-          ? { id: event.category.id, name: event.category.name, color: event.category.color }
+          ? {
+              id: event.category.id,
+              name: event.category.name,
+              description: event.category.description,
+              color: event.category.color,
+            }
           : null,
         minViewRole: event.minViewRole,
         minRespondRole: event.minRespondRole,

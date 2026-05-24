@@ -109,7 +109,12 @@ export async function GET(request: NextRequest) {
         deadline: event.deadline,
         deadlineEnabled: event.deadlineEnabled,
         category: event.category
-          ? { id: event.category.id, name: event.category.name, color: event.category.color }
+          ? {
+              id: event.category.id,
+              name: event.category.name,
+              description: event.category.description,
+              color: event.category.color,
+            }
           : null,
         cancelledAt: event.cancelledAt,
         cancelReason: event.cancelReason,

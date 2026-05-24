@@ -61,6 +61,27 @@ model User {
 
   createdTournaments Tournament[]       @relation("TournamentCreator")
   tournamentResults  TournamentResult[]
+
+  activityLogs       ActivityLog[]
+}
+
+// アプリ内の操作ログ。利用状況分析と監査の両方に使う汎用テーブル。
+// - action は "domain.verb" の命名 (例: "tournament.create", "tournament.list_view")
+// - entityType / entityId は対象レコードがある場合のみ
+// - metadata はフィルタ条件や変更差分などの追加情報を JSON 文字列で
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
 }
 
 // NextAuth Account
@@ -153,6 +174,7 @@ model AnnouncementRead {
 model EventCategory {
   id              String   @id @default(cuid())
   name            String   @unique
+  description     String?  // タグの説明文。ホバー/タップでツールチップ表示。
   color           String?  // 例: "#3B82F6" (Tailwind blue-500)
   order           Int      @default(0) // 表示順 (小さい順)
   createdAt       DateTime @default(now())

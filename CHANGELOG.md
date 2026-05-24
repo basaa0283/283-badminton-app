@@ -3,6 +3,21 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [3.2.0] - 2026-05-24
+
+ログイン無限ループのトラブルシュート導線、利用状況把握用の操作ログ基盤、
+イベント種別タグの説明文ツールチップ、承認時マージ拡張など、運用 / 観察性
+強化の改善まとめ。
+
+### Added
+- **ログイン画面に「ログインできない場合は?」のトラブルシュート案内**: LINE WebView と外部ブラウザの Cookie 分断で無限ループになる現象の暫定対処として、LINE / Safari / Chrome のキャッシュ削除手順を折りたたみで表示 (#36)
+- **操作ログ機能 (`ActivityLog`)**: 汎用的な操作ログテーブルを新設し、大会機能の閲覧/登録/編集/削除/承認/却下/成績登録などを記録。管理画面 `/admin/activity-log` で時系列+フィルタ(action prefix / 期間)つき一覧で確認できる。利用状況分析と監査の両用基盤として、今後 event / announcement 等にも段階的に拡張予定 (#36)
+- **イベント種別タグの説明文 (Tooltip)**: `EventCategory.description` を追加し、`/admin/event-categories` で各タグに説明文を編集可能に。説明があるタグには末尾に "ⓘ" アイコンが表示され、タップで吹き出しで意味を確認できる (#36)
+
+### Changed
+- **承認待ちユーザーのマージ対象を拡張**: visitor だけでなく member ロールの仮アカウントも紐付け対象として選べるように。マージ先ドロップダウンにロール表示も追加 (#36)
+- **LINE WebView ログインに向けた Cookie 設定見直し (試行)**: NextAuth の OAuth 用 cookie (state / pkce / nonce / callbackUrl) を HTTPS 環境では `SameSite=None; Secure` に変更し、LINE 内ブラウザと外部ブラウザ間の cookie 引継ぎ改善を試みる (cookie 名はデフォルトと同一のため既存ログイン中ユーザーへの影響なし) (#36)
+
 ## [3.1.0] - 2026-05-24
 
 Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウンや
@@ -477,6 +492,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[3.2.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.0.1...v3.1.0
 [2.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/basaa0283/283-badminton-app/compare/v1.4.0...v2.0.0

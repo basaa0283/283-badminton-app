@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { tournamentInputSchema } from "@/lib/validations";
 import { sendAdminNotification } from "@/lib/email";
+import { logActivity } from "@/lib/activity-log";
 
 // GET /api/tournaments - 大会マスター一覧
 //   - 一般メンバー: approved のみ + 自分が登録した pending (本人にだけ可視)
@@ -78,6 +79,17 @@ export async function GET(request: NextRequest) {
           where: { approvalStatus: "approved" },
           select: { category: true },
         },
+      },
+    });
+
+    // 利用状況分析: 一覧アクセスを記録 (フィルタ条件もメタデータに残す)
+    void logActivity({
+      userId: session.user.id,
+      action: "tournament.list_view",
+      metadata: {
+        monthsBack: searchParams.get("monthsBack") ?? undefined,
+        date: searchParams.get("date") ?? undefined,
+        resultCount: tournaments.length,
       },
     });
 
@@ -186,6 +198,14 @@ export async function POST(request: NextRequest) {
         `${appUrl}/tournaments/${tournament.id}`,
       ].join("\n"),
     }).catch((err) => console.error("[tournaments] approval mail failed:", err));
+
+    void logActivity({
+      userId: session.user.id,
+      action: "tournament.create",
+      entityType: "Tournament",
+      entityId: tournament.id,
+      metadata: { name: tournament.name, classCount: parsed.data.classes?.length ?? 0 },
+    });
 
     return NextResponse.json({ success: true, data: tournament }, { status: 201 });
   } catch (error) {

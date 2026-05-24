@@ -7,6 +7,7 @@ import { z } from "zod";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(50).optional(),
+  description: z.string().max(500, "説明は500文字以内").nullable().optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "色は #RRGGBB 形式").nullable().optional(),
   order: z.number().int().optional(),
 });

@@ -5,6 +5,15 @@ import { prisma } from "./prisma";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
+// HTTPS 環境かどうか (PROD / DEV は Azure で HTTPS、ローカルは HTTP)。
+// LINE WebView 経由のログインで OAuth コールバック先のブラウザコンテキストが
+// 切り替わる際、SameSite=Lax の cookie が引き継がれずに session が確立されない
+// ことがあるため、HTTPS 環境では SameSite=None; Secure に切り替えてクロス
+// コンテキスト送信を許可する。
+const useSecureCookies = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+const cookiePrefix = useSecureCookies ? "__Secure-" : "";
+const oauthSameSite = useSecureCookies ? "none" : "lax";
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   providers: [
@@ -222,5 +231,65 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
+  },
+  cookies: {
+    sessionToken: {
+      name: `${cookiePrefix}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+      },
+    },
+    callbackUrl: {
+      name: `${cookiePrefix}next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: oauthSameSite,
+        path: "/",
+        secure: useSecureCookies,
+      },
+    },
+    csrfToken: {
+      // __Host- prefix は path=/; secure; domain属性なし が必須。NextAuth v4 が
+      // 期待するデフォルトの形に合わせる。
+      name: `${useSecureCookies ? "__Host-" : ""}next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+      },
+    },
+    pkceCodeVerifier: {
+      name: `${cookiePrefix}next-auth.pkce.code_verifier`,
+      options: {
+        httpOnly: true,
+        sameSite: oauthSameSite,
+        path: "/",
+        secure: useSecureCookies,
+        maxAge: 60 * 15,
+      },
+    },
+    state: {
+      name: `${cookiePrefix}next-auth.state`,
+      options: {
+        httpOnly: true,
+        sameSite: oauthSameSite,
+        path: "/",
+        secure: useSecureCookies,
+        maxAge: 60 * 15,
+      },
+    },
+    nonce: {
+      name: `${cookiePrefix}next-auth.nonce`,
+      options: {
+        httpOnly: true,
+        sameSite: oauthSameSite,
+        path: "/",
+        secure: useSecureCookies,
+      },
+    },
   },
 };
