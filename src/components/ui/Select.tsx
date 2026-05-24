@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 export type SelectOption<T extends string = string> = {
   value: T;
@@ -16,8 +16,12 @@ type Props<T extends string = string> = {
   className?: string;
 };
 
-// HTML <select> は Android LINE WebView でタップしてもドロップダウンが開かないため、
-// 自前の開閉ロジックでネイティブ要素に頼らず動作する代替コンポーネント。
+// HTML <select> は Android LINE WebView でタップしてもドロップダウンが
+// 開かないため、自前で開閉ロジックを持つ代替コンポーネント。
+//
+// 「外側クリックで閉じる」は document リスナーではなく fixed overlay で実装
+// (古い WebView で document リスナーと同じタップで二重発火し、開いた瞬間
+// 閉じてしまう事象を回避するため)。
 export function Select<T extends string = string>({
   value,
   onChange,
@@ -27,27 +31,11 @@ export function Select<T extends string = string>({
   className = "",
 }: Props<T>) {
   const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleOutside = (e: MouseEvent | TouchEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("touchstart", handleOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("touchstart", handleOutside);
-    };
-  }, [open]);
 
   const selected = options.find((o) => o.value === value);
 
   return (
-    <div ref={wrapperRef} className={`relative ${className}`}>
+    <div className={`relative ${className}`}>
       <button
         type="button"
         onClick={() => !disabled && setOpen((v) => !v)}
@@ -80,30 +68,39 @@ export function Select<T extends string = string>({
       </button>
 
       {open && (
-        <ul
-          role="listbox"
-          className="absolute z-50 mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg"
-        >
-          {options.map((option) => {
-            const isSelected = option.value === value;
-            return (
-              <li
-                key={option.value}
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${
-                  isSelected ? "bg-blue-50 text-blue-900 font-medium" : "text-gray-900"
-                }`}
-              >
-                {option.label}
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+          <ul
+            role="listbox"
+            className="absolute z-50 mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg"
+          >
+            {options.map((option) => {
+              const isSelected = option.value === value;
+              return (
+                <li
+                  key={option.value}
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${
+                    isSelected
+                      ? "bg-blue-50 text-blue-900 font-medium"
+                      : "text-gray-900"
+                  }`}
+                >
+                  {option.label}
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </div>
   );
