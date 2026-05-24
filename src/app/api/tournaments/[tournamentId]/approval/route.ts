@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { tournamentApprovalSchema } from "@/lib/validations";
+import { logActivity } from "@/lib/activity-log";
 
 interface Params {
   params: Promise<{ tournamentId: string }>;
@@ -61,6 +62,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
           rejectionReason: null,
         },
       });
+      void logActivity({
+        userId: session.user.id,
+        action: "tournament.approve",
+        entityType: "Tournament",
+        entityId: tournamentId,
+        metadata: { name: existing.name },
+      });
       return NextResponse.json({ success: true, data: updated });
     } else {
       const updated = await prisma.tournament.update({
@@ -71,6 +79,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
           approvedAt: new Date(),
           rejectionReason: parsed.data.rejectionReason ?? null,
         },
+      });
+      void logActivity({
+        userId: session.user.id,
+        action: "tournament.reject",
+        entityType: "Tournament",
+        entityId: tournamentId,
+        metadata: { name: existing.name, reason: parsed.data.rejectionReason },
       });
       return NextResponse.json({ success: true, data: updated });
     }

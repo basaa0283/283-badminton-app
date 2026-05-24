@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { tournamentInputSchema } from "@/lib/validations";
+import { logActivity } from "@/lib/activity-log";
 
 interface Params {
   params: Promise<{ tournamentId: string }>;
@@ -112,6 +113,13 @@ export async function GET(_request: NextRequest, { params }: Params) {
       hiddenCountNoClass,
     };
 
+    void logActivity({
+      userId: session.user.id,
+      action: "tournament.view",
+      entityType: "Tournament",
+      entityId: tournament.id,
+    });
+
     return NextResponse.json({ success: true, data: sanitized });
   } catch (error) {
     console.error("Tournament GET error:", error);
@@ -216,6 +224,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
       });
     });
 
+    void logActivity({
+      userId: session.user.id,
+      action: "tournament.update",
+      entityType: "Tournament",
+      entityId: updated.id,
+      metadata: { name: updated.name },
+    });
+
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("Tournament PUT error:", error);
@@ -264,6 +280,14 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       await tx.tournamentResult.deleteMany({ where: { tournamentId } });
       await tx.tournamentClass.deleteMany({ where: { tournamentId } });
       await tx.tournament.delete({ where: { id: tournamentId } });
+    });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "tournament.delete",
+      entityType: "Tournament",
+      entityId: tournamentId,
+      metadata: { name: existing.name },
     });
 
     return NextResponse.json({ success: true });
