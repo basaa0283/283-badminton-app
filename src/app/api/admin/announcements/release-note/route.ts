@@ -80,7 +80,7 @@ export async function POST() {
   const title = `アプリを v${version} にアップデートしました`;
   const body =
     `不具合修正や機能改善を含むアップデートを反映しました。\n` +
-    `詳細は「更新履歴」(/release-notes) からご確認ください。`;
+    `詳細は「更新履歴」からご確認ください。`;
 
   const announcement = await prisma.announcement.create({
     data: {
