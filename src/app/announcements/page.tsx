@@ -94,9 +94,9 @@ export default function AnnouncementsPage() {
                       <span className="text-gray-500">
                         {format(new Date(a.publishedAt), "yyyy/M/d HH:mm", { locale: ja })}
                       </span>
-                      {a.createdBy && (
-                        <span className="text-gray-400">by {a.createdBy}</span>
-                      )}
+                      <span className="text-gray-400">
+                        by {a.createdBy ?? "運営"}
+                      </span>
                     </div>
                     <h2 className="font-bold text-gray-900 mb-1">{a.title}</h2>
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{a.body}</p>

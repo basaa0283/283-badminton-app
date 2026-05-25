@@ -3,6 +3,12 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [3.3.0] - 2026-05-25
+
+### Added
+- 管理画面「お知らせ管理」上部に「この版をお知らせ」ボタンを追加。現在の `package.json` のバージョンを使って、運営 (system 投稿、`createdById=null`) からのアップデート通知お知らせを 1 クリックで投稿できる。同じバージョンの二重投稿は `SystemSetting.lastAnnouncedReleaseVersion` で防止
+- ユーザー向けお知らせ一覧 (`/announcements`) で、投稿者が system (createdBy=null) のものは "by 運営" と表示
+
 ## [3.2.2] - 2026-05-25
 
 ### Fixed
@@ -504,6 +510,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[3.3.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.2...v3.3.0
 [3.2.2]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.1...v3.2.2
 [3.2.1]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.1.0...v3.2.0
