@@ -42,6 +42,15 @@ export default function AdminAnnouncementsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // リリース通知 (運営からの「アップデートしました」お知らせ)
+  const [releaseStatus, setReleaseStatus] = useState<{
+    currentVersion: string;
+    lastAnnouncedVersion: string | null;
+    alreadyAnnounced: boolean;
+  } | null>(null);
+  const [postingRelease, setPostingRelease] = useState(false);
+  const releaseRef = useRef(false);
+
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [audienceMember, setAudienceMember] = useState(true);
@@ -69,9 +78,43 @@ export default function AdminAnnouncementsPage() {
     if (data.success) setItems(data.data);
   };
 
+  const fetchReleaseStatus = async () => {
+    const res = await fetch("/api/admin/announcements/release-note");
+    const data = await res.json();
+    if (data.success) setReleaseStatus(data.data);
+  };
+
+  const handlePostReleaseAnnouncement = async () => {
+    if (releaseRef.current) return;
+    releaseRef.current = true;
+    setPostingRelease(true);
+    try {
+      if (
+        !confirm(
+          `アプリ v${releaseStatus?.currentVersion} のリリースをお知らせとして投稿します。よろしいですか?`,
+        )
+      ) {
+        return;
+      }
+      const res = await fetch("/api/admin/announcements/release-note", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error?.message || "お知らせ投稿に失敗しました");
+        return;
+      }
+      await Promise.all([fetchItems(), fetchReleaseStatus()]);
+    } finally {
+      setPostingRelease(false);
+      releaseRef.current = false;
+    }
+  };
+
   useEffect(() => {
     if (status === "authenticated") {
       fetchItems().finally(() => setLoading(false));
+      fetchReleaseStatus();
     }
   }, [status]);
 
@@ -174,6 +217,38 @@ export default function AdminAnnouncementsPage() {
             </Button>
           )}
         </div>
+
+        {releaseStatus && (
+          <Card className="mb-4">
+            <CardContent>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    リリース通知 (運営からのお知らせ)
+                  </h2>
+                  <p className="text-xs text-gray-600 mt-1">
+                    現在のバージョン:{" "}
+                    <span className="font-medium">v{releaseStatus.currentVersion}</span>
+                    {releaseStatus.alreadyAnnounced
+                      ? " (このバージョンは既にお知らせ済み)"
+                      : releaseStatus.lastAnnouncedVersion
+                        ? ` (前回投稿: v${releaseStatus.lastAnnouncedVersion})`
+                        : " (まだお知らせ投稿していません)"}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={releaseStatus.alreadyAnnounced ? "secondary" : "primary"}
+                  disabled={releaseStatus.alreadyAnnounced || postingRelease}
+                  loading={postingRelease}
+                  onClick={handlePostReleaseAnnouncement}
+                >
+                  この版をお知らせ
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {showForm && (
           <Card className="mb-4">
