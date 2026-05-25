@@ -21,6 +21,19 @@ export interface ReleaseSection {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "3.2.2",
+    date: "2026-05-25",
+    title: "iOS で大会登録の開催日プルダウンが効かない問題を修正",
+    highlights: [
+      {
+        label: "修正",
+        items: [
+          "iPhone (Safari / LINE 内ブラウザ) で、大会登録の「開催日」のプルダウン (年・月・日) を選んでも反映されず、「次へ」ボタンが活性化しなかった問題を直しました。年・月・日 を順に選ぶと正しく表示・確定されるようになります。",
+        ],
+      },
+    ],
+  },
+  {
     version: "3.2.0",
     date: "2026-05-24",
     title: "操作ログ・タグ説明・ログイン回復導線の追加",

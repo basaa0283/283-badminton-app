@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 
 type Props = {
   content: string | null | undefined;
@@ -18,16 +18,41 @@ type Props = {
 // (Select と同様、document リスナーは使わずオーバーレイ div で閉じる)
 export function Tooltip({ content, children, className = "" }: Props) {
   const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLSpanElement>(null);
+
+  // 外側クリックで閉じる。Select と同じ思想で document.click を
+  // setTimeout(0) で遅延登録 (オーバーレイ方式は iOS の stacking context で
+  // ハマるので不採用)。
+  useEffect(() => {
+    if (!open) return;
+    let listener: ((e: MouseEvent) => void) | null = null;
+    const timer = setTimeout(() => {
+      listener = (e: MouseEvent) => {
+        if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+          setOpen(false);
+        }
+      };
+      document.addEventListener("click", listener);
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      if (listener) {
+        document.removeEventListener("click", listener);
+      }
+    };
+  }, [open]);
 
   if (!content || !content.trim()) {
     return <>{children}</>;
   }
 
   return (
-    <span className={`relative inline-block ${className}`}>
-      <span
-        role="button"
-        tabIndex={0}
+    <span ref={wrapperRef} className={`relative inline-block ${className}`}>
+      {/* iOS Safari は <span onClick> を発火しないことがあるため、トリガーは
+         必ず <button> で実装する。 */}
+      <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -36,25 +61,14 @@ export function Tooltip({ content, children, className = "" }: Props) {
         className="cursor-pointer"
       >
         {children}
-      </span>
+      </button>
       {open && (
-        <>
-          {/* タップで閉じるためのオーバーレイ (PC のホバー操作には mouseLeave が効くので問題なし) */}
-          <span
-            className="fixed inset-0 z-40"
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen(false);
-            }}
-            aria-hidden="true"
-          />
-          <span
-            role="tooltip"
-            className="absolute z-50 left-0 top-full mt-1 max-w-xs w-max bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg whitespace-pre-wrap"
-          >
-            {content}
-          </span>
-        </>
+        <span
+          role="tooltip"
+          className="absolute z-50 left-0 top-full mt-1 max-w-xs w-max bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg whitespace-pre-wrap"
+        >
+          {content}
+        </span>
       )}
     </span>
   );
