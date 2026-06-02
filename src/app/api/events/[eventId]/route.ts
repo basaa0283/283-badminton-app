@@ -112,6 +112,21 @@ export async function GET(request: NextRequest, { params }: Params) {
       }
     }
 
+    // 参加費が表示されるイベントに限り、運営の PayPay ID を併せて返す。
+    // PayPay ID が SystemSetting に登録されていなければ送らない。
+    let paypayPersonalId: string | null = null;
+    if (event.feeVisible && event.fee != null) {
+      try {
+        const row = await prisma.systemSetting.findUnique({
+          where: { key: "paypayPersonalId" },
+        });
+        const id = row?.value?.trim();
+        if (id) paypayPersonalId = id;
+      } catch {
+        // テーブル未マイグレーション等のエラーは握り潰す
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -125,6 +140,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         capacity: event.capacity,
         fee: event.feeVisible ? event.fee : null,
         feeVisible: event.feeVisible,
+        paypayPersonalId,
         deadline: event.deadline,
         deadlineEnabled: event.deadlineEnabled,
         respondStartAt: event.respondStartAt,

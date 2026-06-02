@@ -13,6 +13,10 @@ const STRING_KEYS = [
   "aboutPageContent",
   // "fifo" (デフォルト・先着順) | "priority" (User.priorityScore 順)
   "waitlistPolicy",
+  // 参加費の PayPay 送金先 (PayPay ID)。PayPay の個人 QR / リンクは期限が
+  // あるが、PayPay ID は半永久的に固定なので、これを 1 つ持って全イベント
+  // で「ここに送ってね」と案内する。
+  "paypayPersonalId",
 ] as const;
 type BooleanKey = (typeof BOOLEAN_KEYS)[number];
 type StringKey = (typeof STRING_KEYS)[number];

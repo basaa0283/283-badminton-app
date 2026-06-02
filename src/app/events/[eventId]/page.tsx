@@ -28,6 +28,7 @@ interface EventDetail {
   location: string | null;
   capacity: number | null;
   fee: number | null;
+  paypayPersonalId?: string | null;
   feeVisible: boolean;
   deadline: string | null;
   deadlineEnabled: boolean;
@@ -360,6 +361,14 @@ export default function EventDetailPage() {
                     />
                   </svg>
                   <span>参加費: {event.fee.toLocaleString()}円</span>
+                </div>
+              )}
+
+              {event.feeVisible && event.fee !== null && event.paypayPersonalId && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+                  💸 参加費は{" "}
+                  <span className="font-bold">PayPay ID「{event.paypayPersonalId}」</span>{" "}
+                  宛に送金してください。
                 </div>
               )}
 
