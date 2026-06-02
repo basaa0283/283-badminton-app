@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { updateEventSchema } from "@/lib/validations";
+import { logActivity } from "@/lib/activity-log";
 
 function isStaff(role: UserRole) {
   return role === "admin" || role === "subadmin";
@@ -126,6 +127,13 @@ export async function GET(request: NextRequest, { params }: Params) {
         // テーブル未マイグレーション等のエラーは握り潰す
       }
     }
+
+    void logActivity({
+      userId: session.user.id,
+      action: "event.view",
+      entityType: "Event",
+      entityId: event.id,
+    });
 
     return NextResponse.json({
       success: true,
@@ -299,6 +307,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
       data: updateData,
     });
 
+    void logActivity({
+      userId: session.user.id,
+      action: event.cancelledAt ? "event.cancel" : "event.update",
+      entityType: "Event",
+      entityId: event.id,
+      metadata: { title: event.title },
+    });
+
     return NextResponse.json({ success: true, data: event });
   } catch (error) {
     console.error("Event PUT error:", error);
@@ -339,6 +355,14 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     await prisma.event.delete({ where: { id: eventId } });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "event.delete",
+      entityType: "Event",
+      entityId: eventId,
+      metadata: { title: existing.title },
+    });
 
     return NextResponse.json({ success: true, data: { message: "イベントを削除しました" } });
   } catch (error) {

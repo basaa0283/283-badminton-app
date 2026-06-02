@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { attendanceSchema } from "@/lib/validations";
 import { notifyWaitlistPromotion } from "@/lib/line-messaging";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity-log";
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -164,6 +165,18 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const attendance = await prisma.attendance.findUnique({
       where: { userId_eventId: { userId, eventId } },
+    });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "attendance.update",
+      entityType: "Event",
+      entityId: eventId,
+      metadata: {
+        status: attendance?.status,
+        targetUserId: userId,
+        isProxy: userId !== session.user.id,
+      },
     });
 
     return NextResponse.json({

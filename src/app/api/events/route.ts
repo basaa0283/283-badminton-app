@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { createEventSchema } from "@/lib/validations";
 import { notifyNewEvent } from "@/lib/line-messaging";
+import { logActivity } from "@/lib/activity-log";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 
@@ -129,6 +130,12 @@ export async function GET(request: NextRequest) {
             }
           : null,
       };
+    });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "event.list_view",
+      metadata: { count: total },
     });
 
     return NextResponse.json({
@@ -258,6 +265,14 @@ export async function POST(request: NextRequest) {
         })
         .catch((err) => console.error("[announce] new event announcement failed:", err));
     }
+
+    void logActivity({
+      userId: session.user.id,
+      action: "event.create",
+      entityType: "Event",
+      entityId: event.id,
+      metadata: { title: event.title },
+    });
 
     return NextResponse.json({ success: true, data: event }, { status: 201 });
   } catch (error) {

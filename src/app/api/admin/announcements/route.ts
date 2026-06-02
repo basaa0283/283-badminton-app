@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-log";
 
 const createSchema = z.object({
   title: z.string().min(1, "タイトルは必須です").max(200, "タイトルは200文字以内"),
@@ -65,5 +66,14 @@ export async function POST(request: NextRequest) {
       createdById: session.user.id,
     },
   });
+
+  void logActivity({
+    userId: session.user.id,
+    action: "announcement.create",
+    entityType: "Announcement",
+    entityId: created.id,
+    metadata: { title: created.title, severity: created.severity },
+  });
+
   return NextResponse.json({ success: true, data: created }, { status: 201 });
 }

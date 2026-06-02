@@ -30,6 +30,25 @@ interface Pagination {
 
 // action の人間向けラベル。未登録は action そのままを表示。
 const ACTION_LABEL: Record<string, string> = {
+  "auth.login": "ログイン",
+  "event.list_view": "イベント一覧を閲覧",
+  "event.view": "イベント詳細を閲覧",
+  "event.create": "イベントを登録",
+  "event.update": "イベントを編集",
+  "event.cancel": "イベントを中止",
+  "event.delete": "イベントを削除",
+  "attendance.update": "出欠を登録/変更",
+  "announcement.list_view": "お知らせ一覧を閲覧",
+  "announcement.create": "お知らせを投稿",
+  "announcement.update": "お知らせを編集",
+  "announcement.delete": "お知らせを削除",
+  "member.approve": "メンバーを承認",
+  "member.reject": "メンバーを却下",
+  "member.role_change": "メンバーのロールを変更",
+  "member.update": "メンバー情報を編集",
+  "member.delete": "メンバーを削除",
+  "member.merge": "メンバーをマージ",
+  "profile.self_update": "プロフィールを編集 (本人)",
   "tournament.list_view": "大会一覧を閲覧",
   "tournament.view": "大会詳細を閲覧",
   "tournament.create": "大会を登録",
@@ -126,6 +145,12 @@ export default function AdminActivityLogPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">すべて</option>
+                  <option value="auth.">ログイン</option>
+                  <option value="event.">イベント関連</option>
+                  <option value="attendance.">出欠回答</option>
+                  <option value="announcement.">お知らせ関連</option>
+                  <option value="member.">メンバー管理</option>
+                  <option value="profile.">プロフィール編集</option>
                   <option value="tournament.">大会関連</option>
                   <option value="tournament_result.">成績関連</option>
                 </select>

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity-log";
 
 // DELETE /api/admin/members/[userId] - メンバー削除
 export async function DELETE(
@@ -39,6 +40,14 @@ export async function DELETE(
     await prisma.attendanceHistory.deleteMany({ where: { userId } });
     await prisma.attendance.deleteMany({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
+
+    void logActivity({
+      userId: session.user.id,
+      action: target.role === "pending" ? "member.reject" : "member.delete",
+      entityType: "User",
+      entityId: userId,
+      metadata: { targetNickname: target.nickname, previousRole: target.role },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
