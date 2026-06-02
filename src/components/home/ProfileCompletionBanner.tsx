@@ -56,7 +56,7 @@ export function ProfileCompletionBanner() {
               プロフィールに未入力の項目があります
             </p>
             <p className="text-xs text-amber-800 mt-0.5">
-              {missing.join(" / ")} を埋めるとサークル運営にも役立ちます。
+              未入力: {missing.join(" / ")}
             </p>
           </div>
           <Link
