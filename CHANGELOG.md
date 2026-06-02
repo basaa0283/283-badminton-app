@@ -3,6 +3,24 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [3.4.0] - 2026-06-02
+
+大会機能とイベント機能の連動、管理画面の利用状況ダッシュボード、
+操作ログ全ドメイン化、プロフィール入力誘導、PayPay 送金案内など、
+運用・観察性を一段引き上げる大型アップデート。
+
+### Added
+- **大会 ↔ イベント連動**: 大会登録フォームに「参加表明イベントも作る」チェックボックスを追加。チェック ON + 開催日が未来なら、同日の「大会」種別イベントを自動生成して紐付ける。Event 詳細 / 大会詳細から相互にリンクで行き来できる
+- **申告クラス**: 大会連動イベントでは、参加者ごとに「出場予定クラス (TournamentClass)」を申告できる。管理者は AdminAttendanceManager の各行と新規追加フォームでクラスを選択。参加者一覧では「MS 1部」のような紫色バッジで表示
+- **プロフィール未入力誘導**: ホーム画面の上部に「プロフィールに未入力の項目があります」の控えめなバナーを追加 (氏名 / 性別 / 生年月日 のいずれかが空のとき)
+- **PayPay ID 送金案内**: 管理画面で運営の PayPay ID を 1 つ登録すると、参加費を設定した各イベントの詳細に「PayPay ID 〇〇 宛に送金してください」と案内バナーが出る
+- **操作ログ全ドメイン拡張**: ログイン / イベント (作成/更新/削除/中止/一覧/詳細) / 出欠回答 / お知らせ (作成/更新/削除/一覧) / メンバー (承認/却下/ロール変更/マージ等) / プロフィール (本人編集) を ActivityLog に記録
+- **利用状況ダッシュボード** (`/admin/dashboard`): recharts ベースで、日別ログイン人数 / 7日 30日アクティブユーザー / 主要操作件数推移 / お知らせ既読率を可視化
+
+### Changed
+- **大会連動イベントの参加者操作は管理者のみ**: 申込手続きの整合性を守るため、Event.linkedTournamentId が non-null のイベントでは一般メンバーの出欠表明 UI を非表示にし、API も 403 を返す。参加者の登録/編集は AdminAttendanceManager 経由で管理者が行う
+- 大会を削除すると、紐付き Event も一緒に削除されるよう挙動を統一
+
 ## [3.3.0] - 2026-05-25
 
 ### Added
@@ -510,6 +528,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[3.4.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.2...v3.3.0
 [3.2.2]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.1...v3.2.2
 [3.2.1]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.0...v3.2.1

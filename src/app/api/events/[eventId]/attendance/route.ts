@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { attendanceSchema } from "@/lib/validations";
 import { notifyWaitlistPromotion } from "@/lib/line-messaging";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity-log";
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -71,6 +72,22 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
+    // 大会連動イベント (linkedTournamentId が non-null) は、申込手続きの整合性を
+    // 守るため、参加者の登録/編集は管理者のみが行う運用にする。
+    // 一般メンバー本人の出欠 POST は 403 で弾く (代理 API 経由ならここに来ない)。
+    if (event.linkedTournamentId && !permissions.canEditEvent(role)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN_TOURNAMENT_EVENT",
+            message: "大会の参加者登録は管理者のみが行えます",
+          },
+        },
+        { status: 403 },
+      );
+    }
+
     // 締め切りチェック
     if (event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date()) {
       return NextResponse.json(
@@ -118,6 +135,11 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const finalStatus = status === "waitlist" ? "waitlist" : parsed.data.status;
 
+    // 大会連動イベントの場合のみ意味を持つ申告クラス。それ以外なら null。
+    // attending でない (= 不参加) の場合も保存しない。
+    const declaredClassId =
+      finalStatus === "attending" ? parsed.data.declaredTournamentClassId ?? null : null;
+
     if (existingAttendance) {
       // 更新
       await prisma.attendance.update({
@@ -126,6 +148,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           status: finalStatus,
           comment: parsed.data.comment || null,
           position: status === "waitlist" ? position : null,
+          declaredTournamentClassId: declaredClassId,
         },
       });
     } else {
@@ -137,6 +160,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           status: finalStatus,
           comment: parsed.data.comment || null,
           position: status === "waitlist" ? position : null,
+          declaredTournamentClassId: declaredClassId,
         },
       });
     }
@@ -164,6 +188,18 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const attendance = await prisma.attendance.findUnique({
       where: { userId_eventId: { userId, eventId } },
+    });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "attendance.update",
+      entityType: "Event",
+      entityId: eventId,
+      metadata: {
+        status: attendance?.status,
+        targetUserId: userId,
+        isProxy: userId !== session.user.id,
+      },
     });
 
     return NextResponse.json({

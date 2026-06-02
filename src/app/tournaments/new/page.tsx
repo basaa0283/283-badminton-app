@@ -70,6 +70,7 @@ export default function NewTournamentPage() {
           tier: c.tier,
           order: idx,
         })),
+        createLinkedEvent: values.createLinkedEvent ?? false,
       }),
     });
     const json = await res.json();

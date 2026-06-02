@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { AdminAlertsBanner } from "@/components/admin/AdminAlertsBanner";
+import { ProfileCompletionBanner } from "@/components/home/ProfileCompletionBanner";
 import { permissions, UserRole } from "@/lib/permissions";
 
 interface PublicLinks {
@@ -61,6 +62,8 @@ export default function Home() {
         <AnnouncementBanner />
 
         {isAdmin && <AdminAlertsBanner />}
+
+        <ProfileCompletionBanner />
 
         {/* クイックアクション */}
         <div className="grid grid-cols-2 gap-4 mb-6">

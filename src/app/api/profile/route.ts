@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { updateProfileSchema } from "@/lib/validations";
 import { computeAge } from "@/lib/age";
+import { logActivity } from "@/lib/activity-log";
 
 const PROFILE_SELECT = {
   id: true,
@@ -99,6 +100,13 @@ export async function PUT(request: NextRequest) {
         }),
       },
       select: PROFILE_SELECT,
+    });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "profile.self_update",
+      entityType: "User",
+      entityId: session.user.id,
     });
 
     return NextResponse.json({ success: true, data: withAge(user) });

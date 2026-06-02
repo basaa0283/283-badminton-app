@@ -38,6 +38,8 @@ export interface TournamentFormValues {
   location: string;
   description: string;
   classes: ClassRow[];
+  // 新規大会登録 (= 未来日) の時のみ。参加表明用の Event を一緒に作るか。
+  createLinkedEvent?: boolean;
 }
 
 interface Props {
@@ -61,6 +63,7 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
     location: initial?.location ?? "",
     description: initial?.description ?? "",
     classes: initial?.classes ?? [],
+    createLinkedEvent: initial?.createLinkedEvent ?? false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -249,6 +252,24 @@ export function TournamentForm({ initial, submitLabel, onSubmit }: Props) {
           placeholder="参加資格・特記事項など"
           className="w-full px-3 py-2 border border-gray-300 rounded-lg"
         />
+      </div>
+
+      <div className="border-t border-gray-100 pt-4">
+        <label className="inline-flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={values.createLinkedEvent ?? false}
+            onChange={(e) => update("createLinkedEvent", e.target.checked)}
+            className="mt-1"
+          />
+          <span className="text-sm text-gray-700">
+            参加表明イベントも作る
+            <span className="block text-xs text-gray-500 mt-0.5">
+              開催日が未来の大会で有効。出欠管理 (イベント一覧) に同じ日付の
+              「大会」イベントが追加されて、メンバーが参加表明できるようになります。
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className="border-t border-gray-100 pt-4 space-y-3">

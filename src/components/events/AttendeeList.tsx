@@ -8,12 +8,19 @@ interface Attendee {
   status: string;
   comment: string | null;
   position: number | null;
+  declaredTournamentClassId?: string | null;
   user: {
     id: string;
     nickname: string;
     profileImageUrl: string | null;
     gender: string | null;
   };
+}
+
+interface TournamentClassOption {
+  id: string;
+  category: string;
+  name: string | null;
 }
 
 // 性別に応じた背景色を取得
@@ -30,25 +37,38 @@ function getGenderBgClass(gender: string | null): string {
 
 interface AttendeeListProps {
   attendees: Attendee[];
+  tournamentClasses?: TournamentClassOption[];
 }
 
-export function AttendeeList({ attendees }: AttendeeListProps) {
+export function AttendeeList({ attendees, tournamentClasses }: AttendeeListProps) {
   const attending = attendees.filter((a) => a.status === "attending");
   const notAttending = attendees.filter((a) => a.status === "not_attending");
   const waitlist = attendees.filter((a) => a.status === "waitlist").sort((a, b) => (a.position || 0) - (b.position || 0));
   const observing = attendees.filter((a) => a.status === "observing");
 
+  const classMap = new Map<string, TournamentClassOption>();
+  for (const c of tournamentClasses ?? []) classMap.set(c.id, c);
+
   return (
     <div className="space-y-6">
-      <AttendeeSection title={`参加 (${attending.length})`} attendees={attending} />
+      <AttendeeSection
+        title={`参加 (${attending.length})`}
+        attendees={attending}
+        classMap={classMap}
+      />
       {waitlist.length > 0 && (
-        <AttendeeSection title={`キャンセル待ち (${waitlist.length})`} attendees={waitlist} showPosition />
+        <AttendeeSection
+          title={`キャンセル待ち (${waitlist.length})`}
+          attendees={waitlist}
+          showPosition
+          classMap={classMap}
+        />
       )}
       {observing.length > 0 && (
-        <AttendeeSection title={`見学 (${observing.length})`} attendees={observing} />
+        <AttendeeSection title={`見学 (${observing.length})`} attendees={observing} classMap={classMap} />
       )}
       {notAttending.length > 0 && (
-        <AttendeeSection title={`不参加 (${notAttending.length})`} attendees={notAttending} />
+        <AttendeeSection title={`不参加 (${notAttending.length})`} attendees={notAttending} classMap={classMap} />
       )}
     </div>
   );
@@ -58,10 +78,12 @@ function AttendeeSection({
   title,
   attendees,
   showPosition = false,
+  classMap,
 }: {
   title: string;
   attendees: Attendee[];
   showPosition?: boolean;
+  classMap: Map<string, TournamentClassOption>;
 }) {
   if (attendees.length === 0) return null;
 
@@ -88,13 +110,22 @@ function AttendeeSection({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {showPosition && attendee.position && (
                   <span className="text-xs text-yellow-600 font-medium">{attendee.position}.</span>
                 )}
                 <span className="text-sm font-medium text-gray-900 truncate">
                   {attendee.user.nickname}
                 </span>
+                {attendee.declaredTournamentClassId &&
+                  classMap.has(attendee.declaredTournamentClassId) && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-medium shrink-0">
+                      {(() => {
+                        const c = classMap.get(attendee.declaredTournamentClassId)!;
+                        return `${c.category}${c.name ? ` ${c.name}` : ""}`;
+                      })()}
+                    </span>
+                  )}
               </div>
               {attendee.comment && (
                 <p className="text-xs text-gray-500 truncate">{attendee.comment}</p>

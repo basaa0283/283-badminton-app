@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
+import { logActivity } from "./activity-log";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -114,6 +115,14 @@ export const authOptions: NextAuthOptions = {
                 : dbUser.nickname,
             profileImageUrl: lineProfile.picture ?? dbUser.profileImageUrl ?? null,
           },
+        });
+        // ログイン記録 (利用状況分析・監査用)
+        void logActivity({
+          userId: dbUser.id,
+          action: "auth.login",
+          entityType: "User",
+          entityId: dbUser.id,
+          metadata: { provider: "line" },
         });
       } catch (error) {
         // ログインは止めない。次回ログイン時に再試行されるので致命的ではない。

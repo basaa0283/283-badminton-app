@@ -16,6 +16,7 @@ type AppSettings = {
   instagramUrl: string;
   youtubeUrl: string;
   waitlistPolicy: string; // "fifo" | "priority"
+  paypayPersonalId: string;
 };
 
 type SettingKey = "notifyReminderEnabled" | "notifyWaitlistEnabled";
@@ -61,6 +62,9 @@ export default function AdminPage() {
   const [savingYoutube, setSavingYoutube] = useState(false);
   const [youtubeSaved, setYoutubeSaved] = useState(false);
   const [savingPolicy, setSavingPolicy] = useState(false);
+  const [paypayIdInput, setPaypayIdInput] = useState("");
+  const [savingPaypay, setSavingPaypay] = useState(false);
+  const [paypaySaved, setPaypaySaved] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -84,6 +88,7 @@ export default function AdminPage() {
             setOfficialLineUrlInput(json.data.officialLineUrl || "");
             setInstagramUrlInput(json.data.instagramUrl || "");
             setYoutubeUrlInput(json.data.youtubeUrl || "");
+            setPaypayIdInput(json.data.paypayPersonalId || "");
           }
         });
     }
@@ -155,6 +160,29 @@ export default function AdminPage() {
       }
     } finally {
       setSavingInstagram(false);
+    }
+  };
+
+  const handleSavePaypay = async () => {
+    if (savingPaypay) return;
+    setSavingPaypay(true);
+    setPaypaySaved(false);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paypayPersonalId: paypayIdInput.trim() }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettings((prev) =>
+          prev ? { ...prev, paypayPersonalId: paypayIdInput.trim() } : prev,
+        );
+        setPaypaySaved(true);
+        setTimeout(() => setPaypaySaved(false), 2000);
+      }
+    } finally {
+      setSavingPaypay(false);
     }
   };
 
@@ -264,7 +292,17 @@ export default function AdminPage() {
               <CardContent className="py-6">
                 <div className="text-3xl mb-2">📝</div>
                 <h2 className="font-semibold text-gray-900">操作ログ</h2>
-                <p className="text-sm text-gray-500 mt-1">大会機能などの操作履歴を確認</p>
+                <p className="text-sm text-gray-500 mt-1">操作履歴を時系列で確認</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/dashboard">
+            <Card hover>
+              <CardContent className="py-6">
+                <div className="text-3xl mb-2">📊</div>
+                <h2 className="font-semibold text-gray-900">利用状況ダッシュボード</h2>
+                <p className="text-sm text-gray-500 mt-1">日別アクセス・操作件数・既読率</p>
               </CardContent>
             </Card>
           </Link>
@@ -469,6 +507,31 @@ export default function AdminPage() {
               className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
             >
               {savingYoutube ? "保存中..." : youtubeSaved ? "保存しました" : "保存"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-700">PayPay ID</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              参加費の送金先 PayPay ID。登録すると、参加費を設定した各イベントの詳細画面に「PayPay ID ◯◯ に送ってね」と表示されます。空欄なら表示しない。
+            </p>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-2">
+            <input
+              type="text"
+              value={paypayIdInput}
+              onChange={(e) => setPaypayIdInput(e.target.value)}
+              placeholder="例: tinotino"
+              className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <button
+              onClick={handleSavePaypay}
+              disabled={savingPaypay || settings === null}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
+            >
+              {savingPaypay ? "保存中..." : paypaySaved ? "保存しました" : "保存"}
             </button>
           </div>
         </div>

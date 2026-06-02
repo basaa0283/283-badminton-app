@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@/lib/permissions";
 import { isVisibleTo } from "@/lib/announcement";
+import { logActivity } from "@/lib/activity-log";
 
 // GET /api/announcements - 自分の role に届いている公開中お知らせ + 既読状態
 export async function GET() {
@@ -38,6 +39,12 @@ export async function GET() {
       createdBy: a.createdBy?.nickname ?? null,
       read: a.reads.length > 0,
     }));
+
+  void logActivity({
+    userId,
+    action: "announcement.list_view",
+    metadata: { visibleCount: visible.length },
+  });
 
   return NextResponse.json({ success: true, data: visible });
 }

@@ -72,6 +72,7 @@ interface TournamentDetail {
   // 非公開で隠した成績の件数 (admin / 本人視点では常に 0)。
   hiddenCountByClass: Record<string, number>;
   hiddenCountNoClass: number;
+  linkedEvents?: { id: string; title: string; eventDate: string }[];
 }
 
 export default function TournamentDetailPage() {
@@ -349,6 +350,22 @@ export default function TournamentDetailPage() {
               {data.prefecture ? ` ・ ${PREFECTURE_LABEL[data.prefecture as Prefecture] ?? data.prefecture}` : ""}
               {data.location ? ` ・ ${data.location}` : ""}
             </div>
+            {data.linkedEvents && data.linkedEvents.length > 0 && (
+              <div className="mt-2 text-xs rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-purple-900">
+                🏆 参加表明イベント:{" "}
+                {data.linkedEvents.map((ev, idx) => (
+                  <span key={ev.id}>
+                    <Link
+                      href={`/events/${ev.id}`}
+                      className="underline font-medium hover:no-underline"
+                    >
+                      {ev.title}
+                    </Link>
+                    {idx < data.linkedEvents!.length - 1 ? "、" : ""}
+                  </span>
+                ))}
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <dl className="text-sm space-y-1">

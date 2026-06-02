@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { updateEventSchema } from "@/lib/validations";
+import { logActivity } from "@/lib/activity-log";
 
 function isStaff(role: UserRole) {
   return role === "admin" || role === "subadmin";
@@ -49,6 +50,21 @@ export async function GET(request: NextRequest, { params }: Params) {
             },
           },
           orderBy: [{ status: "asc" }, { position: "asc" }, { createdAt: "asc" }],
+        },
+        // 大会連動イベントの場合は紐付き大会の class 一覧を併せて取得する。
+        // (Attendance フォームの「申告クラス」セレクト用)
+        linkedTournament: {
+          include: {
+            classes: {
+              where: { approvalStatus: "approved" },
+              orderBy: [{ category: "asc" }, { order: "asc" }],
+              select: {
+                id: true,
+                category: true,
+                name: true,
+              },
+            },
+          },
         },
       },
     });
@@ -112,6 +128,28 @@ export async function GET(request: NextRequest, { params }: Params) {
       }
     }
 
+    // 参加費が表示されるイベントに限り、運営の PayPay ID を併せて返す。
+    // PayPay ID が SystemSetting に登録されていなければ送らない。
+    let paypayPersonalId: string | null = null;
+    if (event.feeVisible && event.fee != null) {
+      try {
+        const row = await prisma.systemSetting.findUnique({
+          where: { key: "paypayPersonalId" },
+        });
+        const id = row?.value?.trim();
+        if (id) paypayPersonalId = id;
+      } catch {
+        // テーブル未マイグレーション等のエラーは握り潰す
+      }
+    }
+
+    void logActivity({
+      userId: session.user.id,
+      action: "event.view",
+      entityType: "Event",
+      entityId: event.id,
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -125,6 +163,8 @@ export async function GET(request: NextRequest, { params }: Params) {
         capacity: event.capacity,
         fee: event.feeVisible ? event.fee : null,
         feeVisible: event.feeVisible,
+        paypayPersonalId,
+        linkedTournamentId: event.linkedTournamentId ?? null,
         deadline: event.deadline,
         deadlineEnabled: event.deadlineEnabled,
         respondStartAt: event.respondStartAt,
@@ -181,8 +221,10 @@ export async function GET(request: NextRequest, { params }: Params) {
               status: myAttendance.status,
               comment: myAttendance.comment,
               position: myAttendance.position,
+              declaredTournamentClassId: myAttendance.declaredTournamentClassId ?? null,
             }
           : null,
+        linkedTournamentClasses: event.linkedTournament?.classes ?? [],
         attendees: canViewAttendees
           ? event.attendances.map((a) => ({
               id: a.id,
@@ -195,6 +237,7 @@ export async function GET(request: NextRequest, { params }: Params) {
               paymentStatus: canViewExpenses ? a.paymentStatus : undefined,
               paymentAmount: canViewExpenses ? a.paymentAmount : undefined,
               paymentNote: canViewExpenses ? a.paymentNote : undefined,
+              declaredTournamentClassId: a.declaredTournamentClassId ?? null,
             }))
           : null,
       },
@@ -283,6 +326,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
       data: updateData,
     });
 
+    void logActivity({
+      userId: session.user.id,
+      action: event.cancelledAt ? "event.cancel" : "event.update",
+      entityType: "Event",
+      entityId: event.id,
+      metadata: { title: event.title },
+    });
+
     return NextResponse.json({ success: true, data: event });
   } catch (error) {
     console.error("Event PUT error:", error);
@@ -323,6 +374,14 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     await prisma.event.delete({ where: { id: eventId } });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "event.delete",
+      entityType: "Event",
+      entityId: eventId,
+      metadata: { title: existing.title },
+    });
 
     return NextResponse.json({ success: true, data: { message: "イベントを削除しました" } });
   } catch (error) {

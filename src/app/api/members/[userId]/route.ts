@@ -6,6 +6,7 @@ import { permissions, UserRole, getRoleName } from "@/lib/permissions";
 import { computeAge } from "@/lib/age";
 import { adminUpdateMemberSchema } from "@/lib/validations";
 import { notifyApprovalGranted } from "@/lib/line-messaging";
+import { logActivity } from "@/lib/activity-log";
 
 interface Params {
   params: Promise<{ userId: string }>;
@@ -235,6 +236,23 @@ export async function PUT(request: NextRequest, { params }: Params) {
         appUrl,
       }).catch((err) => console.error("[member.PUT] notifyApprovalGranted failed:", err));
     }
+
+    void logActivity({
+      userId: session.user.id,
+      action:
+        existing.role === "pending" && user.role !== "pending"
+          ? "member.approve"
+          : existing.role !== user.role
+            ? "member.role_change"
+            : "member.update",
+      entityType: "User",
+      entityId: user.id,
+      metadata: {
+        targetNickname: user.nickname,
+        previousRole: existing.role,
+        newRole: user.role,
+      },
+    });
 
     // lineId はクライアントには返さない
     const { lineId: _lineId, ...userPublic } = user;

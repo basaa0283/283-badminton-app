@@ -107,10 +107,19 @@ export async function GET(_request: NextRequest, { params }: Params) {
       tournament.results = kept;
     }
 
+    // 紐付き参加表明イベント (linkedTournamentId に同じ id を指す Event) を返す。
+    // 通常 1 件だけだが、配列で返して将来の複数イベント対応も視野に入れる。
+    const linkedEvents = await prisma.event.findMany({
+      where: { linkedTournamentId: tournament.id },
+      select: { id: true, title: true, eventDate: true },
+      orderBy: { eventDate: "asc" },
+    });
+
     const sanitized = {
       ...tournament,
       hiddenCountByClass,
       hiddenCountNoClass,
+      linkedEvents,
     };
 
     void logActivity({
@@ -275,8 +284,19 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       );
     }
 
+    // 紐付きイベントの id を控えて、大会削除と一緒に削除する
+    const linkedEvents = await prisma.event.findMany({
+      where: { linkedTournamentId: tournamentId },
+      select: { id: true },
+    });
+    const linkedEventIds = linkedEvents.map((e) => e.id);
+
     // SQL Server: result の user FK が NoAction なので明示的に先に削除
     await prisma.$transaction(async (tx) => {
+      // 紐付きイベントを先に削除 (Attendance 等は cascade で消える)
+      if (linkedEventIds.length > 0) {
+        await tx.event.deleteMany({ where: { id: { in: linkedEventIds } } });
+      }
       await tx.tournamentResult.deleteMany({ where: { tournamentId } });
       await tx.tournamentClass.deleteMany({ where: { tournamentId } });
       await tx.tournament.delete({ where: { id: tournamentId } });

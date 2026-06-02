@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Header } from "@/components/layout/Header";
 import { AttendanceForm } from "@/components/events/AttendanceForm";
+import { AttendanceStatusBadge } from "@/components/ui/Badge";
 import { GuestContactCard } from "@/components/guests/GuestContactCard";
 import { AttendeeList } from "@/components/events/AttendeeList";
 import { AdminAttendanceManager } from "@/components/events/AdminAttendanceManager";
@@ -28,6 +29,8 @@ interface EventDetail {
   location: string | null;
   capacity: number | null;
   fee: number | null;
+  paypayPersonalId?: string | null;
+  linkedTournamentId?: string | null;
   feeVisible: boolean;
   deadline: string | null;
   deadlineEnabled: boolean;
@@ -50,7 +53,13 @@ interface EventDetail {
     status: string;
     comment: string | null;
     position: number | null;
+    declaredTournamentClassId?: string | null;
   } | null;
+  linkedTournamentClasses?: Array<{
+    id: string;
+    category: string;
+    name: string | null;
+  }>;
   attendees: Array<{
     id: string;
     status: string;
@@ -66,6 +75,7 @@ interface EventDetail {
     paymentStatus?: string | null;
     paymentAmount?: number | null;
     paymentNote?: string | null;
+    declaredTournamentClassId?: string | null;
   }> | null;
   expenses: {
     shuttleCount: number | null;
@@ -129,12 +139,17 @@ export default function EventDetailPage() {
 
   const handleAttendanceSubmit = async (
     attendanceStatus: "attending" | "not_attending",
-    comment: string
+    comment: string,
+    declaredTournamentClassId: string | null,
   ) => {
     const res = await fetch(`/api/events/${eventId}/attendance`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: attendanceStatus, comment }),
+      body: JSON.stringify({
+        status: attendanceStatus,
+        comment,
+        declaredTournamentClassId,
+      }),
     });
 
     const data = await res.json();
@@ -363,6 +378,26 @@ export default function EventDetailPage() {
                 </div>
               )}
 
+              {event.feeVisible && event.fee !== null && event.paypayPersonalId && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+                  💸 参加費は{" "}
+                  <span className="font-bold">PayPay ID「{event.paypayPersonalId}」</span>{" "}
+                  宛に送金してください。
+                </div>
+              )}
+
+              {event.linkedTournamentId && (
+                <div className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-sm text-purple-900">
+                  🏆 このイベントは大会の参加表明用です。{" "}
+                  <Link
+                    href={`/tournaments/${event.linkedTournamentId}`}
+                    className="font-medium underline hover:no-underline"
+                  >
+                    大会記録ページを見る →
+                  </Link>
+                </div>
+              )}
+
               {event.deadlineEnabled && event.deadline && (
                 <div
                   className={`flex items-center gap-2 ${
@@ -408,11 +443,26 @@ export default function EventDetailPage() {
                     {format(new Date(event.respondStartAt!), "M月d日(E) HH:mm", { locale: ja })}
                   </span> から受付開始です。それまでお待ちください。
                 </div>
+              ) : event.linkedTournamentId && !canEdit ? (
+                // 大会連動イベントは申込手続きの整合性のため、参加者の登録は
+                // 管理者のみが行う運用。一般メンバーは出欠表明できない。
+                <div className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-sm text-purple-900 space-y-1">
+                  <p className="font-medium">大会の参加者は管理者が登録します。</p>
+                  <p className="text-xs">
+                    出場希望や辞退の連絡は管理者までお願いします。
+                    {event.myAttendance && (
+                      <span className="block mt-1">
+                        現在の登録状況: <AttendanceStatusBadge status={event.myAttendance.status} />
+                      </span>
+                    )}
+                  </p>
+                </div>
               ) : (
                 <AttendanceForm
                   eventId={eventId}
                   currentAttendance={event.myAttendance}
                   isDeadlinePassed={!!isDeadlinePassed}
+                  tournamentClasses={event.linkedTournamentClasses}
                   onSubmit={handleAttendanceSubmit}
                 />
               )}
@@ -431,7 +481,10 @@ export default function EventDetailPage() {
               {event.attendees.length === 0 ? (
                 <p className="text-gray-500 text-sm">まだ回答がありません</p>
               ) : (
-                <AttendeeList attendees={event.attendees} />
+                <AttendeeList
+                  attendees={event.attendees}
+                  tournamentClasses={event.linkedTournamentClasses}
+                />
               )}
             </CardContent>
           </Card>
@@ -442,6 +495,7 @@ export default function EventDetailPage() {
             eventId={event.id}
             attendees={event.attendees}
             eventFee={event.fee}
+            tournamentClasses={event.linkedTournamentClasses}
             onUpdated={() => fetchEvent()}
           />
         )}

@@ -10,6 +10,7 @@ const updateSchema = z.object({
   paymentStatus: z.enum(["paid", "unpaid"]).nullable().optional(),
   paymentAmount: z.number().int().nonnegative().nullable().optional(),
   paymentNote: z.string().max(500).nullable().optional(),
+  declaredTournamentClassId: z.string().nullable().optional(),
 });
 
 interface Params {
@@ -52,6 +53,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
   if (parsed.data.paymentStatus !== undefined) data.paymentStatus = parsed.data.paymentStatus;
   if (parsed.data.paymentAmount !== undefined) data.paymentAmount = parsed.data.paymentAmount;
   if (parsed.data.paymentNote !== undefined) data.paymentNote = parsed.data.paymentNote;
+  if (parsed.data.declaredTournamentClassId !== undefined) {
+    data.declaredTournamentClassId = parsed.data.declaredTournamentClassId;
+  }
 
   // 「受取済み」に切り替えた瞬間の event.fee を snapshot し、後で event.fee が
   // 変わっても受取金額が連動しないようにする。

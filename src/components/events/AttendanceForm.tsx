@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { AttendanceStatusBadge } from "@/components/ui/Badge";
+import { Select } from "@/components/ui/Select";
 
 interface AttendanceFormProps {
   eventId: string;
@@ -10,14 +11,27 @@ interface AttendanceFormProps {
     status: string;
     comment: string | null;
     position: number | null;
+    declaredTournamentClassId?: string | null;
   } | null;
   isDeadlinePassed: boolean;
-  onSubmit: (status: "attending" | "not_attending", comment: string) => Promise<void>;
+  // 大会連動イベントの場合、紐付き大会の TournamentClass 一覧。空 or 未指定なら
+  // 申告クラスの UI は表示しない。
+  tournamentClasses?: {
+    id: string;
+    category: string;
+    name: string | null;
+  }[];
+  onSubmit: (
+    status: "attending" | "not_attending",
+    comment: string,
+    declaredTournamentClassId: string | null,
+  ) => Promise<void>;
 }
 
 export function AttendanceForm({
   currentAttendance,
   isDeadlinePassed,
+  tournamentClasses,
   onSubmit,
 }: AttendanceFormProps) {
   const initialStatus =
@@ -26,14 +40,23 @@ export function AttendanceForm({
       : null;
   const [status, setStatus] = useState<"attending" | "not_attending" | null>(initialStatus);
   const [comment, setComment] = useState(currentAttendance?.comment || "");
+  const [declaredClassId, setDeclaredClassId] = useState<string>(
+    currentAttendance?.declaredTournamentClassId ?? "",
+  );
   const [loading, setLoading] = useState(false);
+
+  const hasClasses = (tournamentClasses?.length ?? 0) > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!status) return;
     setLoading(true);
     try {
-      await onSubmit(status, comment);
+      // 不参加なら申告クラスは null に
+      const sendClass = status === "attending" && hasClasses && declaredClassId
+        ? declaredClassId
+        : null;
+      await onSubmit(status, comment, sendClass);
     } finally {
       setLoading(false);
     }
@@ -82,6 +105,29 @@ export function AttendanceForm({
           </button>
         </div>
       </div>
+
+      {status === "attending" && hasClasses && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            出場予定クラス (申告)
+          </label>
+          <Select
+            value={declaredClassId}
+            onChange={setDeclaredClassId}
+            options={[
+              { value: "", label: "未申告" },
+              ...(tournamentClasses ?? []).map((c) => ({
+                value: c.id,
+                label: `${c.category}${c.name ? ` ${c.name}` : ""}`,
+              })),
+            ]}
+            placeholder="未申告"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            参加するクラスを 1 つ選んでください (任意)。複数出場する場合はコメントに記入してください。
+          </p>
+        </div>
+      )}
 
       <div>
         <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">

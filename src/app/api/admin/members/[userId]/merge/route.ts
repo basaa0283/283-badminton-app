@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-log";
 
 const mergeSchema = z.object({
   provisionalUserId: z.string().min(1),
@@ -128,6 +129,18 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
       // 仮アカウント本体を削除
       await tx.user.delete({ where: { id: provisionalUserId } });
+    });
+
+    void logActivity({
+      userId: session.user.id,
+      action: "member.merge",
+      entityType: "User",
+      entityId: userId,
+      metadata: {
+        keptUserId: userId,
+        mergedFromUserId: provisionalUserId,
+        mergedRole: provisionalUser.role,
+      },
     });
 
     return NextResponse.json({ success: true });

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 
 interface Attendee {
   id: string;
@@ -12,12 +13,22 @@ interface Attendee {
   paymentStatus?: string | null;
   paymentAmount?: number | null;
   paymentNote?: string | null;
+  declaredTournamentClassId?: string | null;
+}
+
+interface TournamentClassOption {
+  id: string;
+  category: string;
+  name: string | null;
 }
 
 interface AdminAttendanceManagerProps {
   eventId: string;
   attendees: Attendee[];
   eventFee: number | null;
+  // 大会連動イベントの場合、紐付き大会の class 一覧。空 / 未指定なら申告クラス
+  // UI は表示しない。
+  tournamentClasses?: TournamentClassOption[];
   onUpdated: () => void;
 }
 
@@ -31,6 +42,7 @@ interface RowState {
   status: string;
   isPaid: boolean;
   amountInput: string; // 空欄なら event.fee 採用 (null)
+  declaredClassId: string; // "" なら未申告 (null 扱い)
 }
 
 function rowFromAttendee(a: Attendee): RowState {
@@ -41,7 +53,12 @@ function rowFromAttendee(a: Attendee): RowState {
       a.paymentAmount !== null && a.paymentAmount !== undefined
         ? a.paymentAmount.toString()
         : "",
+    declaredClassId: a.declaredTournamentClassId ?? "",
   };
+}
+
+function classLabel(c: TournamentClassOption): string {
+  return `${c.category}${c.name ? ` ${c.name}` : ""}`;
 }
 
 function parseAmount(input: string): number | null {
@@ -55,8 +72,11 @@ export function AdminAttendanceManager({
   eventId,
   attendees,
   eventFee,
+  tournamentClasses,
   onUpdated,
 }: AdminAttendanceManagerProps) {
+  const hasClasses = (tournamentClasses?.length ?? 0) > 0;
+  const [addingDeclaredClassId, setAddingDeclaredClassId] = useState("");
   // 現在の編集中ローカル状態
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -86,7 +106,13 @@ export function AdminAttendanceManager({
     if (!r) return false;
     const origPaid = a.paymentStatus === "paid";
     const origAmt = a.paymentAmount ?? null;
-    return r.status !== a.status || r.isPaid !== origPaid || parseAmount(r.amountInput) !== origAmt;
+    const origClassId = a.declaredTournamentClassId ?? "";
+    return (
+      r.status !== a.status ||
+      r.isPaid !== origPaid ||
+      parseAmount(r.amountInput) !== origAmt ||
+      r.declaredClassId !== origClassId
+    );
   };
 
   const dirtyCount = attendees.filter(isDirty).length;
@@ -103,6 +129,7 @@ export function AdminAttendanceManager({
           status?: "attending" | "not_attending" | "observing";
           paymentStatus?: "paid" | "unpaid" | null;
           paymentAmount?: number | null;
+          declaredTournamentClassId?: string | null;
         } = {};
         if (
           r.status !== a.status &&
@@ -115,6 +142,10 @@ export function AdminAttendanceManager({
         const newAmt = parseAmount(r.amountInput);
         const origAmt = a.paymentAmount ?? null;
         if (newAmt !== origAmt) body.paymentAmount = newAmt;
+        const origClassId = a.declaredTournamentClassId ?? "";
+        if (r.declaredClassId !== origClassId) {
+          body.declaredTournamentClassId = r.declaredClassId || null;
+        }
         await fetch(`/api/events/${eventId}/attendances/${a.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -133,9 +164,14 @@ export function AdminAttendanceManager({
     await fetch(`/api/events/${eventId}/attendances`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: selectedUserId, status: "attending" }),
+      body: JSON.stringify({
+        userId: selectedUserId,
+        status: "attending",
+        declaredTournamentClassId: hasClasses && addingDeclaredClassId ? addingDeclaredClassId : null,
+      }),
     });
     setSelectedUserId("");
+    setAddingDeclaredClassId("");
     setAddingMember(false);
     onUpdated();
   };
@@ -170,11 +206,34 @@ export function AdminAttendanceManager({
                 </option>
               ))}
             </select>
+            {hasClasses && (
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">
+                  出場予定クラス (任意)
+                </label>
+                <Select
+                  value={addingDeclaredClassId}
+                  onChange={setAddingDeclaredClassId}
+                  options={[
+                    { value: "", label: "未申告" },
+                    ...(tournamentClasses ?? []).map((c) => ({
+                      value: c.id,
+                      label: classLabel(c),
+                    })),
+                  ]}
+                  placeholder="未申告"
+                />
+              </div>
+            )}
             <div className="flex gap-2">
               <Button
                 variant="secondary"
                 className="flex-1 text-sm"
-                onClick={() => { setAddingMember(false); setSelectedUserId(""); }}
+                onClick={() => {
+                  setAddingMember(false);
+                  setSelectedUserId("");
+                  setAddingDeclaredClassId("");
+                }}
               >
                 キャンセル
               </Button>
@@ -199,9 +258,13 @@ export function AdminAttendanceManager({
                   row={r}
                   eventFee={eventFee}
                   dirty={dirty}
+                  tournamentClasses={tournamentClasses}
                   onChangeStatus={(status) => updateRow(a.id, { status })}
                   onTogglePaid={() => updateRow(a.id, { isPaid: !r.isPaid })}
                   onChangeAmount={(amountInput) => updateRow(a.id, { amountInput })}
+                  onChangeDeclaredClass={(declaredClassId) =>
+                    updateRow(a.id, { declaredClassId })
+                  }
                 />
               );
             })}
@@ -233,20 +296,25 @@ function AttendeeRow({
   row,
   eventFee,
   dirty,
+  tournamentClasses,
   onChangeStatus,
   onTogglePaid,
   onChangeAmount,
+  onChangeDeclaredClass,
 }: {
   attendee: Attendee;
   row: RowState;
   eventFee: number | null;
   dirty: boolean;
+  tournamentClasses?: TournamentClassOption[];
   onChangeStatus: (status: "attending" | "not_attending" | "observing") => void;
   onTogglePaid: () => void;
   onChangeAmount: (amountInput: string) => void;
+  onChangeDeclaredClass: (declaredClassId: string) => void;
 }) {
   const isAttending = row.status === "attending";
   const isObserving = row.status === "observing";
+  const hasClasses = (tournamentClasses?.length ?? 0) > 0;
 
   return (
     <div
@@ -331,6 +399,24 @@ function AttendeeRow({
             />
             <span className="text-xs text-gray-500">円</span>
           </div>
+        </div>
+      )}
+
+      {isAttending && hasClasses && (
+        <div className="mt-2">
+          <label className="block text-xs text-gray-500 mb-1">出場予定クラス</label>
+          <Select
+            value={row.declaredClassId}
+            onChange={onChangeDeclaredClass}
+            options={[
+              { value: "", label: "未申告" },
+              ...(tournamentClasses ?? []).map((c) => ({
+                value: c.id,
+                label: classLabel(c),
+              })),
+            ]}
+            placeholder="未申告"
+          />
         </div>
       )}
     </div>
