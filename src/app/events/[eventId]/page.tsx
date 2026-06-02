@@ -481,7 +481,10 @@ export default function EventDetailPage() {
               {event.attendees.length === 0 ? (
                 <p className="text-gray-500 text-sm">まだ回答がありません</p>
               ) : (
-                <AttendeeList attendees={event.attendees} />
+                <AttendeeList
+                  attendees={event.attendees}
+                  tournamentClasses={event.linkedTournamentClasses}
+                />
               )}
             </CardContent>
           </Card>
