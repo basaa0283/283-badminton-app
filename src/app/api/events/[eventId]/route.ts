@@ -237,6 +237,7 @@ export async function GET(request: NextRequest, { params }: Params) {
               paymentStatus: canViewExpenses ? a.paymentStatus : undefined,
               paymentAmount: canViewExpenses ? a.paymentAmount : undefined,
               paymentNote: canViewExpenses ? a.paymentNote : undefined,
+              declaredTournamentClassId: a.declaredTournamentClassId ?? null,
             }))
           : null,
       },

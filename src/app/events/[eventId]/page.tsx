@@ -75,6 +75,7 @@ interface EventDetail {
     paymentStatus?: string | null;
     paymentAmount?: number | null;
     paymentNote?: string | null;
+    declaredTournamentClassId?: string | null;
   }> | null;
   expenses: {
     shuttleCount: number | null;
@@ -491,6 +492,7 @@ export default function EventDetailPage() {
             eventId={event.id}
             attendees={event.attendees}
             eventFee={event.fee}
+            tournamentClasses={event.linkedTournamentClasses}
             onUpdated={() => fetchEvent()}
           />
         )}

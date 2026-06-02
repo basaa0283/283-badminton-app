@@ -9,6 +9,8 @@ const createSchema = z.object({
   userId: z.string().min(1),
   // 代理での出欠付与は「参加 / 不参加 / 見学」の3択。waitlist は内部状態なので外部から指定不可。
   status: z.enum(["attending", "not_attending", "observing"]),
+  // 大会連動イベントの場合、申告クラス (TournamentClass.id) も同時に指定可能。
+  declaredTournamentClassId: z.string().nullable().optional(),
 });
 
 interface Params {
@@ -45,16 +47,31 @@ export async function POST(request: NextRequest, { params }: Params) {
     where: { userId_eventId: { userId: parsed.data.userId, eventId } },
   });
 
+  // 申告クラスは attending の時だけ意味があるので、それ以外は null に。
+  const declaredClassId =
+    parsed.data.status === "attending"
+      ? parsed.data.declaredTournamentClassId ?? null
+      : null;
+
   if (existing) {
     const updated = await prisma.attendance.update({
       where: { id: existing.id },
-      data: { status: parsed.data.status, position: null },
+      data: {
+        status: parsed.data.status,
+        position: null,
+        declaredTournamentClassId: declaredClassId,
+      },
     });
     return NextResponse.json({ success: true, data: updated });
   }
 
   const created = await prisma.attendance.create({
-    data: { userId: parsed.data.userId, eventId, status: parsed.data.status },
+    data: {
+      userId: parsed.data.userId,
+      eventId,
+      status: parsed.data.status,
+      declaredTournamentClassId: declaredClassId,
+    },
   });
 
   await prisma.attendanceHistory.create({
