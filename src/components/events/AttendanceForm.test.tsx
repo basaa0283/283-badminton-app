@@ -122,7 +122,7 @@ describe("AttendanceForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "参加" }));
     await userEvent.click(screen.getByRole("button", { name: "回答を送信する" }));
 
-    expect(onSubmit).toHaveBeenCalledWith("attending", "");
+    expect(onSubmit).toHaveBeenCalledWith("attending", "", null);
   });
 
   it("コメント入力後に submit するとコメントも渡される", async () => {
@@ -139,7 +139,7 @@ describe("AttendanceForm", () => {
     await userEvent.type(screen.getByPlaceholderText("遅れます、途中退出など"), "5分遅刻");
     await userEvent.click(screen.getByRole("button", { name: "回答を送信する" }));
 
-    expect(onSubmit).toHaveBeenCalledWith("attending", "5分遅刻");
+    expect(onSubmit).toHaveBeenCalledWith("attending", "5分遅刻", null);
   });
 
   it("文字数カウンタが表示される", async () => {

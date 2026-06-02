@@ -119,6 +119,11 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const finalStatus = status === "waitlist" ? "waitlist" : parsed.data.status;
 
+    // 大会連動イベントの場合のみ意味を持つ申告クラス。それ以外なら null。
+    // attending でない (= 不参加) の場合も保存しない。
+    const declaredClassId =
+      finalStatus === "attending" ? parsed.data.declaredTournamentClassId ?? null : null;
+
     if (existingAttendance) {
       // 更新
       await prisma.attendance.update({
@@ -127,6 +132,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           status: finalStatus,
           comment: parsed.data.comment || null,
           position: status === "waitlist" ? position : null,
+          declaredTournamentClassId: declaredClassId,
         },
       });
     } else {
@@ -138,6 +144,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           status: finalStatus,
           comment: parsed.data.comment || null,
           position: status === "waitlist" ? position : null,
+          declaredTournamentClassId: declaredClassId,
         },
       });
     }

@@ -224,11 +224,18 @@ model Event {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // 紐付く大会 (任意)。大会登録時に「参加表明用イベントを作る」を選ぶと
+  // セットされる。
+  linkedTournamentId String?
+  linkedTournament   Tournament? @relation("EventTournamentLink", fields: [linkedTournamentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   // リレーション
   createdBy           User         @relation("EventCreator", fields: [createdById], references: [id])
   attendances         Attendance[]
   attendanceHistories AttendanceHistory[]
   messages            Message[]
+
+  @@index([linkedTournamentId])
 }
 
 // 出欠
@@ -239,6 +246,9 @@ model Attendance {
   status      String   // attending / not_attending / waitlist
   comment     String?  @db.NVarChar(500) // コメント
   position    Int?     // キャンセル待ち順（waitlistの場合）
+
+  // 大会連動イベント時の申告クラス (TournamentClass.id を保管、参照整合性は強制せず)
+  declaredTournamentClassId String?
 
   // 参加費 (admin が attending メンバーごとに記録)
   paymentStatus String? // paid / unpaid (null = 未確認)
@@ -331,6 +341,7 @@ model Tournament {
   createdBy User                @relation("TournamentCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   classes   TournamentClass[]
   results   TournamentResult[]
+  linkedEvents Event[]           @relation("EventTournamentLink")
 
   @@index([heldAt])
   @@index([createdById])

@@ -199,15 +199,58 @@ export async function POST(request: NextRequest) {
       ].join("\n"),
     }).catch((err) => console.error("[tournaments] approval mail failed:", err));
 
+    // 「参加表明用のイベントも作る」がオンで、かつ開催日が未来 (or 今日)
+    // の場合は Event を自動生成して紐付ける。
+    // タイトル / 開催日 / 場所 は大会から流用。種別タグ「大会」があれば紐付け。
+    let createdEvent: { id: string } | null = null;
+    const heldAt = new Date(parsed.data.heldAt);
+    const isFutureOrToday = heldAt.getTime() >= Date.now() - 24 * 3600 * 1000;
+    if (parsed.data.createLinkedEvent && isFutureOrToday) {
+      try {
+        const tournamentCategory = await prisma.eventCategory.findFirst({
+          where: { name: "大会" },
+        });
+        const event = await prisma.event.create({
+          data: {
+            title: tournament.name,
+            description: tournament.description ?? null,
+            eventDate: heldAt,
+            isAllDay: true,
+            location: tournament.location ?? null,
+            categoryId: tournamentCategory?.id ?? null,
+            linkedTournamentId: tournament.id,
+            createdById: session.user.id,
+          },
+        });
+        createdEvent = { id: event.id };
+        void logActivity({
+          userId: session.user.id,
+          action: "event.create",
+          entityType: "Event",
+          entityId: event.id,
+          metadata: { title: event.title, linkedTournamentId: tournament.id, viaTournament: true },
+        });
+      } catch (err) {
+        console.error("[tournaments] linked event create failed:", err);
+      }
+    }
+
     void logActivity({
       userId: session.user.id,
       action: "tournament.create",
       entityType: "Tournament",
       entityId: tournament.id,
-      metadata: { name: tournament.name, classCount: parsed.data.classes?.length ?? 0 },
+      metadata: {
+        name: tournament.name,
+        classCount: parsed.data.classes?.length ?? 0,
+        linkedEventCreated: createdEvent !== null,
+      },
     });
 
-    return NextResponse.json({ success: true, data: tournament }, { status: 201 });
+    return NextResponse.json(
+      { success: true, data: { ...tournament, linkedEventId: createdEvent?.id ?? null } },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Tournaments POST error:", error);
     return NextResponse.json(

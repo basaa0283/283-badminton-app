@@ -46,6 +46,8 @@ export const attendanceSchema = z.object({
     message: "参加または不参加を選択してください",
   }),
   comment: z.string().max(200, "コメントは200文字以内で入力してください").optional(),
+  // 大会連動イベントの場合のみ意味を持つ。指定なしは未申告として扱う。
+  declaredTournamentClassId: z.string().nullable().optional(),
 });
 
 // プロフィール更新スキーマ
@@ -114,6 +116,9 @@ export const tournamentInputSchema = z.object({
   location: z.string().max(200).optional().nullable(),
   description: z.string().max(2000).optional().nullable(),
   classes: z.array(tournamentClassInputSchema).max(60).optional().default([]),
+  // 「参加表明用のイベントも作る」フラグ。デフォルト false。
+  // true かつ heldAt が未来日付の時、Tournament 作成と同時に紐付き Event を作る。
+  createLinkedEvent: z.boolean().optional().default(false),
 });
 
 // 大会成績作成/更新スキーマ

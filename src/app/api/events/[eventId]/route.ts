@@ -51,6 +51,21 @@ export async function GET(request: NextRequest, { params }: Params) {
           },
           orderBy: [{ status: "asc" }, { position: "asc" }, { createdAt: "asc" }],
         },
+        // 大会連動イベントの場合は紐付き大会の class 一覧を併せて取得する。
+        // (Attendance フォームの「申告クラス」セレクト用)
+        linkedTournament: {
+          include: {
+            classes: {
+              where: { approvalStatus: "approved" },
+              orderBy: [{ category: "asc" }, { order: "asc" }],
+              select: {
+                id: true,
+                category: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -149,6 +164,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         fee: event.feeVisible ? event.fee : null,
         feeVisible: event.feeVisible,
         paypayPersonalId,
+        linkedTournamentId: event.linkedTournamentId ?? null,
         deadline: event.deadline,
         deadlineEnabled: event.deadlineEnabled,
         respondStartAt: event.respondStartAt,
@@ -205,8 +221,10 @@ export async function GET(request: NextRequest, { params }: Params) {
               status: myAttendance.status,
               comment: myAttendance.comment,
               position: myAttendance.position,
+              declaredTournamentClassId: myAttendance.declaredTournamentClassId ?? null,
             }
           : null,
+        linkedTournamentClasses: event.linkedTournament?.classes ?? [],
         attendees: canViewAttendees
           ? event.attendances.map((a) => ({
               id: a.id,
