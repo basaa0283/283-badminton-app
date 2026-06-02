@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Header } from "@/components/layout/Header";
 import { AttendanceForm } from "@/components/events/AttendanceForm";
+import { AttendanceStatusBadge } from "@/components/ui/Badge";
 import { GuestContactCard } from "@/components/guests/GuestContactCard";
 import { AttendeeList } from "@/components/events/AttendeeList";
 import { AdminAttendanceManager } from "@/components/events/AdminAttendanceManager";
@@ -440,6 +441,20 @@ export default function EventDetailPage() {
                   この出欠は <span className="font-medium">
                     {format(new Date(event.respondStartAt!), "M月d日(E) HH:mm", { locale: ja })}
                   </span> から受付開始です。それまでお待ちください。
+                </div>
+              ) : event.linkedTournamentId && !canEdit ? (
+                // 大会連動イベントは申込手続きの整合性のため、参加者の登録は
+                // 管理者のみが行う運用。一般メンバーは出欠表明できない。
+                <div className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-sm text-purple-900 space-y-1">
+                  <p className="font-medium">大会の参加者は管理者が登録します。</p>
+                  <p className="text-xs">
+                    出場希望や辞退の連絡は管理者までお願いします。
+                    {event.myAttendance && (
+                      <span className="block mt-1">
+                        現在の登録状況: <AttendanceStatusBadge status={event.myAttendance.status} />
+                      </span>
+                    )}
+                  </p>
                 </div>
               ) : (
                 <AttendanceForm

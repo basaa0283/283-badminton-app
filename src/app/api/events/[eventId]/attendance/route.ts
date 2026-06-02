@@ -72,6 +72,22 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
+    // 大会連動イベント (linkedTournamentId が non-null) は、申込手続きの整合性を
+    // 守るため、参加者の登録/編集は管理者のみが行う運用にする。
+    // 一般メンバー本人の出欠 POST は 403 で弾く (代理 API 経由ならここに来ない)。
+    if (event.linkedTournamentId && !permissions.canEditEvent(role)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN_TOURNAMENT_EVENT",
+            message: "大会の参加者登録は管理者のみが行えます",
+          },
+        },
+        { status: 403 },
+      );
+    }
+
     // 締め切りチェック
     if (event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date()) {
       return NextResponse.json(
