@@ -97,6 +97,17 @@ export async function GET(request: NextRequest, { params }: Params) {
       pastAttendanceCount,
     };
 
+    // 自分自身の閲覧はログから除外 (回遊ノイズになる)
+    if (session.user.id !== userId) {
+      void logActivity({
+        userId: session.user.id,
+        action: "member.view",
+        entityType: "User",
+        entityId: userId,
+        metadata: { targetNickname: user.nickname },
+      });
+    }
+
     // 管理者権限の場合、追加の管理者専用フィールドを含める
     if (isAdmin) {
       responseData.firstName = user.firstName;

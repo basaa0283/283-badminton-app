@@ -26,7 +26,9 @@ function withAge<T extends { birthdate: Date | null }>(user: T) {
 }
 
 // GET /api/profile - 自分のプロフィール取得
-export async function GET() {
+// ?fromPage=1 を付けた呼び出しのみ profile.view を記録する。
+// (ProfileCompletionBanner など回遊チェック系の呼び出しでログが肥大化するのを避けるため)
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -46,6 +48,13 @@ export async function GET() {
         { success: false, error: { code: "NOT_FOUND", message: "ユーザーが見つかりません" } },
         { status: 404 }
       );
+    }
+
+    if (request.nextUrl.searchParams.get("fromPage") === "1") {
+      void logActivity({
+        userId: session.user.id,
+        action: "profile.view",
+      });
     }
 
     return NextResponse.json({ success: true, data: withAge(user) });

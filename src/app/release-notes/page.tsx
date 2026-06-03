@@ -2,6 +2,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { RELEASE_NOTES } from "@/lib/release-notes";
+import { LogPageView } from "@/components/analytics/LogPageView";
 
 export const metadata = {
   title: "更新履歴 | 283バドミントン",
@@ -17,6 +18,7 @@ const LABEL_STYLE: Record<string, string> = {
 export default function ReleaseNotesPage() {
   return (
     <div className="min-h-screen bg-gray-100">
+      <LogPageView action="release_notes.view" />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-4">
           <Link href="/" className="text-blue-600 text-sm hover:underline">

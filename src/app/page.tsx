@@ -9,6 +9,7 @@ import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanne
 import { AdminAlertsBanner } from "@/components/admin/AdminAlertsBanner";
 import { ProfileCompletionBanner } from "@/components/home/ProfileCompletionBanner";
 import { permissions, UserRole } from "@/lib/permissions";
+import { useLogPageView } from "@/lib/use-log-page-view";
 
 interface PublicLinks {
   officialLineUrl: string;
@@ -20,6 +21,7 @@ export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [links, setLinks] = useState<PublicLinks | null>(null);
+  useLogPageView("home.view");
 
   useEffect(() => {
     if (status === "unauthenticated") {

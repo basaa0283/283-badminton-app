@@ -22,6 +22,13 @@ import { permissions, UserRole } from "@/lib/permissions";
 
 type AccessRow = { day: string; logins: number };
 type ActionRow = { day: string } & Record<string, number | string>;
+type ViewRow = { day: string; pv: number };
+type ViewsByPageRow = {
+  action: string;
+  label: string;
+  last30: number;
+  last7: number;
+};
 type AnnouncementRow = {
   id: string;
   title: string;
@@ -34,6 +41,8 @@ type AnalyticsData = {
   accessByDay: AccessRow[];
   actionsByDay: ActionRow[];
   trackedActions: string[];
+  viewsByDay: ViewRow[];
+  viewsByPage: ViewsByPageRow[];
   activeUsers: { last7: number; last30: number };
   announcements: AnnouncementRow[];
 };
@@ -159,6 +168,85 @@ export default function AdminDashboardPage() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  日別ページビュー (直近 30 日)
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  ホーム / イベント / 大会 / メンバー詳細などの閲覧件数合算
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data.viewsByDay} margin={{ left: -16, right: 8, top: 8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                      <XAxis dataKey="day" tickFormatter={fmtDate} fontSize={11} stroke="#9CA3AF" />
+                      <YAxis allowDecimals={false} fontSize={11} stroke="#9CA3AF" />
+                      <Tooltip
+                        labelFormatter={(v) => fmtDate(String(v))}
+                        formatter={(v) => [`${Number(v)} 件`, "PV"] as [string, string]}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="pv"
+                        stroke="#10B981"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  ページ別ページビュー (直近 30 日)
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  どのページがよく見られているかランキング
+                </p>
+              </CardHeader>
+              <CardContent>
+                {data.viewsByPage.every((v) => v.last30 === 0) ? (
+                  <p className="text-sm text-gray-500">まだ閲覧ログがありません。</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {(() => {
+                      const max = Math.max(1, ...data.viewsByPage.map((v) => v.last30));
+                      return data.viewsByPage.map((v) => {
+                        const pct = Math.round((v.last30 / max) * 100);
+                        return (
+                          <li key={v.action} className="text-sm">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="font-medium text-gray-900 truncate flex-1">
+                                {v.label}
+                              </span>
+                              <span className="text-xs text-gray-500 shrink-0">
+                                {v.last30} 件 (うち 7 日: {v.last7})
+                              </span>
+                            </div>
+                            <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </li>
+                        );
+                      });
+                    })()}
+                  </ul>
+                )}
+                <p className="text-xs text-gray-400 mt-3">
+                  メンバー詳細は「誰が誰のページを見たか」が個別ログに残ります (操作ログから検索可)。
+                </p>
               </CardContent>
             </Card>
 
