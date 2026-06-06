@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { AttendanceStatusBadge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { getRoleName, UserRole } from "@/lib/permissions";
 
 interface EventCardProps {
   event: {
@@ -20,6 +22,8 @@ interface EventCardProps {
     waitlistCount: number;
     deadline: Date | string | null;
     deadlineEnabled: boolean;
+    minViewRole?: string;
+    minRespondRole?: string;
     category?: {
       id: string;
       name: string;
@@ -32,6 +36,31 @@ interface EventCardProps {
       position: number | null;
     } | null;
   };
+}
+
+// admin / subadmin に対し、イベントの閲覧/回答最低権限を 1 行で示すバッジ。
+// 一般メンバーには出さない (運営者にしか意味がない情報)。
+function PermissionBadges({
+  minViewRole,
+  minRespondRole,
+}: {
+  minViewRole?: string;
+  minRespondRole?: string;
+}) {
+  const { data: session } = useSession();
+  const role = session?.user?.role as UserRole | undefined;
+  const isAdmin = role === "admin" || role === "subadmin";
+  if (!isAdmin || !minViewRole || !minRespondRole) return null;
+  return (
+    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+      <span className="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">
+        👁 閲覧 {getRoleName(minViewRole as UserRole)}+
+      </span>
+      <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
+        ✍ 回答 {getRoleName(minRespondRole as UserRole)}+
+      </span>
+    </div>
+  );
 }
 
 export function EventCard({ event }: EventCardProps) {
@@ -149,6 +178,11 @@ export function EventCard({ event }: EventCardProps) {
               キャンセル待ち {event.myAttendance.position}番目
             </div>
           )}
+
+          <PermissionBadges
+            minViewRole={event.minViewRole}
+            minRespondRole={event.minRespondRole}
+          />
         </CardContent>
       </Card>
     </Link>

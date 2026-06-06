@@ -109,6 +109,8 @@ export async function GET(request: NextRequest) {
         feeVisible: event.feeVisible,
         deadline: event.deadline,
         deadlineEnabled: event.deadlineEnabled,
+        minViewRole: event.minViewRole,
+        minRespondRole: event.minRespondRole,
         category: event.category
           ? {
               id: event.category.id,
