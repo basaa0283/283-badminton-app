@@ -23,11 +23,15 @@ export async function GET() {
       );
     }
 
-    const pendingCount = await prisma.user.count({ where: { role: "pending" } });
+    // 保留中 (holdAt != null) は別バケツでカウントし、TOP バナーには出さない。
+    const [pendingCount, heldCount] = await Promise.all([
+      prisma.user.count({ where: { role: "pending", holdAt: null } }),
+      prisma.user.count({ where: { role: "pending", holdAt: { not: null } } }),
+    ]);
 
     return NextResponse.json({
       success: true,
-      data: { pendingCount },
+      data: { pendingCount, heldCount },
     });
   } catch (error) {
     console.error("GET /api/admin/alerts error:", error);

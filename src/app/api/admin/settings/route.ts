@@ -17,6 +17,9 @@ const STRING_KEYS = [
   // あるが、PayPay ID は半永久的に固定なので、これを 1 つ持って全イベント
   // で「ここに送ってね」と案内する。
   "paypayPersonalId",
+  // 参加リクエスト保留時に LINE で送るテンプレ文。空のときは
+  // src/lib/line-messaging.ts の HOLD_REPLY_DEFAULT が使われる。
+  "holdReplyMessage",
 ] as const;
 type BooleanKey = (typeof BOOLEAN_KEYS)[number];
 type StringKey = (typeof STRING_KEYS)[number];

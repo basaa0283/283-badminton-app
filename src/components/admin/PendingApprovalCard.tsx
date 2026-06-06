@@ -9,6 +9,8 @@ export interface PendingMember {
   nickname: string;
   profileImageUrl: string | null;
   createdAt?: string | null;
+  holdAt?: string | null;
+  holdMessageSentAt?: string | null;
 }
 
 interface PendingApprovalCardProps {
@@ -24,6 +26,8 @@ const ROLE_LABEL: Record<AssignableRole, string> = {
   member: "一般メンバー",
 };
 
+const HOLD_LIMIT_DAYS = 60;
+
 interface MergeCandidate {
   id: string;
   nickname: string;
@@ -31,14 +35,23 @@ interface MergeCandidate {
   profileImageUrl: string | null;
 }
 
+// 保留中ユーザーは別アコーディオンで切り出す。
+// 60 日経過すると「cleanup-held」バッチで自動却下される。
+function daysSince(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 3600 * 1000));
+}
+
 /**
- * 承認待ちユーザーの一覧と承認/却下/マージ UI。
+ * 承認待ちユーザーの一覧と承認/却下/マージ/保留 UI。
  * - 承認: PUT /api/members/[id] で role を guest/visitor/member に変更
  * - 却下: DELETE /api/admin/members/[id] でアカウントごと削除
  * - マージ: PUT /api/admin/members/[id]/merge で既存仮アカと統合
+ * - 保留: POST /api/admin/members/[id]/hold で holdAt セット + LINE 返信
+ * 保留中ユーザーは別セクションで折りたたみ表示。60 日経過で自動却下される。
  */
 export function PendingApprovalCard({ pendingMembers, onChanged }: PendingApprovalCardProps) {
   const [candidates, setCandidates] = useState<MergeCandidate[]>([]);
+  const [showHeld, setShowHeld] = useState(false);
 
   useEffect(() => {
     if (pendingMembers.length === 0) return;
@@ -58,31 +71,71 @@ export function PendingApprovalCard({ pendingMembers, onChanged }: PendingApprov
     })();
   }, [pendingMembers]);
 
+  const active = pendingMembers.filter((m) => !m.holdAt);
+  const held = pendingMembers.filter((m) => m.holdAt);
+
   if (pendingMembers.length === 0) return null;
 
   return (
-    <Card className="mb-4 border-2 border-amber-300">
-      <CardHeader>
-        <h2 className="text-sm font-bold text-amber-900">
-          承認待ち ({pendingMembers.length})
-        </h2>
-        <p className="text-xs text-gray-600 mt-1">
-          新規登録ユーザーは承認するまで本アプリを利用できません。ロールを付与して承認するか、却下してください。事前に作成した仮アカウントがある場合はマージできます。
-        </p>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {pendingMembers.map((m) => (
-            <PendingMemberRow
-              key={m.id}
-              member={m}
-              candidates={candidates}
-              onChanged={onChanged}
-            />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      {active.length > 0 && (
+        <Card className="mb-4 border-2 border-amber-300">
+          <CardHeader>
+            <h2 className="text-sm font-bold text-amber-900">
+              承認待ち ({active.length})
+            </h2>
+            <p className="text-xs text-gray-600 mt-1">
+              ロールを付与して承認・却下・保留・マージのいずれかで対応してください。事前に作成した仮アカウントがある場合はマージできます。
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {active.map((m) => (
+                <PendingMemberRow
+                  key={m.id}
+                  member={m}
+                  candidates={candidates}
+                  onChanged={onChanged}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {held.length > 0 && (
+        <Card className="mb-4 border border-gray-300">
+          <CardHeader>
+            <button
+              type="button"
+              onClick={() => setShowHeld((v) => !v)}
+              className="w-full flex items-center justify-between text-left"
+            >
+              <span className="text-sm font-bold text-gray-700">
+                保留中 ({held.length})
+              </span>
+              <span className="text-xs text-gray-500">
+                {showHeld ? "閉じる" : "開く"} {showHeld ? "▲" : "▼"}
+              </span>
+            </button>
+            {showHeld && (
+              <p className="text-xs text-gray-600 mt-1">
+                LINE 返信を送って情報待ちのユーザー。60 日経過すると自動却下されます (手動実行は管理画面下部の「保留クリーンアップ」)。
+              </p>
+            )}
+          </CardHeader>
+          {showHeld && (
+            <CardContent>
+              <div className="space-y-2">
+                {held.map((m) => (
+                  <HeldMemberRow key={m.id} member={m} onChanged={onChanged} />
+                ))}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+    </>
   );
 }
 
@@ -175,6 +228,35 @@ function PendingMemberRow({
     }
   };
 
+  const hold = async () => {
+    if (
+      !confirm(
+        `${member.nickname} さんを保留にします。\n` +
+          `・LINE に「初参加時の必要事項と参加希望日を送ってください」とテンプレ返信します\n` +
+          `・TOP の参加リクエスト通知から外れます\n` +
+          `・60 日後に自動却下されます\n` +
+          "実行しますか？"
+      )
+    ) {
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/members/${member.id}/hold`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error?.message || "保留に失敗しました");
+        return;
+      }
+      onChanged();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
       <div className="flex items-center gap-2">
@@ -239,6 +321,9 @@ function PendingMemberRow({
             ))}
           </select>
           <div className="flex-1" />
+          <Button size="sm" variant="secondary" onClick={hold} disabled={submitting}>
+            保留
+          </Button>
           <Button size="sm" variant="secondary" onClick={reject} disabled={submitting}>
             却下
           </Button>
@@ -263,6 +348,9 @@ function PendingMemberRow({
             ))}
           </select>
           <div className="flex-1" />
+          <Button size="sm" variant="secondary" onClick={hold} disabled={submitting}>
+            保留
+          </Button>
           <Button size="sm" variant="secondary" onClick={reject} disabled={submitting}>
             却下
           </Button>
@@ -271,6 +359,88 @@ function PendingMemberRow({
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+function HeldMemberRow({
+  member,
+  onChanged,
+}: {
+  member: PendingMember;
+  onChanged: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const days = member.holdAt ? daysSince(member.holdAt) : 0;
+  const remaining = HOLD_LIMIT_DAYS - days;
+  const warning = remaining <= 14;
+
+  const release = async () => {
+    if (!confirm(`${member.nickname} さんを保留解除し、通常の承認待ちに戻しますか？`)) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/members/${member.id}/hold`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error?.message || "保留解除に失敗しました");
+        return;
+      }
+      onChanged();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const reject = async () => {
+    if (!confirm(`${member.nickname} さんを即時却下します (アカウント削除)。よろしいですか？`)) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/members/${member.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error?.message || "却下に失敗しました");
+        return;
+      }
+      onChanged();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 flex items-center gap-2 flex-wrap">
+      {member.profileImageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={member.profileImageUrl}
+          alt=""
+          className="w-7 h-7 rounded-full object-cover"
+        />
+      ) : (
+        <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center text-xs">
+          {member.nickname[0]}
+        </div>
+      )}
+      <span className="text-sm font-medium text-gray-800 truncate">{member.nickname}</span>
+      <span className={`text-xs ${warning ? "text-red-600 font-medium" : "text-gray-500"}`}>
+        保留 {days} 日 ({warning ? `あと ${Math.max(0, remaining)} 日で自動却下` : `${HOLD_LIMIT_DAYS} 日で自動却下`})
+      </span>
+      {!member.holdMessageSentAt && (
+        <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800">
+          LINE 返信未送信
+        </span>
+      )}
+      <div className="flex-1" />
+      <Button size="sm" variant="secondary" onClick={release} disabled={submitting}>
+        保留解除
+      </Button>
+      <Button size="sm" variant="secondary" onClick={reject} disabled={submitting}>
+        却下
+      </Button>
     </div>
   );
 }

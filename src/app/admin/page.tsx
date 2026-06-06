@@ -17,7 +17,18 @@ type AppSettings = {
   youtubeUrl: string;
   waitlistPolicy: string; // "fifo" | "priority"
   paypayPersonalId: string;
+  holdReplyMessage: string;
 };
+
+// notifyHoldRequest が送るデフォルト文 (空欄保存時にプレースホルダー表示するため)。
+const HOLD_REPLY_DEFAULT_PREVIEW =
+  `【283バドミントン】\nご参加リクエストありがとうございます。\n\n` +
+  `ご検討のため、以下の情報をこの公式LINEにメッセージで送ってください:\n` +
+  `- お名前 (ニックネームでも可)\n` +
+  `- 性別 / 年代\n` +
+  `- バドミントン経験 (年数・レベル感)\n` +
+  `- 参加希望日 (例: 6/15 池袋会場)\n\n` +
+  `お返事をいただき次第、運営から参加可否をご連絡します。`;
 
 type SettingKey = "notifyReminderEnabled" | "notifyWaitlistEnabled";
 
@@ -65,6 +76,11 @@ export default function AdminPage() {
   const [paypayIdInput, setPaypayIdInput] = useState("");
   const [savingPaypay, setSavingPaypay] = useState(false);
   const [paypaySaved, setPaypaySaved] = useState(false);
+  const [holdReplyInput, setHoldReplyInput] = useState("");
+  const [savingHoldReply, setSavingHoldReply] = useState(false);
+  const [holdReplySaved, setHoldReplySaved] = useState(false);
+  const [cleanupRunning, setCleanupRunning] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -89,10 +105,62 @@ export default function AdminPage() {
             setInstagramUrlInput(json.data.instagramUrl || "");
             setYoutubeUrlInput(json.data.youtubeUrl || "");
             setPaypayIdInput(json.data.paypayPersonalId || "");
+            setHoldReplyInput(json.data.holdReplyMessage || "");
           }
         });
     }
   }, [session]);
+
+  const handleSaveHoldReply = async () => {
+    if (savingHoldReply) return;
+    setSavingHoldReply(true);
+    setHoldReplySaved(false);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ holdReplyMessage: holdReplyInput }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettings((prev) =>
+          prev ? { ...prev, holdReplyMessage: holdReplyInput } : prev,
+        );
+        setHoldReplySaved(true);
+        setTimeout(() => setHoldReplySaved(false), 2000);
+      }
+    } finally {
+      setSavingHoldReply(false);
+    }
+  };
+
+  const handleCleanupHeld = async () => {
+    if (cleanupRunning) return;
+    if (
+      !confirm(
+        "60 日以上保留中の参加リクエストを一括で削除します。\nアカウントごと消えます。実行しますか？",
+      )
+    ) {
+      return;
+    }
+    setCleanupRunning(true);
+    setCleanupResult(null);
+    try {
+      const res = await fetch("/api/admin/members/cleanup-held", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setCleanupResult(`削除 ${json.data.deletedCount} 件 (基準: ${json.data.holdLimitDays} 日経過)`);
+      } else {
+        setCleanupResult(`失敗: ${json.error?.message || "不明なエラー"}`);
+      }
+    } catch (e) {
+      setCleanupResult(`通信エラー: ${String(e)}`);
+    } finally {
+      setCleanupRunning(false);
+    }
+  };
 
   const handleSaveContact = async () => {
     if (savingContact) return;
@@ -532,6 +600,56 @@ export default function AdminPage() {
               className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
             >
               {savingPaypay ? "保存中..." : paypaySaved ? "保存しました" : "保存"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-700">参加リクエスト保留時の LINE 返信文</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              「保留」ボタン押下時に LINE で返すテンプレ文。空欄ならアプリの初期文 (下のプレースホルダー) が使われます。
+            </p>
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            <textarea
+              value={holdReplyInput}
+              onChange={(e) => setHoldReplyInput(e.target.value)}
+              rows={10}
+              placeholder={HOLD_REPLY_DEFAULT_PREVIEW}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+            />
+            <div className="flex items-center gap-2">
+              <div className="flex-1" />
+              <button
+                onClick={handleSaveHoldReply}
+                disabled={savingHoldReply || settings === null}
+                className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
+              >
+                {savingHoldReply ? "保存中..." : holdReplySaved ? "保存しました" : "保存"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-700">保留中ユーザーのクリーンアップ</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              保留中で 60 日経過したユーザーをまとめて却下 (アカウント削除) します。手動実行。
+            </p>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-2 flex-wrap">
+            {cleanupResult && (
+              <span className="text-xs text-gray-700">{cleanupResult}</span>
+            )}
+            <div className="flex-1" />
+            <button
+              onClick={handleCleanupHeld}
+              disabled={cleanupRunning}
+              className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-red-700"
+            >
+              {cleanupRunning ? "実行中..." : "今すぐクリーンアップ"}
             </button>
           </div>
         </div>

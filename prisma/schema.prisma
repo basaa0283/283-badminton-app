@@ -41,6 +41,13 @@ model User {
   termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
   termsAcceptedVersion String?   // 同意した規約バージョン (例: "2026-05-17")
 
+  // 参加リクエスト保留 (pending ロールに対してのみ意味を持つ)
+  // - holdAt: 保留開始日時 (null = 通常の承認待ち、TOP バナーに残る)
+  // - holdMessageSentAt: 保留時に LINE 返信を送れた日時 (記録目的)
+  // 保留から 60 日経過したユーザーは自動却下 (アカウント削除) の対象。
+  holdAt              DateTime?
+  holdMessageSentAt   DateTime?
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

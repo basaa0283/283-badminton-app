@@ -40,6 +40,8 @@ export async function GET() {
         lastActiveAt: true,
         skillLevel: true,
         createdAt: true,
+        holdAt: true,
+        holdMessageSentAt: true,
       },
     });
 
@@ -57,6 +59,8 @@ export async function GET() {
       lastActiveAt: user.lastActiveAt,
       skillLevel: user.skillLevel,
       createdAt: user.createdAt,
+      holdAt: user.holdAt,
+      holdMessageSentAt: user.holdMessageSentAt,
     }));
 
     return NextResponse.json({ success: true, data: members });
