@@ -20,7 +20,7 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { permissions, UserRole } from "@/lib/permissions";
 
-type AccessRow = { day: string; logins: number };
+type AccessRow = { day: string; activeUsers: number };
 type ActionRow = { day: string } & Record<string, number | string>;
 type ViewRow = { day: string; pv: number };
 type ViewsByPageRow = {
@@ -144,8 +144,11 @@ export default function AdminDashboardPage() {
             <Card>
               <CardHeader>
                 <h2 className="text-sm font-semibold text-gray-900">
-                  日別ログイン unique user (直近 30 日)
+                  日別アクティブユーザー (直近 30 日)
                 </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  その日に何らかの操作 or 閲覧があった unique user 数 (LINE 再認証ではありません)
+                </p>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
@@ -156,11 +159,11 @@ export default function AdminDashboardPage() {
                       <YAxis allowDecimals={false} fontSize={11} stroke="#9CA3AF" />
                       <Tooltip
                         labelFormatter={(v) => fmtDate(String(v))}
-                        formatter={(v) => [`${Number(v)} 人`, "ログイン"] as [string, string]}
+                        formatter={(v) => [`${Number(v)} 人`, "アクティブ"] as [string, string]}
                       />
                       <Line
                         type="monotone"
-                        dataKey="logins"
+                        dataKey="activeUsers"
                         stroke="#3B82F6"
                         strokeWidth={2}
                         dot={{ r: 3 }}

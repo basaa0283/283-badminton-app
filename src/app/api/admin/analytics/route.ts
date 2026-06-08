@@ -52,8 +52,9 @@ export async function GET() {
       days.push(jstKey(d));
     }
 
-    // 日別ログイン unique user
-    const loginByDay = new Map<string, Set<string>>();
+    // 日別アクティブユーザー: その日に何らかの操作 or 閲覧があった unique user。
+    // NextAuth は JWT セッション 30 日有効のため、auth.login だけだと実利用感が出ない。
+    const activeByDay = new Map<string, Set<string>>();
     // 主要操作件数 (action 単位、日別)
     const TRACKED_ACTIONS = [
       "event.create",
@@ -103,10 +104,8 @@ export async function GET() {
       if (log.userId) {
         active30.add(log.userId);
         if (log.createdAt >= since7) active7.add(log.userId);
-        if (log.action === "auth.login") {
-          if (!loginByDay.has(key)) loginByDay.set(key, new Set());
-          loginByDay.get(key)!.add(log.userId);
-        }
+        if (!activeByDay.has(key)) activeByDay.set(key, new Set());
+        activeByDay.get(key)!.add(log.userId);
       }
       const bucket = actionByDay[log.action];
       if (bucket) {
@@ -129,7 +128,7 @@ export async function GET() {
 
     const accessByDay = days.map((day) => ({
       day,
-      logins: loginByDay.get(day)?.size ?? 0,
+      activeUsers: activeByDay.get(day)?.size ?? 0,
     }));
 
     const actionsByDay = days.map((day) => {
