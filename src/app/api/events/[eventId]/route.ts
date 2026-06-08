@@ -163,6 +163,9 @@ export async function GET(request: NextRequest, { params }: Params) {
         capacity: event.capacity,
         fee: event.feeVisible ? event.fee : null,
         feeVisible: event.feeVisible,
+        // 管理者は EventForm で体育館代を編集できるため、event 直下にも値を出す。
+        // canViewExpenses (admin/subadmin) でない場合は null にする。
+        gymCost: canViewExpenses ? event.gymCost : null,
         paypayPersonalId,
         linkedTournamentId: event.linkedTournamentId ?? null,
         deadline: event.deadline,

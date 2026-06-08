@@ -14,6 +14,7 @@ interface EventFormData {
   capacity: string;
   fee: string;
   feeVisible: boolean;
+  gymCost: string;
   deadline: string;
   deadlineEnabled: boolean;
   respondStartAt: string;
@@ -115,6 +116,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [capacity, setCapacity] = useState(initialData?.capacity || "");
   const [fee, setFee] = useState(initialData?.fee || "");
   const [feeVisible, setFeeVisible] = useState(initialData?.feeVisible || false);
+  const [gymCost, setGymCost] = useState(initialData?.gymCost || "");
   const [deadline, setDeadline] = useState(initialData?.deadline || "");
   const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
   const [respondStartAt, setRespondStartAt] = useState(initialData?.respondStartAt || "");
@@ -209,6 +211,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       capacity,
       fee,
       feeVisible,
+      gymCost,
       deadline,
       deadlineEnabled,
       respondStartAt,
@@ -534,6 +537,24 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
             />
           </div>
         )}
+
+        <div>
+          <label htmlFor="gymCost" className="block text-sm font-medium text-gray-700 mb-1">
+            体育館代（円）<span className="text-xs text-gray-500 font-normal ml-1">管理者のみ閲覧</span>
+          </label>
+          <input
+            type="number"
+            id="gymCost"
+            value={gymCost}
+            onChange={(e) => setGymCost(e.target.value)}
+            min={0}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="例: 8000"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            事前に分かっている場合に入力。空欄でも作成可で、後からイベント詳細の「経費・収支」で記録できます。
+          </p>
+        </div>
       </div>
 
       <div className="space-y-3">

@@ -111,6 +111,10 @@ export async function GET(request: NextRequest) {
         deadlineEnabled: event.deadlineEnabled,
         minViewRole: event.minViewRole,
         minRespondRole: event.minRespondRole,
+        // 管理者向け「経費記録未入力」判定用 (UI 側で admin/subadmin のみ参照)
+        gymCost: event.gymCost,
+        shuttleCost: event.shuttleCost,
+        actualRevenue: event.actualRevenue,
         category: event.category
           ? {
               id: event.category.id,

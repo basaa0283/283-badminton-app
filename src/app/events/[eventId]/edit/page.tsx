@@ -20,6 +20,7 @@ interface EventData {
   capacity: number | null;
   fee: number | null;
   feeVisible: boolean;
+  gymCost: number | null;
   deadline: string | null;
   deadlineEnabled: boolean;
   respondStartAt: string | null;
@@ -105,6 +106,7 @@ export default function EditEventPage() {
     capacity: string;
     fee: string;
     feeVisible: boolean;
+    gymCost: string;
     deadline: string;
     deadlineEnabled: boolean;
     respondStartAt: string;
@@ -126,6 +128,7 @@ export default function EditEventPage() {
         capacity: formData.capacity ? parseInt(formData.capacity) : null,
         fee: formData.fee ? parseInt(formData.fee) : null,
         feeVisible: formData.feeVisible,
+        gymCost: formData.gymCost ? parseInt(formData.gymCost) : null,
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
         deadlineEnabled: formData.deadlineEnabled,
         respondStartAt:
@@ -174,6 +177,7 @@ export default function EditEventPage() {
                 capacity: event.capacity?.toString() || "",
                 fee: event.fee?.toString() || "",
                 feeVisible: event.feeVisible,
+                gymCost: event.gymCost?.toString() || "",
                 deadline: event.deadline ? formatDateForInput(event.deadline) : "",
                 deadlineEnabled: event.deadlineEnabled,
                 respondStartAt: event.respondStartAt ? formatDateForInput(event.respondStartAt) : "",
