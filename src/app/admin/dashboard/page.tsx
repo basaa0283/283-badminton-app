@@ -68,10 +68,19 @@ function fmtDate(day: string) {
   return `${parseInt(m, 10)}/${parseInt(d, 10)}`;
 }
 
+type LineQuota = {
+  configured: boolean;
+  quotaType?: string;
+  limit?: number | null;
+  used?: number;
+  remaining?: number | null;
+};
+
 export default function AdminDashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [lineQuota, setLineQuota] = useState<LineQuota | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -91,6 +100,12 @@ export default function AdminDashboardPage() {
         if (json.success) setData(json.data);
       })
       .finally(() => setLoading(false));
+    fetch("/api/admin/line-quota")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setLineQuota(json.data);
+      })
+      .catch(() => {});
   }, [session, router]);
 
   if (status === "loading" || !session || loading) {
@@ -120,6 +135,48 @@ export default function AdminDashboardPage() {
           </Card>
         ) : (
           <>
+            {lineQuota?.configured && lineQuota.limit !== null && lineQuota.limit !== undefined && (
+              <Card
+                className={
+                  (lineQuota.remaining ?? 0) <= 20
+                    ? "border-2 border-red-300 bg-red-50"
+                    : (lineQuota.remaining ?? 0) <= 50
+                      ? "border-2 border-amber-300 bg-amber-50"
+                      : ""
+                }
+              >
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-600">今月の LINE 通知送信</p>
+                      <p className="text-2xl font-bold text-gray-900 mt-1">
+                        {lineQuota.used ?? 0}
+                        <span className="text-base text-gray-500 font-normal">
+                          {" / "}{lineQuota.limit} 通
+                        </span>
+                      </p>
+                      <p className={`text-xs mt-1 ${(lineQuota.remaining ?? 0) <= 20 ? "text-red-700 font-medium" : "text-gray-600"}`}>
+                        残り {lineQuota.remaining} 通
+                        {(lineQuota.remaining ?? 0) <= 20 && " (上限間近)"}
+                      </p>
+                    </div>
+                    <div className="text-right text-xs text-gray-500">
+                      <p>フリープラン: 200 通/月</p>
+                      <p className="mt-0.5">超過すると以降の月内 push 送信は失敗します</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 h-2 rounded-full bg-gray-200 overflow-hidden">
+                    <div
+                      className={`h-full ${(lineQuota.remaining ?? 0) <= 20 ? "bg-red-500" : (lineQuota.remaining ?? 0) <= 50 ? "bg-amber-500" : "bg-blue-500"}`}
+                      style={{
+                        width: `${Math.min(100, ((lineQuota.used ?? 0) / (lineQuota.limit || 1)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <Card>
                 <CardContent>
