@@ -405,6 +405,16 @@ export default function AdminPage() {
             </Card>
           </Link>
 
+          <Link href="/admin/tags">
+            <Card hover>
+              <CardContent className="py-6">
+                <div className="text-3xl mb-2">🎫</div>
+                <h2 className="font-semibold text-gray-900">メンバータグ</h2>
+                <p className="text-sm text-gray-500 mt-1">特定メンバーへの限定公開用</p>
+              </CardContent>
+            </Card>
+          </Link>
+
           <Link href="/admin/announcements">
             <Card hover>
               <CardContent className="py-6">

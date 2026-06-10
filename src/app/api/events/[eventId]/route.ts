@@ -38,6 +38,7 @@ export async function GET(request: NextRequest, { params }: Params) {
           select: { nickname: true },
         },
         category: true,
+        allowedTags: { include: { tag: true } },
         attendances: {
           include: {
             user: {
@@ -91,6 +92,26 @@ export async function GET(request: NextRequest, { params }: Params) {
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
         { status: 404 }
       );
+    }
+
+    // タグ限定: タグ付きイベントは admin / 作成者 / そのタグを持つ自分しか見えない。
+    if (
+      event.allowedTags.length > 0 &&
+      !isStaff(role) &&
+      event.createdById !== session.user.id
+    ) {
+      const myTagIds = await prisma.userMemberTag.findMany({
+        where: { userId: session.user.id },
+        select: { tagId: true },
+      });
+      const mySet = new Set(myTagIds.map((m) => m.tagId));
+      const intersects = event.allowedTags.some((at) => mySet.has(at.tagId));
+      if (!intersects) {
+        return NextResponse.json(
+          { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
+          { status: 404 },
+        );
+      }
     }
 
     const attendingCount = event.attendances.filter((a) => a.status === "attending").length;
@@ -190,6 +211,11 @@ export async function GET(request: NextRequest, { params }: Params) {
         minViewRole: event.minViewRole,
         minRespondRole: event.minRespondRole,
         status: event.status,
+        allowedTags: event.allowedTags.map((at) => ({
+          id: at.tag.id,
+          name: at.tag.name,
+          color: at.tag.color,
+        })),
         cancelledAt: event.cancelledAt,
         cancelReason: event.cancelReason,
         createdBy: event.createdBy.nickname,
@@ -327,6 +353,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.minViewRole !== undefined) updateData.minViewRole = parsed.data.minViewRole;
     if (parsed.data.minRespondRole !== undefined) updateData.minRespondRole = parsed.data.minRespondRole;
     if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
+    // allowedTagIds は別途 transaction で delete+create する (下記)
     if (parsed.data.shuttleCount !== undefined) updateData.shuttleCount = parsed.data.shuttleCount;
     if (parsed.data.shuttleCost !== undefined) updateData.shuttleCost = parsed.data.shuttleCost;
     if (parsed.data.gymCost !== undefined) updateData.gymCost = parsed.data.gymCost;
@@ -338,6 +365,24 @@ export async function PUT(request: NextRequest, { params }: Params) {
       where: { id: eventId },
       data: updateData,
     });
+
+    // allowedTagIds の差分処理 (送信されたときだけ)
+    if (parsed.data.allowedTagIds !== undefined) {
+      const desired = parsed.data.allowedTagIds;
+      await prisma.$transaction([
+        prisma.eventAllowedTag.deleteMany({ where: { eventId } }),
+        ...desired.map((tagId) =>
+          prisma.eventAllowedTag.create({ data: { eventId, tagId } }),
+        ),
+      ]);
+      void logActivity({
+        userId: session.user.id,
+        action: "event_tag.set",
+        entityType: "Event",
+        entityId: eventId,
+        metadata: { tagIds: desired },
+      });
+    }
 
     void logActivity({
       userId: session.user.id,

@@ -62,12 +62,32 @@ export async function GET(request: NextRequest) {
     const statusWhere = isAdmin
       ? {}
       : { OR: [{ status: "published" }, { createdById: session.user.id }] };
-    const baseWhereWithStatus = { ...baseWhere, ...statusWhere };
+    // タグ限定: 自分が持つタグの SOME に含まれない限り、タグありイベントは見えない。
+    // admin/subadmin は無条件で通す。
+    const tagWhere = isAdmin
+      ? {}
+      : {
+          OR: [
+            { allowedTags: { none: {} } },
+            {
+              allowedTags: {
+                some: { tag: { users: { some: { userId: session.user.id } } } },
+              },
+            },
+          ],
+        };
+    const baseWhereWithStatus = isAdmin
+      ? { ...baseWhere, ...statusWhere }
+      : { AND: [baseWhere, statusWhere, tagWhere] };
     const where =
       !upcoming && !isAdmin
         ? {
-            ...baseWhereWithStatus,
-            attendances: { some: { userId: session.user.id, status: "attending" } },
+            AND: [
+              baseWhere,
+              statusWhere,
+              tagWhere,
+              { attendances: { some: { userId: session.user.id, status: "attending" } } },
+            ],
           }
         : baseWhereWithStatus;
 
@@ -90,6 +110,7 @@ export async function GET(request: NextRequest) {
             },
           },
           category: true,
+          allowedTags: { include: { tag: true } },
         },
       }),
       prisma.event.count({ where }),
@@ -117,6 +138,11 @@ export async function GET(request: NextRequest) {
         minViewRole: event.minViewRole,
         minRespondRole: event.minRespondRole,
         status: event.status,
+        allowedTags: event.allowedTags.map((at) => ({
+          id: at.tag.id,
+          name: at.tag.name,
+          color: at.tag.color,
+        })),
         // 管理者向け「経費記録未入力」判定用 (UI 側で admin/subadmin のみ参照)
         gymCost: event.gymCost,
         shuttleCost: event.shuttleCost,
@@ -231,6 +257,13 @@ export async function POST(request: NextRequest) {
         otherMemo: parsed.data.otherMemo ?? null,
         actualRevenue: parsed.data.actualRevenue ?? null,
         createdById: session.user.id,
+        ...(parsed.data.allowedTagIds && parsed.data.allowedTagIds.length > 0
+          ? {
+              allowedTags: {
+                create: parsed.data.allowedTagIds.map((tagId) => ({ tagId })),
+              },
+            }
+          : {}),
       },
     });
 

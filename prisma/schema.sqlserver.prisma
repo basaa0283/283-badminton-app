@@ -65,6 +65,44 @@ model User {
   tournamentResults  TournamentResult[]
 
   activityLogs       ActivityLog[]
+
+  memberTags         UserMemberTag[]
+}
+
+// メンバーに振るタグ (管理者管理)。イベントを「このタグ持ちだけに公開」する用途。
+model MemberTag {
+  id          String   @id @default(cuid())
+  name        String   @unique @db.NVarChar(100)
+  description String?  @db.NVarChar(500)
+  color       String?  @db.NVarChar(20)
+  createdAt   DateTime @default(now())
+
+  users  UserMemberTag[]
+  events EventAllowedTag[]
+}
+
+model UserMemberTag {
+  userId    String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag  MemberTag @relation(fields: [tagId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([userId, tagId])
+  @@index([tagId])
+}
+
+model EventAllowedTag {
+  eventId   String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  event Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tag   MemberTag @relation(fields: [tagId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([eventId, tagId])
+  @@index([tagId])
 }
 
 // アプリ内の操作ログ。利用状況分析と監査の両方に使う汎用テーブル。
@@ -241,6 +279,7 @@ model Event {
   attendances         Attendance[]
   attendanceHistories AttendanceHistory[]
   messages            Message[]
+  allowedTags         EventAllowedTag[]
 
   @@index([linkedTournamentId])
 }

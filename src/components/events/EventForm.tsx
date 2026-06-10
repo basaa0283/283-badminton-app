@@ -25,6 +25,13 @@ interface EventFormData {
   minViewRole: "guest" | "visitor" | "member";
   minRespondRole: "visitor" | "member";
   status: "draft" | "published";
+  allowedTagIds: string[];
+}
+
+interface AvailableTag {
+  id: string;
+  name: string;
+  color: string | null;
 }
 
 interface EventCategory {
@@ -136,6 +143,8 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
     initialData?.status ?? "published",
   );
   const [pendingStatus, setPendingStatus] = useState<"draft" | "published">("published");
+  const [allowedTagIds, setAllowedTagIds] = useState<string[]>(initialData?.allowedTagIds ?? []);
+  const [availableTags, setAvailableTags] = useState<AvailableTag[]>([]);
   const [categories, setCategories] = useState<EventCategory[]>([]);
 
   useEffect(() => {
@@ -143,6 +152,20 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       .then((r) => r.json())
       .then((json) => {
         if (json.success) setCategories(json.data);
+      })
+      .catch(() => {});
+    fetch("/api/admin/tags")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setAvailableTags(
+            (json.data as { id: string; name: string; color: string | null }[]).map((t) => ({
+              id: t.id,
+              name: t.name,
+              color: t.color,
+            })),
+          );
+        }
       })
       .catch(() => {});
   }, []);
@@ -228,6 +251,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       minViewRole,
       minRespondRole,
       status: effectiveStatus,
+      allowedTagIds,
     };
 
     try {
@@ -665,6 +689,42 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
             このロール以上だけが出欠回答できます。ゲストは常に回答できません。
           </p>
         </div>
+
+        {availableTags.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              公開タグ (任意)
+            </label>
+            <div className="border border-gray-200 rounded-lg p-2 max-h-40 overflow-auto space-y-1 bg-white">
+              {availableTags.map((t) => (
+                <label key={t.id} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowedTagIds.includes(t.id)}
+                    onChange={(e) => {
+                      setAllowedTagIds((prev) =>
+                        e.target.checked
+                          ? [...prev, t.id]
+                          : prev.filter((id) => id !== t.id),
+                      );
+                    }}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
+                    style={{ backgroundColor: t.color || "#6B7280" }}
+                  >
+                    {t.name}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              タグを 1 つでも選ぶと、選択したいずれかのタグ持ちメンバーだけにイベントが見えます (上の最低ロール条件にも従う)。
+              何も選ばなければ全員 (最低ロール範囲) に公開。
+            </p>
+          </div>
+        )}
       </div>
 
       {showNotifyOption && (

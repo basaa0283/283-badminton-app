@@ -25,6 +25,7 @@ interface EventCardProps {
     minViewRole?: string;
     minRespondRole?: string;
     status?: "draft" | "published";
+    allowedTags?: Array<{ id: string; name: string; color: string | null }>;
     // 管理者向け: 経費記録の入力状況。null = 未入力扱い。
     gymCost?: number | null;
     shuttleCost?: number | null;
@@ -105,6 +106,11 @@ export function EventCard({ event }: EventCardProps) {
               {event.status === "draft" && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-gray-500 shrink-0">
                   下書き
+                </span>
+              )}
+              {event.allowedTags && event.allowedTags.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-purple-600 shrink-0">
+                  🎫 タグ限定 ({event.allowedTags.length})
                 </span>
               )}
               {missingExpenses && (

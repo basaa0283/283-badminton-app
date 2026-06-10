@@ -22,6 +22,7 @@ interface EventData {
   feeVisible: boolean;
   gymCost: number | null;
   status: "draft" | "published";
+  allowedTags: Array<{ id: string; name: string; color: string | null }>;
   deadline: string | null;
   deadlineEnabled: boolean;
   respondStartAt: string | null;
@@ -109,6 +110,7 @@ export default function EditEventPage() {
     feeVisible: boolean;
     gymCost: string;
     status: "draft" | "published";
+    allowedTagIds: string[];
     deadline: string;
     deadlineEnabled: boolean;
     respondStartAt: string;
@@ -132,6 +134,7 @@ export default function EditEventPage() {
         feeVisible: formData.feeVisible,
         gymCost: formData.gymCost ? parseInt(formData.gymCost) : null,
         status: formData.status,
+        allowedTagIds: formData.allowedTagIds,
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
         deadlineEnabled: formData.deadlineEnabled,
         respondStartAt:
@@ -182,6 +185,7 @@ export default function EditEventPage() {
                 feeVisible: event.feeVisible,
                 gymCost: event.gymCost?.toString() || "",
                 status: event.status,
+                allowedTagIds: event.allowedTags?.map((t) => t.id) ?? [],
                 deadline: event.deadline ? formatDateForInput(event.deadline) : "",
                 deadlineEnabled: event.deadlineEnabled,
                 respondStartAt: event.respondStartAt ? formatDateForInput(event.respondStartAt) : "",
