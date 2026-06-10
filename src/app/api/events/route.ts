@@ -58,13 +58,18 @@ export async function GET(request: NextRequest) {
     // 過去イベント (upcoming=false) は管理者以外には「自分が参加したもの」のみ。
     // 他人の過去履歴を眺めるユースケースが無いので一覧をシンプルに保つ。
     const isAdmin = role === "admin" || role === "subadmin";
+    // status=draft は作成者と管理者だけが見える。一般メンバーには非公開。
+    const statusWhere = isAdmin
+      ? {}
+      : { OR: [{ status: "published" }, { createdById: session.user.id }] };
+    const baseWhereWithStatus = { ...baseWhere, ...statusWhere };
     const where =
       !upcoming && !isAdmin
         ? {
-            ...baseWhere,
+            ...baseWhereWithStatus,
             attendances: { some: { userId: session.user.id, status: "attending" } },
           }
-        : baseWhere;
+        : baseWhereWithStatus;
 
     const [events, total] = await Promise.all([
       prisma.event.findMany({
@@ -111,6 +116,7 @@ export async function GET(request: NextRequest) {
         deadlineEnabled: event.deadlineEnabled,
         minViewRole: event.minViewRole,
         minRespondRole: event.minRespondRole,
+        status: event.status,
         // 管理者向け「経費記録未入力」判定用 (UI 側で admin/subadmin のみ参照)
         gymCost: event.gymCost,
         shuttleCost: event.shuttleCost,
@@ -217,6 +223,7 @@ export async function POST(request: NextRequest) {
         categoryId: parsed.data.categoryId ?? null,
         minViewRole: parsed.data.minViewRole ?? "visitor",
         minRespondRole: parsed.data.minRespondRole ?? "visitor",
+        status: parsed.data.status ?? "published",
         shuttleCount: parsed.data.shuttleCount ?? null,
         shuttleCost: parsed.data.shuttleCost ?? null,
         gymCost: parsed.data.gymCost ?? null,
@@ -227,7 +234,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (parsed.data.notifyMembers) {
+    // draft 状態では LINE 通知もお知らせ投稿も走らない (上限消費しない)。
+    const isDraft = event.status === "draft";
+
+    if (!isDraft && parsed.data.notifyMembers) {
       const members = await prisma.user.findMany({
         where: {
           role: { in: ["member", "subadmin", "admin"] },
@@ -249,7 +259,7 @@ export async function POST(request: NextRequest) {
     // お知らせにも投稿: イベント情報を定型文で Announcement として作成。
     // 公開対象は member/visitor。guest はイベント詳細で見ればよく、お知らせは
     // 内部メンバー向けの位置づけ。後から /admin/announcements で編集可。
-    if (parsed.data.announceOnCreate) {
+    if (!isDraft && parsed.data.announceOnCreate) {
       const lines = [
         event.title,
         `📅 ${formatInTimeZone(event.eventDate, "Asia/Tokyo", "M月d日(E) HH:mm", { locale: ja })}`,

@@ -85,6 +85,14 @@ export async function GET(request: NextRequest, { params }: Params) {
       );
     }
 
+    // draft 状態のイベントは管理者と作成者だけが閲覧可。
+    if (event.status === "draft" && !isStaff(role) && event.createdById !== session.user.id) {
+      return NextResponse.json(
+        { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
+        { status: 404 }
+      );
+    }
+
     const attendingCount = event.attendances.filter((a) => a.status === "attending").length;
     const waitlistCount = event.attendances.filter((a) => a.status === "waitlist").length;
     const observingCount = event.attendances.filter((a) => a.status === "observing").length;
@@ -181,6 +189,7 @@ export async function GET(request: NextRequest, { params }: Params) {
           : null,
         minViewRole: event.minViewRole,
         minRespondRole: event.minRespondRole,
+        status: event.status,
         cancelledAt: event.cancelledAt,
         cancelReason: event.cancelReason,
         createdBy: event.createdBy.nickname,
@@ -317,6 +326,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.categoryId !== undefined) updateData.categoryId = parsed.data.categoryId;
     if (parsed.data.minViewRole !== undefined) updateData.minViewRole = parsed.data.minViewRole;
     if (parsed.data.minRespondRole !== undefined) updateData.minRespondRole = parsed.data.minRespondRole;
+    if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
     if (parsed.data.shuttleCount !== undefined) updateData.shuttleCount = parsed.data.shuttleCount;
     if (parsed.data.shuttleCost !== undefined) updateData.shuttleCost = parsed.data.shuttleCost;
     if (parsed.data.gymCost !== undefined) updateData.gymCost = parsed.data.gymCost;

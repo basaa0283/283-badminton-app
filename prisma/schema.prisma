@@ -222,6 +222,11 @@ model Event {
   cancelledAt     DateTime?
   cancelReason    String?
 
+  // 公開状態 (draft = 作成者と管理者のみ閲覧可、published = 通常公開)。
+  // draft の間は一般メンバーには存在しない扱い (一覧・詳細とも非表示)。
+  // LINE 通知やお知らせ投稿も draft 状態では走らない。
+  status          String    @default("published")
+
   // 経費・収支 (管理者用、イベント実施後に入力)
   shuttleCount    Int?      // 使用シャトル本数
   shuttleCost     Int?      // シャトル代合計

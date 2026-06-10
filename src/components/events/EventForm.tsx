@@ -24,6 +24,7 @@ interface EventFormData {
   categoryId: string;
   minViewRole: "guest" | "visitor" | "member";
   minRespondRole: "visitor" | "member";
+  status: "draft" | "published";
 }
 
 interface EventCategory {
@@ -131,6 +132,10 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [minRespondRole, setMinRespondRole] = useState<"visitor" | "member">(
     initialData?.minRespondRole ?? "visitor"
   );
+  const [status, setStatus] = useState<"draft" | "published">(
+    initialData?.status ?? "published",
+  );
+  const [pendingStatus, setPendingStatus] = useState<"draft" | "published">("published");
   const [categories, setCategories] = useState<EventCategory[]>([]);
 
   useEffect(() => {
@@ -167,8 +172,9 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // LINE 通知が ON のとき、確認ダイアログを出して誤爆を防ぐ
-    if (showNotifyOption && notifyMembers) {
+    const effectiveStatus = pendingStatus;
+    // draft 保存時は LINE 通知が走らないので確認不要。published のときだけ確認。
+    if (effectiveStatus === "published" && showNotifyOption && notifyMembers) {
       const count = notifyTargetCount ?? "?";
       const ok = window.confirm(
         `LINE 通知が ${count} 人に送信されます。\n本当に作成してよろしいですか？`
@@ -221,10 +227,12 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       categoryId,
       minViewRole,
       minRespondRole,
+      status: effectiveStatus,
     };
 
     try {
       await onSubmit(data);
+      setStatus(effectiveStatus);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
@@ -703,14 +711,33 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         </div>
       )}
 
-      <div className="flex gap-3 pt-4">
-        <Button type="button" variant="secondary" className="flex-1" onClick={() => router.back()}>
+      <div className="flex gap-3 pt-4 flex-wrap">
+        <Button type="button" variant="secondary" className="flex-1 min-w-[6rem]" onClick={() => router.back()}>
           キャンセル
         </Button>
-        <Button type="submit" className="flex-1" loading={loading}>
-          {submitLabel}
+        <Button
+          type="submit"
+          variant="secondary"
+          className="flex-1 min-w-[7rem]"
+          loading={loading && pendingStatus === "draft"}
+          onClick={() => setPendingStatus("draft")}
+        >
+          下書き保存
+        </Button>
+        <Button
+          type="submit"
+          className="flex-1 min-w-[8rem]"
+          loading={loading && pendingStatus === "published"}
+          onClick={() => setPendingStatus("published")}
+        >
+          {status === "draft" ? "公開する" : submitLabel}
         </Button>
       </div>
+      {status === "draft" && (
+        <p className="text-xs text-amber-700 mt-2">
+          現在「下書き」状態です。一般メンバーには見えません。「公開する」で全員に表示されます。
+        </p>
+      )}
     </form>
   );
 }

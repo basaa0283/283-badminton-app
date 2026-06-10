@@ -24,6 +24,7 @@ interface EventCardProps {
     deadlineEnabled: boolean;
     minViewRole?: string;
     minRespondRole?: string;
+    status?: "draft" | "published";
     // 管理者向け: 経費記録の入力状況。null = 未入力扱い。
     gymCost?: number | null;
     shuttleCost?: number | null;
@@ -85,9 +86,11 @@ export function EventCard({ event }: EventCardProps) {
       event.shuttleCost == null ||
       event.actualRevenue == null);
 
+  const isDraft = event.status === "draft";
+
   return (
     <Link href={`/events/${event.id}`}>
-      <Card hover className={`mb-3 ${missingExpenses ? "border-2 border-red-300 bg-red-50" : ""}`}>
+      <Card hover className={`mb-3 ${isDraft ? "border-2 border-dashed border-gray-400 bg-gray-50" : missingExpenses ? "border-2 border-red-300 bg-red-50" : ""}`}>
         <CardContent>
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -97,6 +100,11 @@ export function EventCard({ event }: EventCardProps) {
               {event.cancelledAt && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-red-500 shrink-0">
                   中止
+                </span>
+              )}
+              {event.status === "draft" && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-gray-500 shrink-0">
+                  下書き
                 </span>
               )}
               {missingExpenses && (

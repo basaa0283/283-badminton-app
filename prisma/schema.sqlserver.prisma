@@ -216,6 +216,9 @@ model Event {
   cancelledAt     DateTime?
   cancelReason    String?  @db.NVarChar(500)
 
+  // 公開状態 (draft = 管理者・作成者のみ、published = 通常公開)
+  status          String   @default("published") @db.NVarChar(20)
+
   // 経費・収支 (管理者用、イベント実施後に入力)
   shuttleCount    Int?      // 使用シャトル本数
   shuttleCost     Int?      // シャトル代合計

@@ -45,6 +45,7 @@ export default function NewEventPage() {
     fee: string;
     feeVisible: boolean;
     gymCost: string;
+    status: "draft" | "published";
     isAllDay: boolean;
     deadline: string;
     deadlineEnabled: boolean;
@@ -70,6 +71,7 @@ export default function NewEventPage() {
         fee: formData.fee ? parseInt(formData.fee) : undefined,
         feeVisible: formData.feeVisible,
         gymCost: formData.gymCost ? parseInt(formData.gymCost) : undefined,
+        status: formData.status,
         deadline: formData.deadline ? new Date(formData.deadline).toISOString() : undefined,
         deadlineEnabled: formData.deadlineEnabled,
         respondStartAt:
