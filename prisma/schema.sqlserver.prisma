@@ -35,6 +35,12 @@ model User {
   priorityScore   Int       @default(0) // キャンセル待ち繰り上げ優先度 (大きいほど先に繰り上げ)
   tournamentResultsPublic Boolean @default(false) // 大会実績の全体公開スイッチ
 
+  // ポイント制度 (P1)
+  // lifetimePoints: 累積、減らない (経験値・ランキング用)
+  // availablePoints: 有効、ペナルティで減る (キャンセル待ち優先度に直結予定)
+  lifetimePoints  Int @default(0)
+  availablePoints Int @default(10)
+
   // 利用規約・プライバシーポリシーへの同意
   termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
   termsAcceptedVersion String?   @db.NVarChar(50) // 同意した規約バージョン (例: "2026-05-17")
@@ -67,6 +73,40 @@ model User {
   activityLogs       ActivityLog[]
 
   memberTags         UserMemberTag[]
+
+  pointTransactions  PointTransaction[]
+  achievementUnlocks AchievementUnlock[]
+}
+
+// ポイント増減の履歴。設計 docs/superpowers/specs/2026-06-11-points-achievements-cancel-design.md 参照。
+// reason 命名: "signup.bonus" / "event.attendance" / "cancel.same_day_with_notice" など
+model PointTransaction {
+  id         String   @id @default(cuid())
+  userId     String
+  delta      Int      // 正=加算、負=減算。0 はレコードを作らない
+  reason     String   @db.NVarChar(100)
+  entityType String?  @db.NVarChar(50)
+  entityId   String?
+  createdAt  DateTime @default(now())
+
+  // SQL Server 循環参照対策: user は NoAction
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId, createdAt])
+  @@index([reason])
+}
+
+// 実績バッジ解除レコード。achievementId は src/lib/achievements.ts の定数 ID。
+model AchievementUnlock {
+  userId        String
+  achievementId String   @db.NVarChar(100)
+  unlockedAt    DateTime @default(now())
+
+  // SQL Server 循環参照対策: user は NoAction
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([userId, achievementId])
+  @@index([achievementId])
 }
 
 // メンバーに振るタグ (管理者管理)。イベントを「このタグ持ちだけに公開」する用途。
@@ -265,6 +305,9 @@ model Event {
   otherMemo       String?   @db.NVarChar(500) // その他経費の内訳メモ
   actualRevenue   Int?      // 実際の集金額 (後日記録)
 
+  // ポイント制度: イベント参加完了時の追加ボーナス pt (null/0 = 基本値のみ)
+  attendanceBonusPoints Int?
+
   createdById     String    // 作成者
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -319,6 +362,9 @@ model AttendanceHistory {
   status      String   // attending / not_attending / waitlist / cancelled
   comment     String?  @db.NVarChar(500) // コメント
   isProxy     Boolean  @default(false) // 管理者による代理登録
+  // キャンセルの質 (P1)
+  // "regular" | "same_day_with_notice" | "same_day_no_notice" | "no_show"
+  cancelType  String?  @db.NVarChar(50)
   changedAt   DateTime @default(now()) // 変更日時
 
   // リレーション（SQL Server循環参照対策: userはNoAction）
