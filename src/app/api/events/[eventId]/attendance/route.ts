@@ -6,6 +6,10 @@ import { attendanceSchema } from "@/lib/validations";
 import { notifyWaitlistPromotion } from "@/lib/line-messaging";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity-log";
+import { addPoints } from "@/lib/points";
+
+// 12 時間以内のキャンセルか判定する閾値 (12h = 12 * 60 * 60 * 1000 ms)
+const SAME_DAY_THRESHOLD_MS = 12 * 60 * 60 * 1000;
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -135,6 +139,19 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const finalStatus = status === "waitlist" ? "waitlist" : parsed.data.status;
 
+    // キャンセル抑制: attending → (not_attending | observing) はキャンセル扱い。
+    // 開催時刻まで 12h 未満なら同日キャンセル (連絡あり) として -1 pt + cancelType=same_day_with_notice。
+    // それ以外 (前日まで) は cancelType=regular のみ、ポイント減算なし。
+    // waitlist 移動は (定員溢れの自動振り分けが多いので) キャンセル扱いにしない。
+    const isCancelling =
+      wasAttending && (finalStatus === "not_attending" || finalStatus === "observing");
+    const msUntilEvent = event.eventDate.getTime() - Date.now();
+    const cancelType: "regular" | "same_day_with_notice" | null = isCancelling
+      ? msUntilEvent < SAME_DAY_THRESHOLD_MS
+        ? "same_day_with_notice"
+        : "regular"
+      : null;
+
     // 大会連動イベントの場合のみ意味を持つ申告クラス。それ以外なら null。
     // attending でない (= 不参加) の場合も保存しない。
     const declaredClassId =
@@ -165,15 +182,24 @@ export async function POST(request: NextRequest, { params }: Params) {
       });
     }
 
-    // 出欠履歴を記録
+    // 出欠履歴を記録 (キャンセル時は cancelType も保存)
     await prisma.attendanceHistory.create({
       data: {
         userId,
         eventId,
         status: finalStatus,
         comment: parsed.data.comment || null,
+        cancelType,
       },
     });
+
+    // 同日キャンセル (連絡あり) なら -1 pt を自動減算
+    if (cancelType === "same_day_with_notice") {
+      void addPoints(userId, -1, "cancel.same_day_with_notice", {
+        type: "Event",
+        id: eventId,
+      });
+    }
 
     // lastActiveAtを更新
     await prisma.user.update({
