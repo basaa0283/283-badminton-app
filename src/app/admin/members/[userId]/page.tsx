@@ -30,9 +30,21 @@ interface MemberDetail {
   skillLevel: number | null;
   adminNote: string | null;
   priorityScore: number | null;
+  lifetimePoints?: number;
+  availablePoints?: number;
+  pointTransactions?: PointTransactionRow[];
   createdAt: string;
   attendanceCount: number;
   pastAttendanceCount: number;
+}
+
+interface PointTransactionRow {
+  id: string;
+  delta: number;
+  reason: string;
+  entityType: string | null;
+  entityId: string | null;
+  createdAt: string;
 }
 
 function isoToDay(iso: string | null): string {
@@ -614,6 +626,43 @@ export default function MemberDetailPage() {
                     <div className="font-medium text-gray-700 bg-yellow-50 p-2 rounded">
                       {member.adminNote}
                     </div>
+                  </div>
+                )}
+
+                {(member.lifetimePoints !== undefined || member.availablePoints !== undefined) && (
+                  <div className="pt-4 border-t">
+                    <div className="text-sm font-medium text-gray-700 mb-2">ポイント</div>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="bg-blue-50 rounded p-2">
+                        <div className="text-xs text-gray-500">累積 (lifetime)</div>
+                        <div className="text-xl font-bold text-blue-700">{member.lifetimePoints ?? 0}<span className="text-xs font-normal ml-1">pt</span></div>
+                      </div>
+                      <div className="bg-emerald-50 rounded p-2">
+                        <div className="text-xs text-gray-500">有効 (available)</div>
+                        <div className="text-xl font-bold text-emerald-700">{member.availablePoints ?? 0}<span className="text-xs font-normal ml-1">pt</span></div>
+                      </div>
+                    </div>
+                    {member.pointTransactions && member.pointTransactions.length > 0 ? (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">直近の履歴 (最大10件)</div>
+                        <ul className="space-y-1 text-xs">
+                          {member.pointTransactions.map((t) => (
+                            <li key={t.id} className="flex items-center gap-2 border-b border-gray-100 pb-1">
+                              <span className={`font-bold min-w-[3rem] ${t.delta > 0 ? "text-blue-700" : "text-red-700"}`}>
+                                {t.delta > 0 ? `+${t.delta}` : t.delta} pt
+                              </span>
+                              <span className="text-gray-600 font-mono text-[11px]">{t.reason}</span>
+                              <span className="flex-1" />
+                              <span className="text-gray-400 text-[11px]">
+                                {new Date(t.createdAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400">履歴なし</p>
+                    )}
                   </div>
                 )}
 
