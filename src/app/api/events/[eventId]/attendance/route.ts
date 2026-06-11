@@ -166,6 +166,13 @@ export async function POST(request: NextRequest, { params }: Params) {
           comment: parsed.data.comment || null,
           position: status === "waitlist" ? position : null,
           declaredTournamentClassId: declaredClassId,
+          // cancelType: キャンセル時のみセット (= null をクリアしない / 連続キャンセルで上書き OK)
+          // 参加に戻したら null にクリア
+          ...(cancelType !== null
+            ? { cancelType }
+            : finalStatus === "attending"
+              ? { cancelType: null }
+              : {}),
         },
       });
     } else {
@@ -178,6 +185,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           comment: parsed.data.comment || null,
           position: status === "waitlist" ? position : null,
           declaredTournamentClassId: declaredClassId,
+          cancelType: cancelType,
         },
       });
     }

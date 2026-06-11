@@ -14,6 +14,9 @@ interface Attendee {
   paymentAmount?: number | null;
   paymentNote?: string | null;
   declaredTournamentClassId?: string | null;
+  // null = 通常 / "regular" = 前日まで連絡あり / "same_day_with_notice" = 12h以内連絡あり (自動)
+  // "same_day_no_notice" = 12h以内連絡なし (管理者手動) / "no_show" = 当日無断不参加 (管理者手動)
+  cancelType?: string | null;
 }
 
 interface TournamentClassOption {
@@ -259,6 +262,8 @@ export function AdminAttendanceManager({
                   eventFee={eventFee}
                   dirty={dirty}
                   tournamentClasses={tournamentClasses}
+                  eventId={eventId}
+                  onUpdated={onUpdated}
                   onChangeStatus={(status) => updateRow(a.id, { status })}
                   onTogglePaid={() => updateRow(a.id, { isPaid: !r.isPaid })}
                   onChangeAmount={(amountInput) => updateRow(a.id, { amountInput })}
@@ -297,6 +302,8 @@ function AttendeeRow({
   eventFee,
   dirty,
   tournamentClasses,
+  eventId,
+  onUpdated,
   onChangeStatus,
   onTogglePaid,
   onChangeAmount,
@@ -307,11 +314,45 @@ function AttendeeRow({
   eventFee: number | null;
   dirty: boolean;
   tournamentClasses?: TournamentClassOption[];
+  eventId: string;
+  onUpdated: () => void;
   onChangeStatus: (status: "attending" | "not_attending" | "observing") => void;
   onTogglePaid: () => void;
   onChangeAmount: (amountInput: string) => void;
   onChangeDeclaredClass: (declaredClassId: string) => void;
 }) {
+  const [flagging, setFlagging] = useState(false);
+  const cancelType = attendee.cancelType ?? null;
+  const handleCancelFlag = async (type: "same_day_no_notice" | "no_show" | null) => {
+    if (flagging) return;
+    const labelMap = {
+      same_day_no_notice: "連絡なし当日キャンセル (-3pt)",
+      no_show: "無断不参加 (-5pt)",
+    } as const;
+    const message = type
+      ? `${attendee.user.nickname} さんを「${labelMap[type]}」として記録します。`
+      : `${attendee.user.nickname} さんのキャンセルフラグを取消し、ポイントを復元します。`;
+    if (!confirm(message + "\n実行しますか？")) return;
+    setFlagging(true);
+    try {
+      const res = await fetch(
+        `/api/admin/events/${eventId}/attendees/${attendee.id}/cancel-flag`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type }),
+        },
+      );
+      const json = await res.json();
+      if (!json.success) {
+        alert(json.error?.message || "更新に失敗しました");
+        return;
+      }
+      onUpdated();
+    } finally {
+      setFlagging(false);
+    }
+  };
   const isAttending = row.status === "attending";
   const isObserving = row.status === "observing";
   const hasClasses = (tournamentClasses?.length ?? 0) > 0;
@@ -337,6 +378,21 @@ function AttendeeRow({
         <span className="text-sm font-medium text-gray-900 flex-1 truncate">
           {attendee.user.nickname}
         </span>
+        {cancelType === "same_day_with_notice" && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800 font-medium">
+            当日CX (-1)
+          </span>
+        )}
+        {cancelType === "same_day_no_notice" && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-200 text-orange-900 font-medium">
+            連絡なし (-3)
+          </span>
+        )}
+        {cancelType === "no_show" && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-red-200 text-red-900 font-medium">
+            no-show (-5)
+          </span>
+        )}
         {dirty && (
           <span className="text-xs px-2 py-0.5 rounded-full bg-orange-200 text-orange-800 font-medium">
             未保存
@@ -419,6 +475,41 @@ function AttendeeRow({
           />
         </div>
       )}
+
+      <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-1 flex-wrap text-xs">
+        <span className="text-gray-500 mr-1">キャンセル質:</span>
+        <button
+          onClick={() => handleCancelFlag("same_day_no_notice")}
+          disabled={flagging || cancelType === "same_day_no_notice"}
+          className={`px-2 py-0.5 rounded border ${
+            cancelType === "same_day_no_notice"
+              ? "bg-orange-500 text-white border-orange-500"
+              : "bg-white text-gray-700 border-gray-300 hover:border-orange-400"
+          } disabled:opacity-50`}
+        >
+          連絡なし
+        </button>
+        <button
+          onClick={() => handleCancelFlag("no_show")}
+          disabled={flagging || cancelType === "no_show"}
+          className={`px-2 py-0.5 rounded border ${
+            cancelType === "no_show"
+              ? "bg-red-600 text-white border-red-600"
+              : "bg-white text-gray-700 border-gray-300 hover:border-red-400"
+          } disabled:opacity-50`}
+        >
+          no-show
+        </button>
+        {(cancelType === "same_day_no_notice" || cancelType === "no_show") && (
+          <button
+            onClick={() => handleCancelFlag(null)}
+            disabled={flagging}
+            className="px-2 py-0.5 rounded border bg-white text-gray-600 border-gray-300 hover:border-gray-500 disabled:opacity-50"
+          >
+            取消
+          </button>
+        )}
+      </div>
     </div>
   );
 }

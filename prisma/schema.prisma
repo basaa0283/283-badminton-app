@@ -358,6 +358,14 @@ model Attendance {
   paymentAmount Int?    // null なら event.fee と同額。違う額を受け取った場合のみ手入力
   paymentNote   String? // メモ (任意)
 
+  // キャンセルの質 (P2/P3)
+  //   null = キャンセルしていない (現状の status による)
+  //   "regular"               = 前日までのキャンセル (ポイント変動なし)
+  //   "same_day_with_notice"  = 当日 12h 以内、アプリ内キャンセル = 連絡あり (-1pt)
+  //   "same_day_no_notice"    = 当日 12h 以内、連絡なし (管理者手動、-3pt)
+  //   "no_show"               = 参加のまま無断不参加 (管理者手動、-5pt)
+  cancelType  String?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

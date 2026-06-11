@@ -276,6 +276,8 @@ export async function GET(request: NextRequest, { params }: Params) {
               paymentAmount: canViewExpenses ? a.paymentAmount : undefined,
               paymentNote: canViewExpenses ? a.paymentNote : undefined,
               declaredTournamentClassId: a.declaredTournamentClassId ?? null,
+              // キャンセル質フラグ (admin のみ参照)
+              cancelType: canViewExpenses ? a.cancelType : undefined,
             }))
           : null,
       },

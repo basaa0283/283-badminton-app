@@ -344,6 +344,9 @@ model Attendance {
   paymentAmount Int?    // null なら event.fee と同額
   paymentNote   String? @db.NVarChar(500)
 
+  // キャンセルの質 (P2/P3): regular / same_day_with_notice / same_day_no_notice / no_show
+  cancelType    String? @db.NVarChar(50)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
