@@ -778,11 +778,11 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         <Button
           type="submit"
           variant="secondary"
-          className="flex-1 min-w-[7rem]"
+          className="flex-1 min-w-[8rem]"
           loading={loading && pendingStatus === "draft"}
           onClick={() => setPendingStatus("draft")}
         >
-          下書き保存
+          非公開で保存
         </Button>
         <Button
           type="submit"
@@ -790,12 +790,16 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           loading={loading && pendingStatus === "published"}
           onClick={() => setPendingStatus("published")}
         >
-          {status === "draft" ? "公開する" : submitLabel}
+          {status === "draft" ? "全員に公開" : submitLabel}
         </Button>
       </div>
+      <p className="text-xs text-gray-500 mt-2">
+        ※ <strong>非公開で保存</strong>: 一般メンバーには見えず、管理者だけがイベント詳細から参加者を代理登録できます (LINE 通知も出ません)。<br />
+        ※ <strong>全員に公開</strong>: 通常のイベントとして全員に表示されます (LINE 通知 / お知らせ投稿は ON にしている場合のみ走ります)。
+      </p>
       {status === "draft" && (
         <p className="text-xs text-amber-700 mt-2">
-          現在「下書き」状態です。一般メンバーには見えません。「公開する」で全員に表示されます。
+          現在「非公開」状態です。そのまま管理者運用するか、「全員に公開」で公開できます。
         </p>
       )}
     </form>
