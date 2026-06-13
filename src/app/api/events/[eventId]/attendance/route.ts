@@ -139,12 +139,12 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const finalStatus = status === "waitlist" ? "waitlist" : parsed.data.status;
 
-    // キャンセル抑制: attending → (not_attending | observing) はキャンセル扱い。
+    // キャンセル抑制: attending → not_attending をキャンセル扱い。
     // 開催時刻まで 12h 未満なら同日キャンセル (連絡あり) として -1 pt + cancelType=same_day_with_notice。
     // それ以外 (前日まで) は cancelType=regular のみ、ポイント減算なし。
-    // waitlist 移動は (定員溢れの自動振り分けが多いので) キャンセル扱いにしない。
-    const isCancelling =
-      wasAttending && (finalStatus === "not_attending" || finalStatus === "observing");
+    // waitlist 移動は (定員溢れの自動振り分け) なので除外。observing は本 API では受け付けない
+    // (admin が AdminAttendanceManager で設定する経路のみ)。
+    const isCancelling = wasAttending && finalStatus === "not_attending";
     const msUntilEvent = event.eventDate.getTime() - Date.now();
     const cancelType: "regular" | "same_day_with_notice" | null = isCancelling
       ? msUntilEvent < SAME_DAY_THRESHOLD_MS
