@@ -124,6 +124,24 @@ export const authOptions: NextAuthOptions = {
           entityId: dbUser.id,
           metadata: { provider: "line" },
         });
+        // signup.bonus: 全ユーザーが 1 回だけ +10 pt をもらえる
+        // (PointTransaction.reason = "signup.bonus" が既にあればスキップ)
+        try {
+          const existing = await prisma.pointTransaction.findFirst({
+            where: { userId: dbUser.id, reason: "signup.bonus" },
+            select: { id: true },
+          });
+          if (!existing) {
+            const { addPoints } = await import("./points");
+            await addPoints(dbUser.id, 10, "signup.bonus", {
+              type: "User",
+              id: dbUser.id,
+            });
+          }
+        } catch (err) {
+          // ボーナス失敗でログインを止めない
+          console.error("[events.signIn] signup.bonus failed:", err);
+        }
       } catch (error) {
         // ログインは止めない。次回ログイン時に再試行されるので致命的ではない。
         console.error("[events.signIn] Failed to update LINE info:", error);

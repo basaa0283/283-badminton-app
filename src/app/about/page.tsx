@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Markdown } from "@/components/ui/Markdown";
 import { ABOUT_DEFAULT_MARKDOWN } from "@/lib/about-default";
+import { LogPageView } from "@/components/analytics/LogPageView";
 
 export const metadata = {
   title: "サークルについて | 283バドミントン",
@@ -74,6 +75,7 @@ export default async function AboutPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <LogPageView action="about.view" />
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="text-blue-600 text-sm hover:underline">

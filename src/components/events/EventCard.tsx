@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { AttendanceStatusBadge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { getRoleName, UserRole } from "@/lib/permissions";
 
 interface EventCardProps {
   event: {
@@ -20,6 +22,14 @@ interface EventCardProps {
     waitlistCount: number;
     deadline: Date | string | null;
     deadlineEnabled: boolean;
+    minViewRole?: string;
+    minRespondRole?: string;
+    status?: "draft" | "published";
+    allowedTags?: Array<{ id: string; name: string; color: string | null }>;
+    // 管理者向け: 経費記録の入力状況。null = 未入力扱い。
+    gymCost?: number | null;
+    shuttleCost?: number | null;
+    actualRevenue?: number | null;
     category?: {
       id: string;
       name: string;
@@ -34,15 +44,54 @@ interface EventCardProps {
   };
 }
 
+// admin / subadmin に対し、イベントの閲覧/回答最低権限を 1 行で示すバッジ。
+// 一般メンバーには出さない (運営者にしか意味がない情報)。
+function PermissionBadges({
+  minViewRole,
+  minRespondRole,
+}: {
+  minViewRole?: string;
+  minRespondRole?: string;
+}) {
+  const { data: session } = useSession();
+  const role = session?.user?.role as UserRole | undefined;
+  const isAdmin = role === "admin" || role === "subadmin";
+  if (!isAdmin || !minViewRole || !minRespondRole) return null;
+  return (
+    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+      <span className="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">
+        👁 閲覧 {getRoleName(minViewRole as UserRole)}+
+      </span>
+      <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
+        ✍ 回答 {getRoleName(minRespondRole as UserRole)}+
+      </span>
+    </div>
+  );
+}
+
 export function EventCard({ event }: EventCardProps) {
+  const { data: session } = useSession();
+  const role = session?.user?.role as UserRole | undefined;
+  const isAdmin = role === "admin" || role === "subadmin";
   const eventDate = new Date(event.eventDate);
   const isDeadlinePassed =
     event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date();
   const isFull = event.capacity !== null && event.attendingCount >= event.capacity;
+  // 経費記録の未入力チェック (管理者のみ・過去・中止以外)
+  const isPast = eventDate < new Date();
+  const missingExpenses =
+    isAdmin &&
+    isPast &&
+    !event.cancelledAt &&
+    (event.gymCost == null ||
+      event.shuttleCost == null ||
+      event.actualRevenue == null);
+
+  const isDraft = event.status === "draft";
 
   return (
     <Link href={`/events/${event.id}`}>
-      <Card hover className="mb-3">
+      <Card hover className={`mb-3 ${isDraft ? "border-2 border-dashed border-gray-400 bg-gray-50" : missingExpenses ? "border-2 border-red-300 bg-red-50" : ""}`}>
         <CardContent>
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -52,6 +101,21 @@ export function EventCard({ event }: EventCardProps) {
               {event.cancelledAt && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-red-500 shrink-0">
                   中止
+                </span>
+              )}
+              {event.status === "draft" && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-gray-500 shrink-0">
+                  🔒 非公開
+                </span>
+              )}
+              {event.allowedTags && event.allowedTags.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-purple-600 shrink-0">
+                  🎫 タグ限定 ({event.allowedTags.length})
+                </span>
+              )}
+              {missingExpenses && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-red-600 shrink-0">
+                  ⚠ 記録未入力
                 </span>
               )}
               {event.category && (
@@ -149,6 +213,11 @@ export function EventCard({ event }: EventCardProps) {
               キャンセル待ち {event.myAttendance.position}番目
             </div>
           )}
+
+          <PermissionBadges
+            minViewRole={event.minViewRole}
+            minRespondRole={event.minRespondRole}
+          />
         </CardContent>
       </Card>
     </Link>

@@ -52,8 +52,9 @@ export async function GET() {
       days.push(jstKey(d));
     }
 
-    // 日別ログイン unique user
-    const loginByDay = new Map<string, Set<string>>();
+    // 日別アクティブユーザー: その日に何らかの操作 or 閲覧があった unique user。
+    // NextAuth は JWT セッション 30 日有効のため、auth.login だけだと実利用感が出ない。
+    const activeByDay = new Map<string, Set<string>>();
     // 主要操作件数 (action 単位、日別)
     const TRACKED_ACTIONS = [
       "event.create",
@@ -65,6 +66,36 @@ export async function GET() {
     const actionByDay: Record<string, Map<string, number>> = {};
     for (const a of TRACKED_ACTIONS) actionByDay[a] = new Map();
 
+    // 閲覧系 action の日別集計 + 累計集計
+    const TRACKED_VIEWS = [
+      "home.view",
+      "event.list_view",
+      "event.view",
+      "tournament.list_view",
+      "tournament.view",
+      "member.view",
+      "profile.view",
+      "announcement.list_view",
+      "about.view",
+      "release_notes.view",
+    ] as const;
+    const VIEW_LABEL: Record<(typeof TRACKED_VIEWS)[number], string> = {
+      "home.view": "ホーム",
+      "event.list_view": "イベント一覧",
+      "event.view": "イベント詳細",
+      "tournament.list_view": "大会一覧",
+      "tournament.view": "大会詳細",
+      "member.view": "メンバー詳細",
+      "profile.view": "プロフィール (自分)",
+      "announcement.list_view": "お知らせ一覧",
+      "about.view": "サークルについて",
+      "release_notes.view": "更新履歴",
+    };
+    const viewSet = new Set<string>(TRACKED_VIEWS);
+    const viewByDay = new Map<string, number>(); // 全view合算 (日別)
+    const viewTotalByAction = new Map<string, number>(); // action別累計 (30日)
+    const viewTotalByActionLast7 = new Map<string, number>(); // action別累計 (7日)
+
     const active7 = new Set<string>();
     const active30 = new Set<string>();
 
@@ -73,20 +104,31 @@ export async function GET() {
       if (log.userId) {
         active30.add(log.userId);
         if (log.createdAt >= since7) active7.add(log.userId);
-        if (log.action === "auth.login") {
-          if (!loginByDay.has(key)) loginByDay.set(key, new Set());
-          loginByDay.get(key)!.add(log.userId);
-        }
+        if (!activeByDay.has(key)) activeByDay.set(key, new Set());
+        activeByDay.get(key)!.add(log.userId);
       }
       const bucket = actionByDay[log.action];
       if (bucket) {
         bucket.set(key, (bucket.get(key) ?? 0) + 1);
       }
+      if (viewSet.has(log.action)) {
+        viewByDay.set(key, (viewByDay.get(key) ?? 0) + 1);
+        viewTotalByAction.set(
+          log.action,
+          (viewTotalByAction.get(log.action) ?? 0) + 1,
+        );
+        if (log.createdAt >= since7) {
+          viewTotalByActionLast7.set(
+            log.action,
+            (viewTotalByActionLast7.get(log.action) ?? 0) + 1,
+          );
+        }
+      }
     }
 
     const accessByDay = days.map((day) => ({
       day,
-      logins: loginByDay.get(day)?.size ?? 0,
+      activeUsers: activeByDay.get(day)?.size ?? 0,
     }));
 
     const actionsByDay = days.map((day) => {
@@ -96,6 +138,20 @@ export async function GET() {
       }
       return row;
     });
+
+    const viewsByDay = days.map((day) => ({
+      day,
+      pv: viewByDay.get(day) ?? 0,
+    }));
+
+    const viewsByPage = (TRACKED_VIEWS as readonly string[])
+      .map((action) => ({
+        action,
+        label: VIEW_LABEL[action as keyof typeof VIEW_LABEL] ?? action,
+        last30: viewTotalByAction.get(action) ?? 0,
+        last7: viewTotalByActionLast7.get(action) ?? 0,
+      }))
+      .sort((a, b) => b.last30 - a.last30);
 
     // お知らせ既読率: publishedAt 降順、直近 20 件
     const announcements = await prisma.announcement.findMany({
@@ -150,6 +206,8 @@ export async function GET() {
         accessByDay,
         actionsByDay,
         trackedActions: TRACKED_ACTIONS,
+        viewsByDay,
+        viewsByPage,
         activeUsers: {
           last7: active7.size,
           last30: active30.size,

@@ -70,7 +70,7 @@ export default function ProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch("/api/profile");
+      const res = await fetch("/api/profile?fromPage=1");
       const data = await res.json();
       if (data.success) {
         setProfile(data.data);

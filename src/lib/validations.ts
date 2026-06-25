@@ -28,6 +28,11 @@ export const createEventSchema = z.object({
   // 閲覧・回答できる最低ロール
   minViewRole: z.enum(["guest", "visitor", "member"]).default("visitor"),
   minRespondRole: z.enum(["visitor", "member"]).default("visitor"),
+  // 公開状態 (draft = 管理者と作成者のみ、published = 通常公開)
+  status: z.enum(["draft", "published"]).default("published"),
+  // タグ限定公開: 空配列なら従来通り (誰でも minViewRole 範囲)。
+  // 値ありなら「閾値クリア + そのタグのいずれかを自分が持つ」に絞る。
+  allowedTagIds: z.array(z.string()).optional(),
   // 経費・収支 (管理者用)
   shuttleCount: z.number().int().nonnegative("シャトル本数は0以上で入力してください").optional().nullable(),
   shuttleCost: z.number().int().nonnegative("シャトル代は0以上で入力してください").optional().nullable(),

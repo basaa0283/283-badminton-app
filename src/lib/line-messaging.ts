@@ -85,6 +85,27 @@ export async function notifyApprovalGranted(params: {
   await push(params.lineId, text);
 }
 
+// 保留時のテンプレ返信。SystemSetting の holdReplyMessage に上書き文があればそれを送り、
+// 無ければ HOLD_REPLY_DEFAULT を送る。
+export const HOLD_REPLY_DEFAULT =
+  `【283バドミントン】\nご参加リクエストありがとうございます。\n\n` +
+  `ご検討のため、以下の情報をこの公式LINEにメッセージで送ってください:\n` +
+  `- お名前 (ニックネームでも可)\n` +
+  `- 性別 / 年代\n` +
+  `- バドミントン経験 (年数・レベル感)\n` +
+  `- 参加希望日 (例: 6/15 池袋会場)\n\n` +
+  `お返事をいただき次第、運営から参加可否をご連絡します。`;
+
+export async function notifyHoldRequest(params: {
+  lineId: string;
+}): Promise<void> {
+  const setting = await prisma.systemSetting.findUnique({
+    where: { key: "holdReplyMessage" },
+  });
+  const text = setting?.value?.trim() ? setting.value : HOLD_REPLY_DEFAULT;
+  await push(params.lineId, text);
+}
+
 export async function notifyWaitlistPromotion(params: {
   lineId: string;
   eventTitle: string;

@@ -51,6 +51,8 @@ export async function GET(request: NextRequest, { params }: Params) {
         skillLevel: true,
         adminNote: true,
         priorityScore: true,
+        lifetimePoints: true,
+        availablePoints: true,
         createdAt: true,
         _count: {
           select: {
@@ -97,6 +99,17 @@ export async function GET(request: NextRequest, { params }: Params) {
       pastAttendanceCount,
     };
 
+    // 自分自身の閲覧はログから除外 (回遊ノイズになる)
+    if (session.user.id !== userId) {
+      void logActivity({
+        userId: session.user.id,
+        action: "member.view",
+        entityType: "User",
+        entityId: userId,
+        metadata: { targetNickname: user.nickname },
+      });
+    }
+
     // 管理者権限の場合、追加の管理者専用フィールドを含める
     if (isAdmin) {
       responseData.firstName = user.firstName;
@@ -104,9 +117,27 @@ export async function GET(request: NextRequest, { params }: Params) {
       responseData.skillLevel = user.skillLevel;
       responseData.adminNote = user.adminNote;
       responseData.priorityScore = user.priorityScore;
+      responseData.lifetimePoints = user.lifetimePoints;
+      responseData.availablePoints = user.availablePoints;
       // 管理者には生年月日・年齢を常に表示
       responseData.birthdate = user.birthdate;
       responseData.age = computeAge(user.birthdate);
+
+      // 直近の PointTransaction 10 件 (動作確認用)
+      const recentTransactions = await prisma.pointTransaction.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          delta: true,
+          reason: true,
+          entityType: true,
+          entityId: true,
+          createdAt: true,
+        },
+      });
+      responseData.pointTransactions = recentTransactions;
     }
 
     return NextResponse.json({

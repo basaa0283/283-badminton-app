@@ -37,9 +37,22 @@ model User {
   // (本人と admin は常に見える)。
   tournamentResultsPublic Boolean @default(false)
 
+  // ポイント制度 (P1)
+  // lifetimePoints: 累積、減らない (経験値・ランキング用)
+  // availablePoints: 有効、ペナルティで減る (キャンセル待ち優先度に直結予定)
+  lifetimePoints  Int @default(0)
+  availablePoints Int @default(10)
+
   // 利用規約・プライバシーポリシーへの同意
   termsAcceptedAt      DateTime? // 同意した日時 (null = 未同意)
   termsAcceptedVersion String?   // 同意した規約バージョン (例: "2026-05-17")
+
+  // 参加リクエスト保留 (pending ロールに対してのみ意味を持つ)
+  // - holdAt: 保留開始日時 (null = 通常の承認待ち、TOP バナーに残る)
+  // - holdMessageSentAt: 保留時に LINE 返信を送れた日時 (記録目的)
+  // 保留から 60 日経過したユーザーは自動却下 (アカウント削除) の対象。
+  holdAt              DateTime?
+  holdMessageSentAt   DateTime?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -63,6 +76,80 @@ model User {
   tournamentResults  TournamentResult[]
 
   activityLogs       ActivityLog[]
+
+  memberTags         UserMemberTag[]
+
+  pointTransactions  PointTransaction[]
+  achievementUnlocks AchievementUnlock[]
+}
+
+// ポイント増減の履歴。設計 docs/superpowers/specs/2026-06-11-points-achievements-cancel-design.md 参照。
+// reason 命名: "signup.bonus" / "event.attendance" / "cancel.same_day_with_notice" など
+model PointTransaction {
+  id         String   @id @default(cuid())
+  userId     String
+  delta      Int      // 正=加算、負=減算。0 はレコードを作らない
+  reason     String
+  entityType String?
+  entityId   String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([reason])
+}
+
+// 実績バッジ解除レコード。achievementId は src/lib/achievements.ts の定数 ID。
+model AchievementUnlock {
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, achievementId])
+  @@index([achievementId])
+}
+
+// メンバーに振るタグ (管理者管理)。
+// イベントを「このタグ持ちだけに公開」する用途。
+model MemberTag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?  // バッジ表示色 (任意)
+  createdAt   DateTime @default(now())
+
+  users  UserMemberTag[]
+  events EventAllowedTag[]
+}
+
+// User × MemberTag の中間テーブル
+model UserMemberTag {
+  userId    String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag  MemberTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tagId])
+  @@index([tagId])
+}
+
+// Event × MemberTag の中間テーブル (タグありなら「このタグ持ちだけが見える」)。
+// タグなしのイベントは従来通り minViewRole 閾値のみで判定。
+model EventAllowedTag {
+  eventId   String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  event Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tag   MemberTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, tagId])
+  @@index([tagId])
 }
 
 // アプリ内の操作ログ。利用状況分析と監査の両方に使う汎用テーブル。
@@ -215,6 +302,11 @@ model Event {
   cancelledAt     DateTime?
   cancelReason    String?
 
+  // 公開状態 (draft = 作成者と管理者のみ閲覧可、published = 通常公開)。
+  // draft の間は一般メンバーには存在しない扱い (一覧・詳細とも非表示)。
+  // LINE 通知やお知らせ投稿も draft 状態では走らない。
+  status          String    @default("published")
+
   // 経費・収支 (管理者用、イベント実施後に入力)
   shuttleCount    Int?      // 使用シャトル本数
   shuttleCost     Int?      // シャトル代合計
@@ -222,6 +314,9 @@ model Event {
   otherCost       Int?      // その他経費合計
   otherMemo       String?   // その他経費の内訳メモ
   actualRevenue   Int?      // 実際の集金額 (後日記録)
+
+  // ポイント制度: イベント参加完了時の追加ボーナス pt (null/0 = 基本値のみ)
+  attendanceBonusPoints Int?
 
   createdById     String    // 作成者
   createdAt       DateTime  @default(now())
@@ -238,6 +333,7 @@ model Event {
   attendances     Attendance[]
   attendanceHistories AttendanceHistory[]
   messages        Message[]
+  allowedTags     EventAllowedTag[]
 
   @@index([linkedTournamentId])
 }
@@ -262,6 +358,14 @@ model Attendance {
   paymentAmount Int?    // null なら event.fee と同額。違う額を受け取った場合のみ手入力
   paymentNote   String? // メモ (任意)
 
+  // キャンセルの質 (P2/P3)
+  //   null = キャンセルしていない (現状の status による)
+  //   "regular"               = 前日までのキャンセル (ポイント変動なし)
+  //   "same_day_with_notice"  = 当日 12h 以内、アプリ内キャンセル = 連絡あり (-1pt)
+  //   "same_day_no_notice"    = 当日 12h 以内、連絡なし (管理者手動、-3pt)
+  //   "no_show"               = 参加のまま無断不参加 (管理者手動、-5pt)
+  cancelType  String?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -280,6 +384,9 @@ model AttendanceHistory {
   status      String   // attending / not_attending / waitlist / cancelled
   comment     String?  // コメント
   isProxy     Boolean  @default(false) // 管理者による代理登録
+  // キャンセルの質 (P1)
+  // "regular" | "same_day_with_notice" | "same_day_no_notice" | "no_show"
+  cancelType  String?
   changedAt   DateTime @default(now()) // 変更日時
 
   // リレーション

@@ -14,6 +14,7 @@ interface EventFormData {
   capacity: string;
   fee: string;
   feeVisible: boolean;
+  gymCost: string;
   deadline: string;
   deadlineEnabled: boolean;
   respondStartAt: string;
@@ -23,6 +24,14 @@ interface EventFormData {
   categoryId: string;
   minViewRole: "guest" | "visitor" | "member";
   minRespondRole: "visitor" | "member";
+  status: "draft" | "published";
+  allowedTagIds: string[];
+}
+
+interface AvailableTag {
+  id: string;
+  name: string;
+  color: string | null;
 }
 
 interface EventCategory {
@@ -115,6 +124,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [capacity, setCapacity] = useState(initialData?.capacity || "");
   const [fee, setFee] = useState(initialData?.fee || "");
   const [feeVisible, setFeeVisible] = useState(initialData?.feeVisible || false);
+  const [gymCost, setGymCost] = useState(initialData?.gymCost || "");
   const [deadline, setDeadline] = useState(initialData?.deadline || "");
   const [deadlineEnabled, setDeadlineEnabled] = useState(initialData?.deadlineEnabled || false);
   const [respondStartAt, setRespondStartAt] = useState(initialData?.respondStartAt || "");
@@ -129,6 +139,12 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const [minRespondRole, setMinRespondRole] = useState<"visitor" | "member">(
     initialData?.minRespondRole ?? "visitor"
   );
+  const [status, setStatus] = useState<"draft" | "published">(
+    initialData?.status ?? "published",
+  );
+  const [pendingStatus, setPendingStatus] = useState<"draft" | "published">("published");
+  const [allowedTagIds, setAllowedTagIds] = useState<string[]>(initialData?.allowedTagIds ?? []);
+  const [availableTags, setAvailableTags] = useState<AvailableTag[]>([]);
   const [categories, setCategories] = useState<EventCategory[]>([]);
 
   useEffect(() => {
@@ -136,6 +152,20 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       .then((r) => r.json())
       .then((json) => {
         if (json.success) setCategories(json.data);
+      })
+      .catch(() => {});
+    fetch("/api/admin/tags")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setAvailableTags(
+            (json.data as { id: string; name: string; color: string | null }[]).map((t) => ({
+              id: t.id,
+              name: t.name,
+              color: t.color,
+            })),
+          );
+        }
       })
       .catch(() => {});
   }, []);
@@ -165,8 +195,9 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // LINE 通知が ON のとき、確認ダイアログを出して誤爆を防ぐ
-    if (showNotifyOption && notifyMembers) {
+    const effectiveStatus = pendingStatus;
+    // draft 保存時は LINE 通知が走らないので確認不要。published のときだけ確認。
+    if (effectiveStatus === "published" && showNotifyOption && notifyMembers) {
       const count = notifyTargetCount ?? "?";
       const ok = window.confirm(
         `LINE 通知が ${count} 人に送信されます。\n本当に作成してよろしいですか？`
@@ -209,6 +240,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       capacity,
       fee,
       feeVisible,
+      gymCost,
       deadline,
       deadlineEnabled,
       respondStartAt,
@@ -218,10 +250,13 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       categoryId,
       minViewRole,
       minRespondRole,
+      status: effectiveStatus,
+      allowedTagIds,
     };
 
     try {
       await onSubmit(data);
+      setStatus(effectiveStatus);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
@@ -534,6 +569,24 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
             />
           </div>
         )}
+
+        <div>
+          <label htmlFor="gymCost" className="block text-sm font-medium text-gray-700 mb-1">
+            体育館代（円）<span className="text-xs text-gray-500 font-normal ml-1">管理者のみ閲覧</span>
+          </label>
+          <input
+            type="number"
+            id="gymCost"
+            value={gymCost}
+            onChange={(e) => setGymCost(e.target.value)}
+            min={0}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="例: 8000"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            事前に分かっている場合に入力。空欄でも作成可で、後からイベント詳細の「経費・収支」で記録できます。
+          </p>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -636,6 +689,42 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
             このロール以上だけが出欠回答できます。ゲストは常に回答できません。
           </p>
         </div>
+
+        {availableTags.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              公開タグ (任意)
+            </label>
+            <div className="border border-gray-200 rounded-lg p-2 max-h-40 overflow-auto space-y-1 bg-white">
+              {availableTags.map((t) => (
+                <label key={t.id} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowedTagIds.includes(t.id)}
+                    onChange={(e) => {
+                      setAllowedTagIds((prev) =>
+                        e.target.checked
+                          ? [...prev, t.id]
+                          : prev.filter((id) => id !== t.id),
+                      );
+                    }}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
+                    style={{ backgroundColor: t.color || "#6B7280" }}
+                  >
+                    {t.name}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              タグを 1 つでも選ぶと、選択したいずれかのタグ持ちメンバーだけにイベントが見えます (上の最低ロール条件にも従う)。
+              何も選ばなければ全員 (最低ロール範囲) に公開。
+            </p>
+          </div>
+        )}
       </div>
 
       {showNotifyOption && (
@@ -682,14 +771,37 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
         </div>
       )}
 
-      <div className="flex gap-3 pt-4">
-        <Button type="button" variant="secondary" className="flex-1" onClick={() => router.back()}>
+      <div className="flex gap-3 pt-4 flex-wrap">
+        <Button type="button" variant="secondary" className="flex-1 min-w-[6rem]" onClick={() => router.back()}>
           キャンセル
         </Button>
-        <Button type="submit" className="flex-1" loading={loading}>
-          {submitLabel}
+        <Button
+          type="submit"
+          variant="secondary"
+          className="flex-1 min-w-[8rem]"
+          loading={loading && pendingStatus === "draft"}
+          onClick={() => setPendingStatus("draft")}
+        >
+          非公開で保存
+        </Button>
+        <Button
+          type="submit"
+          className="flex-1 min-w-[8rem]"
+          loading={loading && pendingStatus === "published"}
+          onClick={() => setPendingStatus("published")}
+        >
+          {status === "draft" ? "全員に公開" : submitLabel}
         </Button>
       </div>
+      <p className="text-xs text-gray-500 mt-2">
+        ※ <strong>非公開で保存</strong>: 一般メンバーには見えず、管理者だけがイベント詳細から参加者を代理登録できます (LINE 通知も出ません)。<br />
+        ※ <strong>全員に公開</strong>: 通常のイベントとして全員に表示されます (LINE 通知 / お知らせ投稿は ON にしている場合のみ走ります)。
+      </p>
+      {status === "draft" && (
+        <p className="text-xs text-amber-700 mt-2">
+          現在「非公開」状態です。そのまま管理者運用するか、「全員に公開」で公開できます。
+        </p>
+      )}
     </form>
   );
 }
