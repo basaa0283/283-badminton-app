@@ -3,6 +3,7 @@
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 // 開発環境かどうか
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -75,6 +76,15 @@ export default function LoginPage() {
               </svg>
               LINEでログイン
             </button>
+
+            <div className="pt-2 text-center">
+              <Link
+                href="/preview"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                初めての方 (参加検討中) はこちら →
+              </Link>
+            </div>
 
             <div className="pt-2">
               <button
