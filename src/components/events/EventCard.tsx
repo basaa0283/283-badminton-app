@@ -27,9 +27,9 @@ interface EventCardProps {
     status?: "draft" | "published";
     allowedTags?: Array<{ id: string; name: string; color: string | null }>;
     // 管理者向け: 経費記録の入力状況。null = 未入力扱い。
+    // shuttleCost は自動計算値のため使わず、shuttleCount で判定する。
     gymCost?: number | null;
-    shuttleCost?: number | null;
-    actualRevenue?: number | null;
+    shuttleCount?: number | null;
     category?: {
       id: string;
       name: string;
@@ -77,15 +77,15 @@ export function EventCard({ event }: EventCardProps) {
   const isDeadlinePassed =
     event.deadlineEnabled && event.deadline && new Date(event.deadline) < new Date();
   const isFull = event.capacity !== null && event.attendingCount >= event.capacity;
-  // 経費記録の未入力チェック (管理者のみ・過去・中止以外)
+  // 経費記録の未入力チェック (管理者のみ・過去・中止以外)。
+  // 体育館代 (gymCost) とシャトル本数 (shuttleCount) の 2 つが入っていれば OK 扱い。
+  // 集金額 (actualRevenue) は無料イベントで誤検知するため判定に含めない。
   const isPast = eventDate < new Date();
   const missingExpenses =
     isAdmin &&
     isPast &&
     !event.cancelledAt &&
-    (event.gymCost == null ||
-      event.shuttleCost == null ||
-      event.actualRevenue == null);
+    (event.gymCost == null || event.shuttleCount == null);
 
   const isDraft = event.status === "draft";
 
