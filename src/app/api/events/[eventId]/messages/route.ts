@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
+import { isEventAnnouncementVisibleTo } from "@/lib/announcement";
 import { logActivity } from "@/lib/activity-log";
 
 interface Params {
@@ -10,12 +11,9 @@ interface Params {
 }
 
 // GET /api/events/[eventId]/messages
-// イベント当日連絡 (単方向) の一覧を返す。
-// 自分の Attendance ステータスに応じて表示対象を絞る:
-//   - message.targetType="attending"              => attending の人だけに見える
-//   - message.targetType="attending_or_undecided" => attending または Attendance レコードなしの人に見える
-//   - message.targetType="all"                    => イベントを閲覧できる人全員
-// admin/subadmin は常に全て見える (=運用確認のため)。
+// イベント紐付き Announcement (旧「当日連絡」) の一覧を返す。
+// 実体は Announcement テーブル (eventId 紐付き)。
+// TOP バナー (AnnouncementBanner) にも同じ Announcement が表示されるので既読管理も自動で乗る。
 export async function GET(_request: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
@@ -39,7 +37,6 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
     const isAdmin = permissions.canAccessAdmin(role);
-    // イベント閲覧権限 (draft は作成者/admin のみ)
     if (!isAdmin && event.createdById !== session.user.id) {
       if (event.status === "draft") {
         return NextResponse.json(
@@ -55,12 +52,12 @@ export async function GET(_request: NextRequest, { params }: Params) {
       }
     }
 
-    const [messages, myAttendance] = await Promise.all([
-      prisma.message.findMany({
+    const [announcements, myAttendance] = await Promise.all([
+      prisma.announcement.findMany({
         where: { eventId },
-        orderBy: { sentAt: "desc" },
+        orderBy: { publishedAt: "desc" },
         include: {
-          sender: { select: { id: true, nickname: true, profileImageUrl: true } },
+          createdBy: { select: { id: true, nickname: true, profileImageUrl: true } },
         },
       }),
       prisma.attendance.findUnique({
@@ -70,25 +67,24 @@ export async function GET(_request: NextRequest, { params }: Params) {
     ]);
 
     const attendanceStatus = myAttendance?.status ?? null;
-
-    const visible = messages.filter((m) => {
-      if (isAdmin) return true;
-      if (m.targetType === "all") return true;
-      if (m.targetType === "attending") return attendanceStatus === "attending";
-      if (m.targetType === "attending_or_undecided") {
-        return attendanceStatus === "attending" || attendanceStatus === null;
-      }
-      return false;
-    });
+    const visible = announcements.filter((a) =>
+      isEventAnnouncementVisibleTo(role, a, attendanceStatus),
+    );
 
     return NextResponse.json({
       success: true,
-      data: visible.map((m) => ({
-        id: m.id,
-        content: m.content,
-        targetType: m.targetType,
-        sentAt: m.sentAt,
-        sender: m.sender,
+      data: visible.map((a) => ({
+        id: a.id,
+        content: a.body,
+        targetType: a.attendanceTargetType,
+        sentAt: a.publishedAt,
+        sender: a.createdBy
+          ? {
+              id: a.createdBy.id,
+              nickname: a.createdBy.nickname,
+              profileImageUrl: a.createdBy.profileImageUrl,
+            }
+          : { id: "system", nickname: "運営", profileImageUrl: null },
       })),
     });
   } catch (error) {
@@ -101,7 +97,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 // POST /api/events/[eventId]/messages
-// 管理者のみ投稿可。body: { content: string, targetType?: string }
+// Announcement を作成 (eventId + attendanceTargetType セット)。TOP バナーにも自動で流れる。
 const ALLOWED_TARGETS = new Set(["attending", "attending_or_undecided", "all"]);
 
 export async function POST(request: NextRequest, { params }: Params) {
@@ -142,22 +138,43 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
-    const msg = await prisma.message.create({
+    // 対象範囲 -> audience の初期化。イベント紐付きなので audience は自身のイベント閲覧権限に合わせる:
+    // "all" = 全員に見せるので member/visitor/guest 全部 ON、
+    // それ以外は少なくとも member+visitor は ON (attendance 判定で更に絞られる)。
+    const audienceGuest = targetType === "all";
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { title: true, eventDate: true },
+    });
+    const dateStr = event?.eventDate
+      ? new Date(event.eventDate).toLocaleDateString("ja-JP", {
+          month: "numeric",
+          day: "numeric",
+        })
+      : "";
+    const title = event ? `【${dateStr} ${event.title}】` : "【イベントお知らせ】";
+
+    const ann = await prisma.announcement.create({
       data: {
+        title,
+        body: content,
+        severity: "info",
+        audienceMember: true,
+        audienceVisitor: true,
+        audienceGuest,
+        createdById: session.user.id,
         eventId,
-        senderId: session.user.id,
-        content,
-        targetType,
+        attendanceTargetType: targetType,
       },
     });
     void logActivity({
       userId: session.user.id,
       action: "event_message.post",
-      entityType: "Event",
-      entityId: eventId,
-      metadata: { messageId: msg.id, targetType },
+      entityType: "Announcement",
+      entityId: ann.id,
+      metadata: { eventId, targetType },
     });
-    return NextResponse.json({ success: true, data: { id: msg.id } });
+    return NextResponse.json({ success: true, data: { id: ann.id } });
   } catch (error) {
     console.error("event messages POST error:", error);
     return NextResponse.json(

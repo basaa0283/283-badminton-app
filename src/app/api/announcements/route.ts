@@ -3,10 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@/lib/permissions";
-import { isVisibleTo } from "@/lib/announcement";
+import { isVisibleTo, isEventAnnouncementVisibleTo } from "@/lib/announcement";
 import { logActivity } from "@/lib/activity-log";
 
 // GET /api/announcements - 自分の role に届いている公開中お知らせ + 既読状態
+// イベント紐付き (eventId != null) のお知らせは Attendance ステータスでさらに絞り込む
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -22,11 +23,26 @@ export async function GET() {
     include: {
       createdBy: { select: { nickname: true } },
       reads: { where: { userId }, select: { readAt: true } },
+      event: {
+        select: {
+          id: true,
+          title: true,
+          eventDate: true,
+          attendances: {
+            where: { userId },
+            select: { status: true },
+          },
+        },
+      },
     },
   });
 
   const visible = all
     .filter((a) => isVisibleTo(role, a))
+    .filter((a) => {
+      const attendance = a.event?.attendances[0]?.status ?? null;
+      return isEventAnnouncementVisibleTo(role, a, attendance);
+    })
     .map((a) => ({
       id: a.id,
       title: a.title,
@@ -38,6 +54,10 @@ export async function GET() {
       publishedAt: a.publishedAt,
       createdBy: a.createdBy?.nickname ?? null,
       read: a.reads.length > 0,
+      // イベント紐付きなら関連イベントの ID・タイトル・日時を返す (バナーからリンクさせる用)
+      event: a.event
+        ? { id: a.event.id, title: a.event.title, eventDate: a.event.eventDate }
+        : null,
     }));
 
   void logActivity({

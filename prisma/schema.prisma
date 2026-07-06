@@ -225,6 +225,7 @@ model ShuttlePrice {
 
 // お知らせ
 // 表示対象は non-admin role ごとに on/off。admin/subadmin は常に全件閲覧。
+// イベント紐付け (eventId != null) の場合はさらに Attendance ステータスで絞り込む。
 model Announcement {
   id              String   @id @default(cuid())
   title           String
@@ -238,10 +239,21 @@ model Announcement {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  createdBy User? @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  // イベント紐付き "当日連絡" 用 (任意)。
+  // eventId 紐付きの場合、表示対象は attendanceTargetType に従って絞る:
+  //   "attending"              => 参加確定者のみ
+  //   "attending_or_undecided" => 参加確定 + 未応答
+  //   "all"                    => 全員 (audience もあわせて判定)
+  //   null                     => 通常のお知らせ (audience のみで判定)
+  eventId              String?
+  attendanceTargetType String?
+
+  createdBy User?  @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  event     Event? @relation("EventAnnouncements", fields: [eventId], references: [id], onDelete: Cascade)
   reads     AnnouncementRead[]
 
   @@index([publishedAt])
+  @@index([eventId])
 }
 
 // お知らせ既読マーカー (ユーザー × お知らせ)
@@ -334,6 +346,7 @@ model Event {
   attendanceHistories AttendanceHistory[]
   messages        Message[]
   allowedTags     EventAllowedTag[]
+  announcements   Announcement[] @relation("EventAnnouncements")
 
   @@index([linkedTournamentId])
 }
