@@ -144,9 +144,9 @@ export async function GET(request: NextRequest) {
           color: at.tag.color,
         })),
         // 管理者向け「経費記録未入力」判定用 (UI 側で admin/subadmin のみ参照)
+        // shuttleCost は個数×単価で自動計算されるため生値は常に null。判定は shuttleCount で行う。
         gymCost: event.gymCost,
-        shuttleCost: event.shuttleCost,
-        actualRevenue: event.actualRevenue,
+        shuttleCount: event.shuttleCount,
         category: event.category
           ? {
               id: event.category.id,

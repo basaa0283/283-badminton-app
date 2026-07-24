@@ -3,6 +3,21 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [3.6.0] - 2026-07-25
+
+イベント当日の連絡機能を導入し、TOP のお知らせバナーと既読管理を再利用して確実に気付ける形にした。
+また未ログインの見学検討者向けの参加相談ページを新設。
+
+### Added
+- **イベント当日連絡機能**: 管理者がイベント詳細から「参加確定者のみ / 参加確定+未応答 / 全員」に絞ってメッセージを投稿できる。TOP バナーに自動表示 + 既存の既読管理をそのまま継承。LINE 通知は使わず (フリー枠を消費しない) (#48)
+- **未ログイン向け参加検討ページ** `/preview`: 直近のゲスト向けイベントの日時とカテゴリだけを一覧表示。場所や参加者は非表示。「参加希望日を添えて公式 LINE に連絡」CTA と、コピペ用テンプレを提示。/about と /login からも導線あり
+
+### Changed
+- **当日連絡は Announcement テーブルに統合**: 実装初期案 (Message テーブル) から Announcement へ移行。TOP バナー、audience 絞り込み、既読管理を丸ごと再利用できるようになった
+
+### Fixed
+- **「⚠ 記録未入力」バッジが常に表示されていた不具合**: シャトル代 (自動計算値) と実集金額 (無料イベントで常に null) を判定から除外。体育館代 + シャトル本数の 2 つが埋まっていれば OK 表示になるよう修正
+
 ## [3.5.0] - 2026-06-13
 
 イベントの公開制御 (非公開・タグ限定) を強化し、ポイント制度の基盤と当日キャンセル抑制ロジックを導入。
@@ -551,6 +566,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[3.6.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.4.0...v3.5.0
 [3.4.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.2.2...v3.3.0

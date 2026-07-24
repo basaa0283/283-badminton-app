@@ -90,6 +90,19 @@ export default async function AboutPage() {
           <Markdown source={content} />
         </article>
 
+        <section className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h2 className="text-sm font-bold text-blue-900 mb-1">参加をご検討の方へ</h2>
+          <p className="text-sm text-gray-700 mb-3">
+            直近の練習会の予定と、参加希望の連絡フォームをご案内しています。
+          </p>
+          <Link
+            href="/preview"
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm"
+          >
+            直近の予定を見る →
+          </Link>
+        </section>
+
         <LineContactCard url={officialLineUrl} />
       </main>
     </div>

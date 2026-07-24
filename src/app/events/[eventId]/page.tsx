@@ -13,6 +13,7 @@ import { GuestContactCard } from "@/components/guests/GuestContactCard";
 import { AttendeeList } from "@/components/events/AttendeeList";
 import { AdminAttendanceManager } from "@/components/events/AdminAttendanceManager";
 import { ExpensesCard } from "@/components/events/ExpensesCard";
+import { EventMessages } from "@/components/events/EventMessages";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -499,6 +500,8 @@ export default function EventDetailPage() {
             onUpdated={() => fetchEvent()}
           />
         )}
+
+        <EventMessages eventId={event.id} isAdmin={canViewExpenses} />
 
         {canViewExpenses && event.expenses && (
           <ExpensesCard

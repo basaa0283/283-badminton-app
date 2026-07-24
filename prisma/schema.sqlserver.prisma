@@ -216,7 +216,7 @@ model ShuttlePrice {
   @@index([effectiveFrom])
 }
 
-// お知らせ
+// お知らせ (イベント紐付き "当日連絡" にも使う)
 model Announcement {
   id              String   @id @default(cuid())
   title           String   @db.NVarChar(200)
@@ -230,10 +230,16 @@ model Announcement {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  createdBy User? @relation("AnnouncementCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  // イベント紐付き "当日連絡" 用 (任意)
+  eventId              String?
+  attendanceTargetType String?  @db.NVarChar(50)
+
+  createdBy User?  @relation("AnnouncementCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  event     Event? @relation("EventAnnouncements", fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   reads     AnnouncementRead[]
 
   @@index([publishedAt])
+  @@index([eventId])
 }
 
 // お知らせ既読マーカー
@@ -323,6 +329,7 @@ model Event {
   attendanceHistories AttendanceHistory[]
   messages            Message[]
   allowedTags         EventAllowedTag[]
+  announcements       Announcement[] @relation("EventAnnouncements")
 
   @@index([linkedTournamentId])
 }

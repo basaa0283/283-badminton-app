@@ -17,6 +17,32 @@ export function isVisibleTo(
   return false;
 }
 
+/**
+ * イベント紐付き Announcement (attendanceTargetType 指定あり) の表示可否判定。
+ * eventId が null の Announcement には常に true を返す (= 通常の audience 判定に任せる)。
+ *
+ * 判定ルール:
+ *   - admin / subadmin       => 常に true
+ *   - "attending"            => 自分の attendance status が "attending"
+ *   - "attending_or_undecided" => "attending" または Attendance レコードなし
+ *   - "all"                  => 常に true (audience 判定を通ればよい)
+ *   - null (通常お知らせ)     => 常に true
+ */
+export function isEventAnnouncementVisibleTo(
+  role: UserRole,
+  a: { eventId: string | null; attendanceTargetType: string | null },
+  attendanceStatus: string | null
+): boolean {
+  if (!a.eventId || !a.attendanceTargetType) return true;
+  if (role === "admin" || role === "subadmin") return true;
+  if (a.attendanceTargetType === "all") return true;
+  if (a.attendanceTargetType === "attending") return attendanceStatus === "attending";
+  if (a.attendanceTargetType === "attending_or_undecided") {
+    return attendanceStatus === "attending" || attendanceStatus === null;
+  }
+  return false;
+}
+
 export const SEVERITY_STYLE: Record<
   Severity,
   { bg: string; border: string; text: string; label: string }
