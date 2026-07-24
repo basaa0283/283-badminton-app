@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Activity log GET error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 },
     );
   }

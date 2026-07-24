@@ -106,6 +106,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("POST /api/invite/complete error:", error);
-    return NextResponse.json({ success: false, error: { code: "INTERNAL_ERROR", message: String(error) } }, { status: 500 });
+    return NextResponse.json({ success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } }, { status: 500 });
   }
 }

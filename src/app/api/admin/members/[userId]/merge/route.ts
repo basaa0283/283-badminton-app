@@ -147,7 +147,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   } catch (error) {
     console.error("PUT /api/admin/members/[userId]/merge error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 }
     );
   }

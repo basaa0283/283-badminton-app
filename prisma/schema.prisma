@@ -169,6 +169,7 @@ model ActivityLog {
   @@index([userId, createdAt])
   @@index([action, createdAt])
   @@index([entityType, entityId])
+  @@index([createdAt])
 }
 
 // NextAuth Account
@@ -349,6 +350,7 @@ model Event {
   announcements   Announcement[] @relation("EventAnnouncements")
 
   @@index([linkedTournamentId])
+  @@index([eventDate])
 }
 
 // 出欠
@@ -387,6 +389,7 @@ model Attendance {
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
+  @@index([eventId])
 }
 
 // 出欠回答履歴（変更のたびに記録）

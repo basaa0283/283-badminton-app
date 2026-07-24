@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     console.error("POST /api/admin/members error:", error);
     return NextResponse.json({
       success: false,
-      error: { code: "INTERNAL_ERROR", message: String(error) },
+      error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" },
     }, { status: 500 });
   }
 }

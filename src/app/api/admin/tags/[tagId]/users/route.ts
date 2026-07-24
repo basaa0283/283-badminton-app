@@ -75,7 +75,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   } catch (error) {
     console.error("tag users PUT error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 },
     );
   }
@@ -109,7 +109,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   } catch (error) {
     console.error("tag users GET error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 },
     );
   }

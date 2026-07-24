@@ -15,11 +15,9 @@ const WINDOW_TOLERANCE_MINUTES = 30;
 // Header: Authorization: Bearer {CRON_SECRET}
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get("Authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+  const auth = request.headers.get("authorization");
+  if (!secret || auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED" } }, { status: 401 });
   }
 
   const now = new Date();

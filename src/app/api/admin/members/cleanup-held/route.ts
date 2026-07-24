@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity-log";
+import { deleteUserCascade } from "@/lib/user-delete";
 
 // POST /api/admin/members/cleanup-held
 // 60 日以上保留中の pending ユーザーを削除する。
@@ -37,7 +38,7 @@ export async function POST() {
 
     for (const t of targets) {
       try {
-        await prisma.user.delete({ where: { id: t.id } });
+        await deleteUserCascade(t.id);
         void logActivity({
           userId: session.user.id,
           action: "member.auto_reject",
@@ -61,7 +62,7 @@ export async function POST() {
   } catch (error) {
     console.error("cleanup-held POST error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 },
     );
   }
