@@ -69,7 +69,7 @@ export async function GET() {
   } catch (error) {
     console.error("line-quota GET error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 },
     );
   }

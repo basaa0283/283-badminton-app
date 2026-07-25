@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity-log";
+import { deleteUserCascade } from "@/lib/user-delete";
 
 // DELETE /api/admin/members/[userId] - メンバー削除
 export async function DELETE(
@@ -35,11 +36,8 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: { code: "NOT_FOUND" } }, { status: 404 });
     }
 
-    // SQL ServerはonDelete: NoActionのため関連レコードを先に削除
-    await prisma.invitationToken.deleteMany({ where: { userId } });
-    await prisma.attendanceHistory.deleteMany({ where: { userId } });
-    await prisma.attendance.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    // SQL ServerはonDelete: NoActionのため関連レコードを先に削除（共通ヘルパー）
+    await deleteUserCascade(userId);
 
     void logActivity({
       userId: session.user.id,
@@ -53,7 +51,7 @@ export async function DELETE(
   } catch (error) {
     console.error("DELETE /api/admin/members error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 }
     );
   }

@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Tournaments GET error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 }
     );
   }
@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Tournaments POST error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 }
     );
   }

@@ -77,7 +77,7 @@ export async function POST(_request: Request, { params }: Params) {
   } catch (error) {
     console.error("hold POST error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 },
     );
   }
@@ -133,7 +133,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   } catch (error) {
     console.error("hold DELETE error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 },
     );
   }

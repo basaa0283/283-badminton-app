@@ -78,7 +78,6 @@ jobs:
       - name: Apply DB schema (prisma db push)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
-        continue-on-error: true
         run: npx prisma db push --accept-data-loss
 
       - name: Build Next.js

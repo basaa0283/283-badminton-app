@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 import { logActivity } from "@/lib/activity-log";
+import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
 
 const createSchema = z.object({
   title: z.string().min(1, "タイトルは必須です").max(200, "タイトルは200文字以内"),
@@ -74,6 +75,45 @@ export async function POST(request: NextRequest) {
     entityId: created.id,
     metadata: { title: created.title, severity: created.severity },
   });
+
+  // メール通知: 即時公開のみ対象 (予約投稿は将来課題 — publishedAt が未来の場合は送らない)
+  // eventId 紐付きお知らせ (当日連絡) も対象外 (M3 で別途対応)
+  const isScheduled = created.publishedAt > new Date();
+  const hasEventId = created.eventId != null;
+  if (!isScheduled && !hasEventId) {
+    void (async () => {
+      try {
+        // audienceMember/Visitor/Guest と role の突き合わせ + admin/subadmin は常に対象
+        const targetRoles: string[] = ["admin", "subadmin"];
+        if (created.audienceMember) targetRoles.push("member");
+        if (created.audienceVisitor) targetRoles.push("visitor");
+        if (created.audienceGuest) targetRoles.push("guest");
+
+        // pending / hold 中のユーザーは通知対象から除外
+        // (targetRoles に pending は含まれないが、hold は role と独立なので明示的に弾く)
+        const targetUsers = await prisma.user.findMany({
+          where: {
+            role: { in: targetRoles },
+            holdAt: null,
+          },
+          select: { id: true },
+        });
+
+        const appUrl = process.env.NEXTAUTH_URL ?? "";
+        const bodyText =
+          created.body + `\n\n詳しくはアプリで: ${appUrl}/announcements`;
+
+        await dispatchNotificationEmails({
+          type: "announcement",
+          subject: `【２８ばど】${created.title}`,
+          body: bodyText,
+          recipientUserIds: targetUsers.map((u) => u.id),
+        });
+      } catch (err) {
+        console.error("[announcements POST] メール通知エラー:", err);
+      }
+    })();
+  }
 
   return NextResponse.json({ success: true, data: created }, { status: 201 });
 }

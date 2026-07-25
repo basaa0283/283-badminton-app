@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>283-badminton-app リファクタリング監査 2026-07</title>
+<style>
+  body { font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; margin: 0; background: #f5f6f8; color: #1f2328; line-height: 1.6; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: 22px; border-bottom: 3px solid #2563eb; padding-bottom: 8px; }
+  h2 { font-size: 18px; margin-top: 40px; padding: 6px 12px; border-radius: 6px; }
+  h2.tier-s { background: #fee2e2; color: #991b1b; }
+  h2.tier-a { background: #ffedd5; color: #9a3412; }
+  h2.tier-b { background: #fef9c3; color: #854d0e; }
+  h2.tier-c { background: #e0e7ff; color: #3730a3; }
+  .summary { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 16px 20px; margin: 16px 0; }
+  .summary b { color: #2563eb; }
+  table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; margin: 12px 0; }
+  th { background: #374151; color: #fff; padding: 8px 10px; text-align: left; white-space: nowrap; }
+  td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; vertical-align: top; }
+  tr:hover td { background: #f0f6ff; }
+  .id { font-weight: 700; white-space: nowrap; color: #2563eb; }
+  .risk-high { color: #dc2626; font-weight: 700; }
+  .risk-mid { color: #d97706; font-weight: 600; }
+  .risk-low { color: #16a34a; }
+  .size { white-space: nowrap; }
+  .cat { font-size: 11px; color: #6b7280; white-space: nowrap; }
+  .note { font-size: 12px; color: #6b7280; }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .lead { font-size: 14px; }
+  .pill { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px; margin-right: 4px; }
+  .pill-sec { background: #fee2e2; color: #991b1b; }
+  .pill-perf { background: #dbeafe; color: #1e40af; }
+  .pill-ux { background: #fce7f3; color: #9d174d; }
+  .pill-arch { background: #d1fae5; color: #065f46; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>283-badminton-app リファクタリング監査レポート</h1>
+<p class="note">2026-07-25 / 対象: v3.6.0 時点の dev/release / 調査: 6 観点並列監査 (API 設計・フロントエンド構造・パフォーマンス・UI/UX・データモデル・テスト/依存関係)</p>
+
+<div class="summary lead">
+  <b>結論サマリー:</b> 発見 62 件を統合・重複排除して <b>36 項目</b> に整理。
+  <ul>
+    <li><b>S (緊急 5 件)</b>: セキュリティ穴 1、本番障害リスク 3、情報漏洩 1。v4.0.0 を待たず hotfix 推奨</li>
+    <li><b>A (v4.0.0 の柱 10 件)</b>: 全 API の共通化、race condition 解消、LINE WebView 非互換 UI の一掃、DB 負荷対策</li>
+    <li><b>B (v4.0.0 に同梱可 13 件)</b>: フロント構造整理、UX 統一、テスト補強</li>
+    <li><b>C (スコープ外提案 8 件)</b>: 大規模アーキテクチャ変更・依存メジャーアップグレード</li>
+  </ul>
+  <b>横断的な根本原因は 3 つ:</b>
+  ① <code>middleware.ts</code> 不在 → 認証ガードが全 25 ページ + 53 API ファイルにコピペ ②
+  LINE WebView 対応部品 (Select / ConfirmModal) を作ったのに、旧実装 (native select / confirm()) が大量に残存 ③
+  ActivityLog 等の無制限成長 + インデックス欠落が 5 DTU の Azure SQL Basic に蓄積ダメージ
+</div>
+
+<!-- ============ S ============ -->
+<h2 class="tier-s">S: 緊急対応 (v4.0.0 を待たず hotfix 推奨)</h2>
+<table>
+<tr><th>ID</th><th>タイトル</th><th>問題</th><th>改善案</th><th>リスク</th><th>規模</th></tr>
+<tr>
+  <td class="id">S1</td>
+  <td><span class="pill pill-sec">SEC</span>CRON エンドポイントの認証バイパス</td>
+  <td><code>/api/cron/remind</code> は <code>CRON_SECRET</code> が未設定だと認証チェックを完全スキップ。誰でも全参加者への LINE 通知を発射でき、月 200 通のフリー枠も枯渇させられる</td>
+  <td><code>if (!secret || auth !== ...)</code> に修正し「未設定 = エラー」へ。あわせて本番 env の設定有無を確認</td>
+  <td class="risk-high">高</td><td class="size">小</td>
+</tr>
+<tr>
+  <td class="id">S2</td>
+  <td><span class="pill pill-sec">BUG</span>ユーザー削除が本番で FK エラーになる</td>
+  <td>SQL Server 側は <code>PointTransaction</code> / <code>AchievementUnlock</code> / <code>AnnouncementRead</code> が NoAction、<code>Event.createdById</code> が Restrict のため、イベント作成歴・ポイント履歴のあるユーザーの削除 (承認却下含む) が DB エラーで失敗しうる</td>
+  <td>削除ルートに 3 テーブルの deleteMany を追加 (トランザクション内)。Event.createdBy は SetNull 化 or 削除時付け替え</td>
+  <td class="risk-high">高</td><td class="size">中</td>
+</tr>
+<tr>
+  <td class="id">S3</td>
+  <td><span class="pill pill-sec">CI</span>本番 db push の失敗が黙殺される</td>
+  <td>PROD パイプラインの <code>prisma db push</code> が <code>continue-on-error: true</code>。schema 適用失敗でも新コードがデプロイされ、コードと DB の不整合状態で本番が動く</td>
+  <td>continue-on-error を外し、失敗時はデプロイを止める (or 通知必須化)</td>
+  <td class="risk-high">高</td><td class="size">小</td>
+</tr>
+<tr>
+  <td class="id">S4</td>
+  <td><span class="pill pill-perf">PERF</span>DB インデックス 3 本の欠落</td>
+  <td>最頻クエリがインデックスに乗っていない: ① <code>Event.eventDate</code> (イベント一覧) ② <code>Attendance.eventId</code> (イベント詳細) ③ <code>ActivityLog.createdAt</code> (analytics)。5 DTU では全件スキャンが直撃</td>
+  <td>両 schema に <code>@@index</code> 3 本追加。db push だけで適用でき、コード変更・ユーザー影響ゼロ</td>
+  <td class="risk-low">低 (改善効果 高)</td><td class="size">小</td>
+</tr>
+<tr>
+  <td class="id">S5</td>
+  <td><span class="pill pill-sec">SEC</span>エラーレスポンスで内部情報漏洩</td>
+  <td>43 箇所で <code>message: String(error)</code> を返しており、Prisma のテーブル名・カラム名・制約名がクライアントに露出</td>
+  <td>本番では汎用メッセージに統一、詳細は console.error のみ (A1 の共通ヘルパーとセットで対応可)</td>
+  <td class="risk-mid">中</td><td class="size">小</td>
+</tr>
+</table>
+
+<!-- ============ A ============ -->
+<h2 class="tier-a">A: v4.0.0 の柱 (構造改善・体感改善が大きい)</h2>
+<table>
+<tr><th>ID</th><th>タイトル</th><th>問題</th><th>改善案</th><th>リスク</th><th>規模</th></tr>
+<tr>
+  <td class="id">A1</td>
+  <td><span class="pill pill-arch">ARCH</span>API 共通ヘルパー導入 (withAuth / apiError)</td>
+  <td>認証チェックが 53 ファイル 77 箇所にコピペ。try-catch 無しルート 12 件は DB エラーが素の 500 HTML になる。エラー形式も不統一</td>
+  <td><code>withAuth(handler, {require})</code> + <code>apiError(code)</code> を新設し全ルートを移行。S5 も同時解決。挙動は不変なのでユーザー影響なし</td>
+  <td class="risk-low">低</td><td class="size">大</td>
+</tr>
+<tr>
+  <td class="id">A2</td>
+  <td><span class="pill pill-sec">BUG</span>出欠登録 + 繰り上げの race condition 解消</td>
+  <td>定員チェック→登録→キャンセル待ち繰り上げがトランザクション外。同時操作で「定員超過」「同 position 重複」「二重繰り上げ」が起こり得る (コア機能の整合性問題)</td>
+  <td>attendance 登録〜promoteFromWaitlist を <code>$transaction</code> で包む。invite/complete・settings PUT・メンバー削除も同様に整備</td>
+  <td class="risk-mid">中</td><td class="size">中</td>
+</tr>
+<tr>
+  <td class="id">A3</td>
+  <td><span class="pill pill-ux">UX</span>confirm() / alert() の全廃 → ConfirmModal 統一</td>
+  <td>20 箇所超が native <code>confirm()</code>、エラーも <code>alert()</code> 混在。<b>LINE WebView の一部環境では confirm() が即 false を返し</b>、削除・LINE 通知確認などが操作不能または確認スキップになる恐れ</td>
+  <td>既存の ConfirmModal に順次置換、エラーはインライン赤バナーに統一</td>
+  <td class="risk-high">高 (現状の方が危険)</td><td class="size">大</td>
+</tr>
+<tr>
+  <td class="id">A4</td>
+  <td><span class="pill pill-ux">UX</span>native &lt;select&gt; の全廃 → 自前 Select 統一</td>
+  <td>Android LINE WebView 対策で自前 Select を作ったのに、EventForm (8 箇所)・承認カード・管理画面などで native select が残存。Android ユーザーが操作できない可能性が残っている</td>
+  <td>全 native select を Select コンポーネントに置換 (計 17 箇所)</td>
+  <td class="risk-high">高 (現状の方が危険)</td><td class="size">大</td>
+</tr>
+<tr>
+  <td class="id">A5</td>
+  <td><span class="pill pill-perf">PERF</span>イベント一覧 API の軽量化 (_count 化)</td>
+  <td>一覧が全イベントの全出欠レコードを include (30 イベント × 50 人 = 1500 行を毎回転送・集計)。最頻アクセス画面で DTU を浪費</td>
+  <td>Prisma の <code>_count</code> + 自分の分だけの where 絞りに書き換え。転送量ほぼゼロに</td>
+  <td class="risk-mid">中 (要リグレッション確認)</td><td class="size">大</td>
+</tr>
+<tr>
+  <td class="id">A6</td>
+  <td><span class="pill pill-perf">PERF</span>ActivityLog / AttendanceHistory のパージ戦略</td>
+  <td>全 API が書き込む ActivityLog が無制限成長。Azure SQL Basic は 2GB 上限であり、放置すると DB 停止リスク</td>
+  <td>90 日超のログを定期削除する cron (or 管理画面手動ボタン) を追加。保持期間はデータ活用方針と要相談</td>
+  <td class="risk-high">高 (放置した場合)</td><td class="size">中</td>
+</tr>
+<tr>
+  <td class="id">A7</td>
+  <td><span class="pill pill-perf">PERF</span>analytics API の DB 側集計化</td>
+  <td>ダッシュボードが 30 日分の ActivityLog を全件メモリに載せて JS 集計。ログ増加に比例して悪化</td>
+  <td>groupBy / raw query で DB 側集計に変更</td>
+  <td class="risk-low">低</td><td class="size">大</td>
+</tr>
+<tr>
+  <td class="id">A8</td>
+  <td><span class="pill pill-arch">DB</span>スキーマ掃除 (Message 削除ほか)</td>
+  <td>Message テーブルは Announcement 統合後コード参照ゼロの死にテーブル。schema コメントに observing 抜け、priorityScore の役割記述曖昧など文書化ズレも蓄積</td>
+  <td>Message + User.sentMessages を両 schema から削除、コメント修正。本番の既存レコード無を確認してから</td>
+  <td class="risk-low">低</td><td class="size">小</td>
+</tr>
+<tr>
+  <td class="id">A9</td>
+  <td><span class="pill pill-arch">DB</span>cancelType 二重管理の整理</td>
+  <td>Attendance.cancelType (最新値) と AttendanceHistory.cancelType (履歴) の二重更新が必要な構造で、更新漏れ経路が生じうる (ポイント計算のズレに直結)</td>
+  <td>更新をヘルパー関数に集約してトランザクション化。二重更新漏れを構造的に防ぐ</td>
+  <td class="risk-mid">中</td><td class="size">中</td>
+</tr>
+<tr>
+  <td class="id">A10</td>
+  <td><span class="pill pill-arch">ARCH</span>zod バリデーション統一</td>
+  <td>7 ルートが手動 typeof チェックで、文字列長・空文字検証が抜けやすい</td>
+  <td>zod スキーマ + safeParse に統一 (A1 とセットで実施すると効率的)</td>
+  <td class="risk-low">低</td><td class="size">小</td>
+</tr>
+</table>
+
+<!-- ============ B ============ -->
+<h2 class="tier-b">B: v4.0.0 に同梱可 (品質・保守性の底上げ)</h2>
+<table>
+<tr><th>ID</th><th>タイトル</th><th>問題 / 改善案</th><th>リスク</th><th>規模</th></tr>
+<tr><td class="id">B1</td><td>useRequireAuth フック導入</td><td>全 25 ページの認証ガードコピペを 3 行に集約するカスタムフック (middleware 全面移行は C1 に切り分け)</td><td class="risk-low">低</td><td class="size">中</td></tr>
+<tr><td class="id">B2</td><td>巨大ファイル分割</td><td>admin/members/[userId] 869 行、EventForm 807 行、admin/page 24 useState。セクション別コンポーネントに分割</td><td class="risk-low">低</td><td class="size">大</td></tr>
+<tr><td class="id">B3</td><td>型定義の集約</td><td>Announcement / Member / TournamentDetail / EventCategory が複数ファイルに別々定義され形状も乖離。src/types/ に集約</td><td class="risk-low">低</td><td class="size">小</td></tr>
+<tr><td class="id">B4</td><td>fetch エラーのサイレント落ち修正</td><td>大会詳細ほかで fetch 失敗時に「読み込み中...」が永続表示。try-catch + エラー表示 + .then/await の統一</td><td class="risk-mid">中</td><td class="size">中</td></tr>
+<tr><td class="id">B5</td><td>保存成功フィードバック統一</td><td>ボタンラベル変化 / 緑テキスト / バナーの 3 方式混在 → 1 方式に統一</td><td class="risk-low">低</td><td class="size">中</td></tr>
+<tr><td class="id">B6</td><td>ローディングスケルトン導入</td><td>全ページ「読み込み中...」テキストのみ。主要リスト画面にスケルトン + スピナー</td><td class="risk-low">低</td><td class="size">中</td></tr>
+<tr><td class="id">B7</td><td>管理トップのカード整理</td><td>カード 11 枚が縦 1 列でスクロール地獄。頻度別グループ化 or 2 列固定</td><td class="risk-low">低</td><td class="size">中</td></tr>
+<tr><td class="id">B8</td><td>メンバー管理テーブルのモバイル最適化</td><td>6 列テーブルがスマホで横スクロール必須 → カード形式 or 列間引き</td><td class="risk-low">低</td><td class="size">中</td></tr>
+<tr><td class="id">B9</td><td>バッジ実装の統一</td><td>AttendanceStatusBadge 不使用のインライン定義、タグバッジの独自実装を Badge コンポーネント経由に統一</td><td class="risk-low">低</td><td class="size">小</td></tr>
+<tr><td class="id">B10</td><td>アクセシビリティ最低限修正</td><td>&lt;th onClick&gt; ソート、&lt;div onClick&gt; 行リンクを button/Link 化</td><td class="risk-low">低</td><td class="size">小</td></tr>
+<tr><td class="id">B11</td><td>コアロジックのテスト追加</td><td>キャンセル判定 (12h 境界)・ポイント差替・announcement 表示範囲・meetsRoleThreshold がテストゼロ。v4.0.0 の大改修前に安全網として先行推奨</td><td class="risk-low">低</td><td class="size">中</td></tr>
+<tr><td class="id">B12</td><td>E2E 追加 (v3.5/3.6 機能)</td><td>タグ限定公開・非公開イベント・当日連絡・保留・優先度繰り上げが E2E 未カバー</td><td class="risk-low">低</td><td class="size">中</td></tr>
+<tr><td class="id">B13</td><td>lint warning 20 件解消</td><td>exhaustive-deps 6 件 (無限ループ予備軍) は useCallback 化、未使用型は削除。warning ゼロ化で CI の見通し改善</td><td class="risk-low">低</td><td class="size">小</td></tr>
+</table>
+
+<!-- ============ C ============ -->
+<h2 class="tier-c">C: v4.0.0 スコープ外の提案 (将来課題として Issue 化推奨)</h2>
+<table>
+<tr><th>ID</th><th>タイトル</th><th>内容</th><th>規模</th></tr>
+<tr><td class="id">C1</td><td>middleware.ts + Server Component 化</td><td>認証を middleware に移し、ページを RSC 化してバンドル削減・SSR 高速化。アーキテクチャ変更が大きく段階移行が必要</td><td class="size">大</td></tr>
+<tr><td class="id">C2</td><td>Prisma 5 → 6 → 7 段階アップグレード</td><td>本番 Azure SQL への影響が大きい。DEV で段階検証しつつ独立ブランチで</td><td class="size">大</td></tr>
+<tr><td class="id">C3</td><td>TypeScript 7 / nodemailer 9 アップグレード</td><td>メジャー乖離。それぞれ独立ブランチでビルド確認</td><td class="size">中</td></tr>
+<tr><td class="id">C4</td><td>Prisma native enum 化</td><td>role / status 系 String enum の型安全化。SQLite 制約もあり大掛かり</td><td class="size">大</td></tr>
+<tr><td class="id">C5</td><td>schema 二重保守の CI 差分検証</td><td>schema.prisma / schema.sqlserver.prisma のモデル・フィールド一致を CI で自動チェック。「本番だけカラム欠損」事故の予防。<b>価値高いので B 昇格も検討可</b></td><td class="size">中</td></tr>
+<tr><td class="id">C6</td><td>NextAuth 残骸フィールド整理</td><td>User.name / emailVerified / image の役割整理 (session.user.image が実は常に undefined の疑い)</td><td class="size">小</td></tr>
+<tr><td class="id">C7</td><td>Perf 小物パック</td><td>リマインダー並列送信 / タグクエリ統合 / EventForm fetch キャッシュ / history デフォルト期間絞り 等 6 件</td><td class="size">中</td></tr>
+<tr><td class="id">C8</td><td>next/image 化 + CI Playwright キャッシュ</td><td>画像最適化 (8 箇所) と CI 時間 1-2 分短縮</td><td class="size">小</td></tr>
+</table>
+
+<h2 style="background:#f3f4f6; color:#374151;">推奨実行順 (私案)</h2>
+<div class="summary">
+  <ol>
+    <li><b>Hotfix (即日〜)</b>: S1 → S3 → S4 → S2 → S5。v3.6.x パッチとして先行リリース可能な粒度</li>
+    <li><b>v4.0.0 第1波 (安全網)</b>: B11 (テスト追加) → A1 (withAuth) → A2 (トランザクション)。裏方中心でユーザー影響ゼロ</li>
+    <li><b>v4.0.0 第2波 (UX 一掃)</b>: A3 (confirm 廃止) + A4 (select 統一) + B4〜B9 から選択</li>
+    <li><b>v4.0.0 第3波 (性能)</b>: A5 (_count 化) → A6 (パージ) → A7 (analytics)</li>
+    <li><b>仕上げ</b>: A8〜A10、B1〜B3、B12〜B13 から選択 → v4.0.0 リリース</li>
+  </ol>
+  <p class="note">※ v4.0.0 と銘打つが後方互換は維持する方針 (MAJOR にするのは「大規模刷新」の位置づけのため)。破壊的変更はなし。</p>
+</div>
+
+</div>
+</body>
+</html>

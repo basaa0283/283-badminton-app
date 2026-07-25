@@ -51,8 +51,9 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
+    console.error("GET /api/admin/settings error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 }
     );
   }
@@ -93,8 +94,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("PUT /api/admin/settings error:", error);
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: String(error) } },
+      { success: false, error: { code: "INTERNAL_ERROR", message: "サーバーエラーが発生しました" } },
       { status: 500 }
     );
   }

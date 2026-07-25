@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyEventReminder } from "@/lib/line-messaging";
+import { formatInTimeZone } from "date-fns-tz";
+import { ja } from "date-fns/locale";
+import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
 
 // リマインダーウィンドウ（時間）: 前日 & 当日
 const REMINDER_WINDOWS = [
@@ -15,11 +18,9 @@ const WINDOW_TOLERANCE_MINUTES = 30;
 // Header: Authorization: Bearer {CRON_SECRET}
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get("Authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+  const auth = request.headers.get("authorization");
+  if (!secret || auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED" } }, { status: 401 });
   }
 
   const now = new Date();
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       include: {
         attendances: {
           where: { status: "attending" },
-          include: { user: { select: { lineId: true, nickname: true } } },
+          include: { user: { select: { id: true, lineId: true, nickname: true } } },
         },
       },
     });
@@ -43,6 +44,8 @@ export async function GET(request: NextRequest) {
     for (const event of events) {
       // 終日イベントは 24h 前 (前日 00:00 = 深夜) では送らず、2h 前 (前日 22:00 ≒ 前日夜) のみ送る
       if (event.isAllDay && window.hoursUntil >= 24) continue;
+
+      // LINE リマインダー
       for (const attendance of event.attendances) {
         if (!attendance.user.lineId) continue;
         try {
@@ -57,6 +60,29 @@ export async function GET(request: NextRequest) {
         } catch (err) {
           console.error(`[cron/remind] failed for user ${attendance.user.nickname}:`, err);
         }
+      }
+
+      // メール リマインダー (LINE と同じ参加確定者)
+      const attendingUserIds = event.attendances.map((a) => a.user.id);
+      if (attendingUserIds.length > 0) {
+        const dateStr = event.isAllDay
+          ? formatInTimeZone(event.eventDate, "Asia/Tokyo", "M月d日(E)", { locale: ja }) + " 終日"
+          : formatInTimeZone(event.eventDate, "Asia/Tokyo", "M月d日(E) HH:mm", { locale: ja });
+        const appUrl = process.env.NEXTAUTH_URL ?? "";
+        const bodyLines = [
+          `【リマインダー】${event.title}`,
+          "",
+          `📅 ${dateStr}`,
+          ...(event.location ? [`📍 ${event.location}`] : []),
+          "",
+          `詳細: ${appUrl}/events/${event.id}`,
+        ];
+        await dispatchNotificationEmails({
+          type: "reminder",
+          subject: `【２８ばど】リマインダー: ${event.title}`,
+          body: bodyLines.join("\n"),
+          recipientUserIds: attendingUserIds,
+        });
       }
     }
   }

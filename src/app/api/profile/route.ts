@@ -18,6 +18,13 @@ const PROFILE_SELECT = {
   comment: true,
   role: true,
   tournamentResultsPublic: true,
+  // メール通知 (任意登録)
+  notifyEmail: true,
+  notifyEmailVerifiedAt: true,
+  notifyOnNewEvent: true,
+  notifyOnAnnouncement: true,
+  notifyOnReminder: true,
+  notifyOnEventMessage: true,
   createdAt: true,
 } as const;
 

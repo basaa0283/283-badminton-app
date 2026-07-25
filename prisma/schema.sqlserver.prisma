@@ -49,6 +49,14 @@ model User {
   holdAt              DateTime?
   holdMessageSentAt   DateTime?
 
+  // メール通知 (任意登録)。notifyEmail は NextAuth の email とは独立 (unique なし)
+  notifyEmail           String?
+  notifyEmailVerifiedAt DateTime? // null = 未確認。未確認アドレスには送信しない
+  notifyOnNewEvent      Boolean   @default(true)
+  notifyOnAnnouncement  Boolean   @default(true)
+  notifyOnReminder      Boolean   @default(true)
+  notifyOnEventMessage  Boolean   @default(true)
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -162,6 +170,7 @@ model ActivityLog {
   @@index([userId, createdAt])
   @@index([action, createdAt])
   @@index([entityType, entityId])
+  @@index([createdAt])
 }
 
 // NextAuth Account
@@ -332,6 +341,7 @@ model Event {
   announcements       Announcement[] @relation("EventAnnouncements")
 
   @@index([linkedTournamentId])
+  @@index([eventDate])
 }
 
 // 出欠
@@ -362,6 +372,7 @@ model Attendance {
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
+  @@index([eventId])
 }
 
 // 出欠回答履歴（変更のたびに記録）
@@ -384,6 +395,19 @@ model AttendanceHistory {
   @@index([userId])
   @@index([eventId])
   @@index([changedAt])
+}
+
+// メール確認・配信停止用トークン
+// User へのリレーションは意図的に張らない (削除時の FK 問題回避)。
+// ユーザー削除時は src/lib/user-delete.ts の deleteUserCascade で明示削除する。
+model EmailToken {
+  token     String    @id
+  userId    String
+  purpose   String    @db.NVarChar(20) // "verify" (24h期限) | "unsubscribe" (無期限)
+  expiresAt DateTime? // null = 無期限
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // 招待トークン

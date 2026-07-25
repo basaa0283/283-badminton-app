@@ -27,6 +27,233 @@ interface Profile {
   comment: string | null;
   role: string;
   tournamentResultsPublic: boolean;
+  // メール通知 (任意登録)
+  notifyEmail: string | null;
+  notifyEmailVerifiedAt: string | null;
+  notifyOnNewEvent: boolean;
+  notifyOnAnnouncement: boolean;
+  notifyOnReminder: boolean;
+  notifyOnEventMessage: boolean;
+}
+
+type NotifyKey =
+  | "notifyOnNewEvent"
+  | "notifyOnAnnouncement"
+  | "notifyOnReminder"
+  | "notifyOnEventMessage";
+
+const NOTIFY_SWITCH_ITEMS: { key: NotifyKey; label: string }[] = [
+  { key: "notifyOnNewEvent", label: "新規イベント" },
+  { key: "notifyOnAnnouncement", label: "お知らせ" },
+  { key: "notifyOnReminder", label: "リマインダー" },
+  { key: "notifyOnEventMessage", label: "当日連絡" },
+];
+
+function Toggle({ enabled, disabled, onToggle }: { enabled: boolean; disabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+        enabled ? "bg-green-500" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+          enabled ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
+  );
+}
+
+// メール通知セクション。3 状態: 未登録 / 確認待ち / 確認済み。
+// スイッチ変更は保存ボタンなしで即時 PUT する。
+function EmailNotifySection({
+  profile,
+  onUpdated,
+}: {
+  profile: Profile;
+  onUpdated: (patch: Partial<Profile>) => void;
+}) {
+  const [emailInput, setEmailInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [toggling, setToggling] = useState<NotifyKey | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const registerEmail = async (email: string) => {
+    if (sending) return;
+    setSending(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/profile/notify-email", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error?.message || "確認メールの送信に失敗しました");
+      }
+      onUpdated({ notifyEmail: data.data.notifyEmail, notifyEmailVerifiedAt: null });
+      setEmailInput("");
+      setMessage("確認メールを送りました。メール内のリンクを開くと有効になります");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const removeEmail = async () => {
+    if (removing) return;
+    if (!confirm("メール通知の登録を解除しますか？")) return;
+    setRemoving(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/profile/notify-email", { method: "DELETE" });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error?.message || "登録の解除に失敗しました");
+      }
+      onUpdated({ notifyEmail: null, notifyEmailVerifiedAt: null });
+      setMessage("登録を解除しました");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const toggleSetting = async (key: NotifyKey) => {
+    if (toggling) return;
+    setToggling(key);
+    setError(null);
+    try {
+      const res = await fetch("/api/profile/notify-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: !profile[key] }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error?.message || "設定の変更に失敗しました");
+      }
+      onUpdated(data.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  const verified = !!profile.notifyEmailVerifiedAt;
+
+  return (
+    <Card className="mt-4">
+      <CardHeader>
+        <h2 className="text-lg font-bold text-gray-900">メール通知</h2>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+            {error}
+          </div>
+        )}
+        {message && (
+          <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm mb-4">
+            {message}
+          </div>
+        )}
+
+        {!profile.notifyEmail && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
+              イベント追加やお知らせをメールでも受け取れます (任意)
+            </p>
+            <input
+              type="email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              maxLength={254}
+              placeholder="you@example.com"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <Button
+              onClick={() => registerEmail(emailInput.trim())}
+              disabled={!emailInput.trim()}
+              loading={sending}
+              className="w-full"
+            >
+              確認メールを送る
+            </Button>
+          </div>
+        )}
+
+        {profile.notifyEmail && !verified && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700">
+              確認待ち: <span className="font-medium">{profile.notifyEmail}</span>
+            </p>
+            <p className="text-xs text-gray-500">
+              確認メール内のリンクを開くと有効になります (有効期限: 24時間)
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => registerEmail(profile.notifyEmail!)}
+                loading={sending}
+                className="flex-1"
+              >
+                確認メールを再送
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={removeEmail}
+                loading={removing}
+                className="flex-1"
+              >
+                登録を解除
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {profile.notifyEmail && verified && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700">
+              通知先: <span className="font-medium">{profile.notifyEmail}</span>
+            </p>
+            <div className="space-y-3">
+              {NOTIFY_SWITCH_ITEMS.map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{label}</span>
+                  <Toggle
+                    enabled={profile[key]}
+                    disabled={toggling !== null}
+                    onToggle={() => toggleSetting(key)}
+                  />
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="secondary"
+              onClick={removeEmail}
+              loading={removing}
+              className="w-full"
+            >
+              登録を解除
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function isoToDay(iso: string | null): string {
@@ -322,6 +549,15 @@ export default function ProfilePage() {
             </form>
           </CardContent>
         </Card>
+
+        {profile && (
+          <EmailNotifySection
+            profile={profile}
+            onUpdated={(patch) =>
+              setProfile((prev) => (prev ? { ...prev, ...patch } : prev))
+            }
+          />
+        )}
 
         {session?.user &&
           permissions.canViewTournaments(session.user.role as UserRole) && (
