@@ -3,6 +3,26 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [3.7.0] - 2026-07-26
+
+メール通知ルートの新設 (LINE 月次上限の回避策) と、リファクタリング監査で発見した
+セキュリティ・安定性問題の hotfix をまとめた。
+
+### Added
+- **メール通知機能**: プロフィールから任意でメールアドレスを登録し、確認リンクで有効化すると、4 種の通知 (新規イベント公開 / お知らせ / リマインダー / 当日連絡) をメールで受け取れる。種類ごとに ON/OFF 可能。全メールに個人別の配信停止リンク付き。宛先は既存の公開制御 (minViewRole / タグ限定 / audience / attendanceTargetType) をそのまま適用。Gmail SMTP 使用、未確認アドレスには一切送信しない
+- アプリ内「更新履歴」に v3.5.0 / v3.6.0 / v3.7.0 の記載を追加 (更新漏れの解消)
+
+### Security
+- リマインダー cron (`/api/cron/remind`) が `CRON_SECRET` 未設定時に認証をスキップしていた問題を修正 (未設定 = 401)
+- API エラーレスポンスに内部エラー詳細 (`String(error)`) を含めていた 43 箇所を汎用メッセージに置換 (DB スキーマ情報の漏洩防止)
+
+### Fixed
+- ユーザー削除 (承認却下・保留クリーンアップ) が、ポイント履歴などを持つユーザーで本番 DB の FK エラーになり得た問題を修正 (削除処理を deleteUserCascade に集約しトランザクション化)
+
+### Changed
+- 頻出クエリ向けの DB インデックスを 3 本追加 (Event.eventDate / Attendance.eventId / ActivityLog.createdAt) — イベント一覧・詳細の応答改善
+- 本番デプロイの DB スキーマ適用 (`prisma db push`) が失敗した場合、デプロイを中断するように変更 (従来は失敗を無視して続行していた)
+
 ## [3.6.0] - 2026-07-25
 
 イベント当日の連絡機能を導入し、TOP のお知らせバナーと既読管理を再利用して確実に気付ける形にした。
@@ -566,6 +586,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[3.7.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.4.0...v3.5.0
 [3.4.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.3.0...v3.4.0
