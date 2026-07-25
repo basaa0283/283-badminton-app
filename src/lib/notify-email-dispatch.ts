@@ -9,7 +9,7 @@ import { logActivity } from "./activity-log";
  * 「確認済み + 該当スイッチ ON」のユーザーだけに絞り込んで送る。
  */
 export async function dispatchNotificationEmails(params: {
-  type: "new_event" | "announcement";
+  type: "new_event" | "announcement" | "reminder" | "event_message";
   subject: string;
   body: string; // フッター抜きの本文
   recipientUserIds: string[];
@@ -20,7 +20,13 @@ export async function dispatchNotificationEmails(params: {
 
   // type に対応するスイッチを決定
   const switchField =
-    type === "new_event" ? "notifyOnNewEvent" : "notifyOnAnnouncement";
+    type === "new_event"
+      ? "notifyOnNewEvent"
+      : type === "announcement"
+        ? "notifyOnAnnouncement"
+        : type === "reminder"
+          ? "notifyOnReminder"
+          : "notifyOnEventMessage";
 
   // 1クエリで「確認済み + スイッチON」のユーザーを取得
   const users = await prisma.user.findMany({

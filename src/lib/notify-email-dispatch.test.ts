@@ -116,4 +116,54 @@ describe("dispatchNotificationEmails", () => {
     expect(prisma.emailToken.createMany).not.toHaveBeenCalled();
     expect(sendEmail).toHaveBeenCalledTimes(1);
   });
+
+  it("reminder タイプは notifyOnReminder スイッチでフィルタされる", async () => {
+    // notifyOnReminder=true のユーザーが findMany で返る想定
+    (prisma.user.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: "user-r", notifyEmail: "reminder@example.com" },
+    ]);
+    (prisma.emailToken.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { userId: "user-r", token: "token-r" },
+    ]);
+    (sendEmail as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+
+    await dispatchNotificationEmails({
+      type: "reminder",
+      subject: "【２８ばど】リマインダー: テストイベント",
+      body: "明日のイベントです",
+      recipientUserIds: ["user-r"],
+    });
+
+    // findMany の where に notifyOnReminder: true が渡されることを確認
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ notifyOnReminder: true }),
+      }),
+    );
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("event_message タイプは notifyOnEventMessage スイッチでフィルタされる", async () => {
+    (prisma.user.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: "user-m", notifyEmail: "message@example.com" },
+    ]);
+    (prisma.emailToken.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { userId: "user-m", token: "token-m" },
+    ]);
+    (sendEmail as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+
+    await dispatchNotificationEmails({
+      type: "event_message",
+      subject: "【２８ばど】7/26 テストイベント の連絡",
+      body: "当日の連絡事項です",
+      recipientUserIds: ["user-m"],
+    });
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ notifyOnEventMessage: true }),
+      }),
+    );
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
 });

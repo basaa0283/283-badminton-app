@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { isEventAnnouncementVisibleTo } from "@/lib/announcement";
 import { logActivity } from "@/lib/activity-log";
+import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -144,7 +145,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     const audienceGuest = targetType === "all";
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { title: true, eventDate: true },
+      select: {
+        title: true,
+        eventDate: true,
+        minViewRole: true,
+        allowedTags: { select: { tagId: true } },
+      },
     });
     const dateStr = event?.eventDate
       ? new Date(event.eventDate).toLocaleDateString("ja-JP", {
@@ -174,6 +180,81 @@ export async function POST(request: NextRequest, { params }: Params) {
       entityId: ann.id,
       metadata: { eventId, targetType },
     });
+
+    // メール通知: fire-and-forget (cron と異なり API レスポンスを待たせない)
+    void (async () => {
+      try {
+        const appUrl = process.env.NEXTAUTH_URL ?? "";
+        const subject = `【２８ばど】${dateStr} ${event?.title ?? "イベント"} の連絡`;
+        const emailBody = content + `\n\n詳細: ${appUrl}/events/${eventId}`;
+
+        const allowedTagIds = (event?.allowedTags ?? []).map((t) => t.tagId);
+        const hasTagRestriction = allowedTagIds.length > 0;
+        const minViewRole = event?.minViewRole ?? "visitor";
+
+        let recipientUserIds: string[];
+
+        if (targetType === "attending") {
+          // 参加確定者のみ
+          const attendances = await prisma.attendance.findMany({
+            where: { eventId, status: "attending" },
+            select: { userId: true },
+          });
+          recipientUserIds = attendances.map((a) => a.userId);
+        } else {
+          // attending_or_undecided / all: イベントを閲覧できるユーザーを取得
+          const allUsers = await prisma.user.findMany({
+            where: {
+              role: { notIn: ["pending"] },
+              holdAt: null,
+            },
+            select: {
+              id: true,
+              role: true,
+              memberTags: { select: { tagId: true } },
+            },
+          });
+
+          // イベント閲覧可能ユーザーを絞り込む
+          const viewableUserIds = allUsers
+            .filter((u) => {
+              if (u.role === "admin" || u.role === "subadmin") return true;
+              if (!meetsRoleThreshold(u.role as UserRole, minViewRole)) return false;
+              if (hasTagRestriction) {
+                const userTagIds = new Set(u.memberTags.map((t) => t.tagId));
+                return allowedTagIds.some((tid) => userTagIds.has(tid));
+              }
+              return true;
+            })
+            .map((u) => u.id);
+
+          if (targetType === "all") {
+            recipientUserIds = viewableUserIds;
+          } else {
+            // attending_or_undecided: 参加確定 or Attendance レコードなし
+            const attendances = await prisma.attendance.findMany({
+              where: { eventId, userId: { in: viewableUserIds } },
+              select: { userId: true, status: true },
+            });
+            const attendanceMap = new Map(attendances.map((a) => [a.userId, a.status]));
+            recipientUserIds = viewableUserIds.filter((uid) => {
+              const status = attendanceMap.get(uid) ?? null;
+              return status === "attending" || status === null;
+            });
+          }
+        }
+
+        await dispatchNotificationEmails({
+          type: "event_message",
+          subject,
+          body: emailBody,
+          recipientUserIds,
+        });
+      } catch (err) {
+        console.error("[event messages POST] メール通知エラー:", err);
+      }
+    })();
+
     return NextResponse.json({ success: true, data: { id: ann.id } });
   } catch (error) {
     console.error("event messages POST error:", error);
