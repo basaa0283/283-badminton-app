@@ -11,6 +11,8 @@ export async function deleteUserCascade(userId: string): Promise<void> {
     prisma.achievementUnlock.deleteMany({ where: { userId } }),
     prisma.announcementRead.deleteMany({ where: { userId } }),
     prisma.message.deleteMany({ where: { senderId: userId } }),
+    // EmailToken は User への FK を張っていないので明示削除が必須
+    prisma.emailToken.deleteMany({ where: { userId } }),
     prisma.invitationToken.deleteMany({ where: { userId } }),
     prisma.attendanceHistory.deleteMany({ where: { userId } }),
     prisma.attendance.deleteMany({ where: { userId } }),
