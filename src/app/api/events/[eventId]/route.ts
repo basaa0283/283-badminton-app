@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { updateEventSchema } from "@/lib/validations";
 import { logActivity } from "@/lib/activity-log";
+import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
+import { formatInTimeZone } from "date-fns-tz";
+import { ja } from "date-fns/locale";
 
 function isStaff(role: UserRole) {
   return role === "admin" || role === "subadmin";
@@ -393,6 +396,70 @@ export async function PUT(request: NextRequest, { params }: Params) {
       entityId: event.id,
       metadata: { title: event.title },
     });
+
+    // メール通知: draft → published に変わったときのみ送信 (公開ボタンで初めて通知)
+    const wasPublished =
+      existing.status === "draft" && event.status === "published";
+    if (wasPublished) {
+      void (async () => {
+        try {
+          // allowedTags を再取得 (差分処理後の最新状態)
+          const eventWithTags = await prisma.event.findUnique({
+            where: { id: eventId },
+            include: { allowedTags: { select: { tagId: true } } },
+          });
+          const allowedTagIds = eventWithTags?.allowedTags.map((t) => t.tagId) ?? [];
+          const hasTagRestriction = allowedTagIds.length > 0;
+
+          // pending / hold 中のユーザーは通知対象から除外
+          const allUsers = await prisma.user.findMany({
+            where: { role: { notIn: ["pending"] }, holdAt: null },
+            select: {
+              id: true,
+              role: true,
+              memberTags: { select: { tagId: true } },
+            },
+          });
+
+          const targetUserIds = allUsers
+            .filter((u) => {
+              if (u.role === "admin" || u.role === "subadmin") return true;
+              if (!meetsRoleThreshold(u.role as UserRole, event.minViewRole)) return false;
+              if (hasTagRestriction) {
+                const userTagIds = new Set(u.memberTags.map((t) => t.tagId));
+                return allowedTagIds.some((tid) => userTagIds.has(tid));
+              }
+              return true;
+            })
+            .map((u) => u.id);
+
+          const appUrl = process.env.NEXTAUTH_URL ?? "";
+          const dateStr = event.isAllDay
+            ? formatInTimeZone(event.eventDate, "Asia/Tokyo", "M月d日(E)", { locale: ja }) + " 終日"
+            : formatInTimeZone(event.eventDate, "Asia/Tokyo", "M月d日(E) HH:mm", { locale: ja });
+
+          const bodyLines = [
+            "新しいイベントが追加されました！",
+            "",
+            event.title,
+            `📅 ${dateStr}`,
+            ...(event.location ? [`📍 ${event.location}`] : []),
+            "",
+            "参加登録はアプリから:",
+            `${appUrl}/events/${event.id}`,
+          ];
+
+          await dispatchNotificationEmails({
+            type: "new_event",
+            subject: `【２８ばど】新しいイベント: ${event.title}`,
+            body: bodyLines.join("\n"),
+            recipientUserIds: targetUserIds,
+          });
+        } catch (err) {
+          console.error("[events PUT] メール通知エラー:", err);
+        }
+      })();
+    }
 
     return NextResponse.json({ success: true, data: event });
   } catch (error) {
