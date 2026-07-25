@@ -35,7 +35,7 @@ export async function sendEmail({ to, subject, body }: SendEmailArgs): Promise<b
     });
 
     await transporter.sendMail({
-      from: `283-badminton-app <${user}>`,
+      from: `２８ばど <${user}>`,
       to,
       subject,
       text: body,
@@ -54,15 +54,15 @@ export async function sendEmail({ to, subject, body }: SendEmailArgs): Promise<b
 export async function sendVerificationEmail(to: string, token: string): Promise<boolean> {
   const verifyUrl = `${process.env.NEXTAUTH_URL}/email/verify?token=${token}`;
   const body =
-    `283バドミントンのメール通知に、このメールアドレスが登録されました。\n\n` +
+    `２８ばどのメール通知に、このメールアドレスが登録されました。\n\n` +
     `下記のリンクを開いて、メール通知を有効にしてください (有効期限: 24時間):\n\n` +
     `${verifyUrl}\n\n` +
     `心当たりがない場合は、このメールは破棄してください (何も起こりません)。\n\n` +
-    `--\n283バドミントン`;
+    `--\n２８ばど`;
 
   return sendEmail({
     to,
-    subject: "【283バドミントン】メール通知の確認",
+    subject: "【２８ばど】メール通知の確認",
     body,
   });
 }
@@ -74,7 +74,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
 export function buildFooter(unsubscribeToken: string): string {
   const unsubscribeUrl = `${process.env.NEXTAUTH_URL}/email/unsubscribe?token=${unsubscribeToken}`;
   return (
-    `\n\n--\n283バドミントン\n` +
+    `\n\n--\n２８ばど\n` +
     `メール通知の停止はこちら:\n${unsubscribeUrl}\n` +
     `(通知の種類ごとの設定はアプリのプロフィール画面から変更できます)`
   );
