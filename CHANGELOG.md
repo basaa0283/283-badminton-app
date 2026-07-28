@@ -3,6 +3,11 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [3.7.1] - 2026-07-28
+
+### Fixed
+- 本番デプロイが DB スキーマ適用の段階で毎回失敗していた問題を修正。原因は `User.lineId` に `@unique` を付けていたため、Prisma が本番の「フィルタ付きユニークインデックス (`lineId IS NOT NULL`、仮アカウントの NULL 複数許容用)」を通常の UNIQUE 制約へ作り直そうとし、NULL 行が複数あるため失敗していた。schema から `@unique` を外し、一意性はフィルタ付きインデックス (手動管理) に委ねることで解消。本番 DB は変更なし、lineId を一意キーとして検索するコードも無いため挙動不変
+
 ## [3.7.0] - 2026-07-26
 
 メール通知ルートの新設 (LINE 月次上限の回避策) と、リファクタリング監査で発見した
@@ -586,6 +591,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[3.7.1]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.0...v3.7.1
 [3.7.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.4.0...v3.5.0
