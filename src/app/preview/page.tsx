@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
+
+const JST = "Asia/Tokyo";
 
 export const metadata = {
   title: "参加をご検討の方へ | 283バドミントン",
@@ -77,13 +79,14 @@ async function getData(): Promise<{
   return { events: mapped, officialLineUrl: setting?.value ?? "" };
 }
 
+// Azure ランタイムは UTC で動くため、date-fns の format をそのまま使うと 9 時間ずれる。
+// 明示的に JST (Asia/Tokyo) に変換して整形する (他ページの LINE 通知等と同じ方針)。
 function formatEventDate(iso: string, isAllDay: boolean, endIso: string | null): string {
-  const d = new Date(iso);
-  const dateStr = format(d, "M月d日(E)", { locale: ja });
+  const dateStr = formatInTimeZone(new Date(iso), JST, "M月d日(E)", { locale: ja });
   if (isAllDay) return `${dateStr} 終日`;
-  const startTime = format(d, "HH:mm", { locale: ja });
+  const startTime = formatInTimeZone(new Date(iso), JST, "HH:mm", { locale: ja });
   if (endIso) {
-    const endTime = format(new Date(endIso), "HH:mm", { locale: ja });
+    const endTime = formatInTimeZone(new Date(endIso), JST, "HH:mm", { locale: ja });
     return `${dateStr} ${startTime}〜${endTime}`;
   }
   return `${dateStr} ${startTime}〜`;

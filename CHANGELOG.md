@@ -3,10 +3,11 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
-## [3.7.2] - 2026-07-28
+## [3.7.2] - 2026-08-17
 
 ### Fixed
 - v3.7.1 に続き、`User.email` の `@unique` も削除。lineId と同様に本番ではフィルタ付きユニークインデックス (`email IS NOT NULL`、email 未設定の仮アカウント複数許容用) で管理されており、`prisma db push` が失敗していた。NULL 許容の一意カラムは lineId / email の 2 つのみで、他の `@unique` は全て NOT NULL カラムか複合キーのため影響なし (確認済み)
+- 未ログイン向け参加検討ページ (`/preview`) の練習日程で、開始時刻が UTC 表記になり 9 時間ずれて表示されていた不具合を修正 (例: 18:30 開始が 9:30 と表示)。サーバー側 (Azure=UTC) でレンダリングされる server component だったため、`date-fns` の素の `format` ではなく `formatInTimeZone` (Asia/Tokyo 固定) を使うよう変更
 
 ## [3.7.1] - 2026-07-28
 
