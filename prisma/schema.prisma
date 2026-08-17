@@ -15,7 +15,7 @@ model User {
   id              String    @id @default(cuid())
   lineId          String? // LINE User ID。一意性はフィルタ付きユニークインデックス (lineId IS NOT NULL) で担保 (手動管理)。schema には @unique を付けない (NULL 複数許容のため)。
   name            String?   // NextAuth標準フィールド
-  email           String?   @unique // NextAuth標準フィールド
+  email           String?   // NextAuth標準フィールド。一意性はフィルタ付きユニークインデックス (email IS NOT NULL) で担保 (手動管理)。schema には @unique を付けない (NULL 複数許容のため)
   emailVerified   DateTime? // NextAuth標準フィールド
   image           String?   // NextAuth標準フィールド（プロフィール画像URL）
   nickname        String    @default("名無し") // ニックネーム（公開）
