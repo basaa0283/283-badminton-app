@@ -8,6 +8,7 @@
 ### Fixed
 - v3.7.1 に続き、`User.email` の `@unique` も削除。lineId と同様に本番ではフィルタ付きユニークインデックス (`email IS NOT NULL`、email 未設定の仮アカウント複数許容用) で管理されており、`prisma db push` が失敗していた。NULL 許容の一意カラムは lineId / email の 2 つのみで、他の `@unique` は全て NOT NULL カラムか複合キーのため影響なし (確認済み)
 - 未ログイン向け参加検討ページ (`/preview`) の練習日程で、開始時刻が UTC 表記になり 9 時間ずれて表示されていた不具合を修正 (例: 18:30 開始が 9:30 と表示)。サーバー側 (Azure=UTC) でレンダリングされる server component だったため、`date-fns` の素の `format` ではなく `formatInTimeZone` (Asia/Tokyo 固定) を使うよう変更
+- ユーザー削除処理 (`deleteUserCascade`) に `UserMemberTag` (メンバータグ割り当て) の明示削除を追加。過去の削除漏れで残った孤児レコードが原因で本番デプロイの DB スキーマ適用が FK 制約違反で失敗していた (本番の孤児 2 件は手動 SQL で削除済み)。今後は削除時に確実にクリーンアップされる
 
 ## [3.7.1] - 2026-07-28
 
