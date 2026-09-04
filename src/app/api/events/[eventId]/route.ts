@@ -8,6 +8,7 @@ import { logActivity } from "@/lib/activity-log";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
+import { tenantWhere } from "@/lib/tenant";
 
 function isStaff(role: UserRole) {
   return role === "admin" || role === "subadmin";
@@ -34,8 +35,9 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { eventId } = await params;
     const role = session.user.role as UserRole;
 
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
+    const tw = await tenantWhere();
+    const event = await prisma.event.findFirst({
+      where: { id: eventId, AND: [tw] },
       include: {
         createdBy: {
           select: { nickname: true },
@@ -345,7 +347,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
-    const existing = await prisma.event.findUnique({ where: { id: eventId } });
+    const tw = await tenantWhere();
+    const existing = await prisma.event.findFirst({ where: { id: eventId, AND: [tw] } });
     if (!existing) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
@@ -421,8 +424,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
       void (async () => {
         try {
           // allowedTags を再取得 (差分処理後の最新状態)
-          const eventWithTags = await prisma.event.findUnique({
-            where: { id: eventId },
+          const eventWithTags = await prisma.event.findFirst({
+            where: { id: eventId, AND: [tw] },
             include: { allowedTags: { select: { tagId: true } } },
           });
           const allowedTagIds = eventWithTags?.allowedTags.map((t) => t.tagId) ?? [];
@@ -509,7 +512,8 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     const { eventId } = await params;
 
-    const existing = await prisma.event.findUnique({ where: { id: eventId } });
+    const tw = await tenantWhere();
+    const existing = await prisma.event.findFirst({ where: { id: eventId, AND: [tw] } });
     if (!existing) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },

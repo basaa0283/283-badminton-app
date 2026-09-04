@@ -7,7 +7,7 @@ import { notifyWaitlistPromotion } from "@/lib/line-messaging";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity-log";
 import { addPoints } from "@/lib/points";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 
 // 12 時間以内のキャンセルか判定する閾値 (12h = 12 * 60 * 60 * 1000 ms)
 const SAME_DAY_THRESHOLD_MS = 12 * 60 * 60 * 1000;
@@ -52,8 +52,9 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
+    const tw = await tenantWhere();
+    const event = await prisma.event.findFirst({
+      where: { id: eventId, AND: [tw] },
       include: {
         attendances: {
           where: { status: "attending" },
@@ -324,7 +325,8 @@ async function promoteFromWaitlist(eventId: string, capacity: number | null) {
   });
 
   if (nextInLine.user.lineId) {
-    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    const tw = await tenantWhere();
+    const event = await prisma.event.findFirst({ where: { id: eventId, AND: [tw] } });
     if (event) {
       notifyWaitlistPromotion({
         lineId: nextInLine.user.lineId,

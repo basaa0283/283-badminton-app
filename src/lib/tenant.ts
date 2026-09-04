@@ -28,6 +28,23 @@ export async function getDefaultTenantId(): Promise<string> {
   return tenant.id;
 }
 
+// 現在のリクエストが属するテナント ID。
+// P2 (URL サブパス化) までは常にデフォルトテナント (283bad) を返す。
+// P2 で middleware の slug 解決に差し替える。呼び出し側はこの関数だけ使うこと。
+export async function getCurrentTenantId(): Promise<string> {
+  return getDefaultTenantId();
+}
+
+// 読み取りクエリ用の tenant フィルタ断片。where に AND で合成して使う。
+// 移行期間中 (PROD の backfill 完了前) は tenantId=NULL の旧レコードも
+// デフォルトテナントの持ち物として扱う。backfill 完了後に NULL 許容を外す。
+export async function tenantWhere(): Promise<{
+  OR: [{ tenantId: string }, { tenantId: null }];
+}> {
+  const tenantId = await getCurrentTenantId();
+  return { OR: [{ tenantId }, { tenantId: null }] };
+}
+
 // テスト用: キャッシュをリセットする
 export function _resetTenantCacheForTest(): void {
   cachedDefaultTenantId = null;

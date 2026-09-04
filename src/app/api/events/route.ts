@@ -9,7 +9,7 @@ import { logActivity } from "@/lib/activity-log";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 
 // GET /api/events - イベント一覧取得
 export async function GET(request: NextRequest) {
@@ -103,9 +103,12 @@ export async function GET(request: NextRequest) {
           }
         : baseWhereWithStatus;
 
+    const tw = await tenantWhere();
+    const whereWithTenant = { AND: [where, tw] };
+
     const [events, total] = await Promise.all([
       prisma.event.findMany({
-        where,
+        where: whereWithTenant,
         orderBy: { eventDate: upcoming ? "asc" : "desc" },
         include: {
           attendances: {
@@ -125,7 +128,7 @@ export async function GET(request: NextRequest) {
           allowedTags: { include: { tag: true } },
         },
       }),
-      prisma.event.count({ where }),
+      prisma.event.count({ where: whereWithTenant }),
     ]);
 
     const userId = session.user.id;
