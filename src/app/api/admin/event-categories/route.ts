@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -27,7 +27,9 @@ export async function GET() {
   if (!permissions.canAccessAdmin(role)) {
     return NextResponse.json({ success: false, error: { code: "FORBIDDEN" } }, { status: 403 });
   }
+  const tw = await tenantWhere();
   const categories = await prisma.eventCategory.findMany({
+    where: { AND: [tw] },
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
   });
   return NextResponse.json({ success: true, data: categories });
@@ -54,7 +56,11 @@ export async function POST(request: NextRequest) {
   }
 
   // 既存の最大 order +10 を新規 order に
-  const maxOrder = await prisma.eventCategory.aggregate({ _max: { order: true } });
+  const twForOrder = await tenantWhere();
+  const maxOrder = await prisma.eventCategory.aggregate({
+    where: { AND: [twForOrder] },
+    _max: { order: true },
+  });
   const order = parsed.data.order ?? (maxOrder._max.order ?? 0) + 10;
   try {
     const tenantId = await getDefaultTenantId();

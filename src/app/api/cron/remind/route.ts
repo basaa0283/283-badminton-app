@@ -4,6 +4,7 @@ import { notifyEventReminder } from "@/lib/line-messaging";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
+import { tenantWhere } from "@/lib/tenant";
 
 // リマインダーウィンドウ（時間）: 前日 & 当日
 const REMINDER_WINDOWS = [
@@ -31,8 +32,9 @@ export async function GET(request: NextRequest) {
     const targetFrom = new Date(now.getTime() + (window.hoursUntil * 60 - WINDOW_TOLERANCE_MINUTES) * 60 * 1000);
     const targetTo = new Date(now.getTime() + (window.hoursUntil * 60 + WINDOW_TOLERANCE_MINUTES) * 60 * 1000);
 
+    const tw = await tenantWhere();
     const events = await prisma.event.findMany({
-      where: { eventDate: { gte: targetFrom, lte: targetTo } },
+      where: { eventDate: { gte: targetFrom, lte: targetTo }, AND: [tw] },
       include: {
         attendances: {
           where: { status: "attending" },

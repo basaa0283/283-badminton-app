@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { tenantWhere } from "@/lib/tenant";
 
 // GET /api/admin/activity-log
 // 管理者向けの操作ログ閲覧。
@@ -43,11 +44,13 @@ export async function GET(request: NextRequest) {
     const offset =
       Number.isFinite(offsetParam) && offsetParam > 0 ? offsetParam : 0;
 
+    const tw = await tenantWhere();
     const where: {
       action?: { startsWith: string };
       userId?: string;
       createdAt?: { gte?: Date; lte?: Date };
-    } = {};
+      AND: [typeof tw];
+    } = { AND: [tw] };
     if (actionFilter) where.action = { startsWith: actionFilter };
     if (userIdFilter) where.userId = userIdFilter;
     if (fromStr) {

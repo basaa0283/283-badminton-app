@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 import { notifyWaitlistPromotion } from "@/lib/line-messaging";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 
 const proxyAttendanceSchema = z.object({
   eventId: z.string().min(1),
@@ -113,8 +113,9 @@ export async function POST(
       const currentAttending = event.attendances.filter((a) => a.userId !== userId).length;
       if (currentAttending >= event.capacity) {
         finalStatus = "waitlist";
+        const twForMax = await tenantWhere();
         const maxPos = await prisma.attendance.aggregate({
-          where: { eventId, status: "waitlist" },
+          where: { eventId, status: "waitlist", AND: [twForMax] },
           _max: { position: true },
         });
         position = (maxPos._max.position || 0) + 1;
@@ -156,13 +157,14 @@ export async function POST(
 async function promoteFromWaitlist(eventId: string, capacity: number | null): Promise<void> {
   if (!capacity) return;
 
+  const tw = await tenantWhere();
   const currentAttending = await prisma.attendance.count({
-    where: { eventId, status: "attending" },
+    where: { eventId, status: "attending", AND: [tw] },
   });
   if (currentAttending >= capacity) return;
 
   const nextInLine = await prisma.attendance.findFirst({
-    where: { eventId, status: "waitlist" },
+    where: { eventId, status: "waitlist", AND: [tw] },
     orderBy: { position: "asc" },
     include: { user: { select: { lineId: true, nickname: true } } },
   });

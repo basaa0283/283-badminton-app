@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -24,7 +24,9 @@ export async function GET() {
     return NextResponse.json({ success: false, error: { code: "FORBIDDEN" } }, { status: 403 });
   }
 
+  const tw = await tenantWhere();
   const prices = await prisma.shuttlePrice.findMany({
+    where: { AND: [tw] },
     orderBy: { effectiveFrom: "desc" },
   });
   return NextResponse.json({ success: true, data: prices });

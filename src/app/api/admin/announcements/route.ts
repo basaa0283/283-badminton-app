@@ -6,7 +6,7 @@ import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 import { logActivity } from "@/lib/activity-log";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 
 const createSchema = z.object({
   title: z.string().min(1, "タイトルは必須です").max(200, "タイトルは200文字以内"),
@@ -29,7 +29,9 @@ export async function GET() {
     return NextResponse.json({ success: false, error: { code: "FORBIDDEN" } }, { status: 403 });
   }
 
+  const tw = await tenantWhere();
   const items = await prisma.announcement.findMany({
+    where: { AND: [tw] },
     orderBy: { publishedAt: "desc" },
     include: { createdBy: { select: { nickname: true } } },
   });

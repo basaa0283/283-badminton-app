@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { tenantWhere } from "@/lib/tenant";
 
 // GET /api/admin/analytics
 // 管理画面ダッシュボード用の集計データ。直近 30 日分の日別系列と
@@ -34,8 +35,9 @@ export async function GET() {
     since7.setUTCDate(since7.getUTCDate() - 6);
     since7.setUTCHours(0, 0, 0, 0);
 
+    const tw = await tenantWhere();
     const recentLogs = await prisma.activityLog.findMany({
-      where: { createdAt: { gte: since30 } },
+      where: { createdAt: { gte: since30 }, AND: [tw] },
       select: { userId: true, action: true, createdAt: true },
     });
 
@@ -155,7 +157,7 @@ export async function GET() {
 
     // お知らせ既読率: publishedAt 降順、直近 20 件
     const announcements = await prisma.announcement.findMany({
-      where: { publishedAt: { lte: now } },
+      where: { publishedAt: { lte: now }, AND: [tw] },
       orderBy: { publishedAt: "desc" },
       take: 20,
       select: {

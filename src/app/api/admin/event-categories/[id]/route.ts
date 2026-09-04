@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { tenantWhere } from "@/lib/tenant";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -37,6 +38,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     );
   }
 
+  const tw = await tenantWhere();
+  const existing = await prisma.eventCategory.findFirst({ where: { id, AND: [tw] } });
+  if (!existing) {
+    return NextResponse.json({ success: false, error: { code: "NOT_FOUND" } }, { status: 404 });
+  }
+
   try {
     const updated = await prisma.eventCategory.update({
       where: { id },
@@ -64,6 +71,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   }
 
   const { id } = await params;
+  const tw = await tenantWhere();
+  const existing = await prisma.eventCategory.findFirst({ where: { id, AND: [tw] } });
+  if (!existing) {
+    return NextResponse.json({ success: false, error: { code: "NOT_FOUND" } }, { status: 404 });
+  }
   // 関連イベントの categoryId を先に null に (SQL Server NoAction 対応)
   await prisma.event.updateMany({ where: { categoryId: id }, data: { categoryId: null } });
   await prisma.eventCategory.delete({ where: { id } }).catch(() => null);

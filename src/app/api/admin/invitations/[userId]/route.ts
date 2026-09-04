@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 
 // POST /api/admin/invitations/[userId] - 招待トークン発行（再発行も可）
 export async function POST(
@@ -29,7 +29,8 @@ export async function POST(
     }
 
     // 既存トークンを削除して新規発行
-    await prisma.invitationToken.deleteMany({ where: { userId } });
+    const twDelete = await tenantWhere();
+    await prisma.invitationToken.deleteMany({ where: { userId, AND: [twDelete] } });
 
     const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3日間有効
     const tenantId = await getDefaultTenantId();
@@ -65,7 +66,8 @@ export async function GET(
 
     const { userId } = await params;
 
-    const invitation = await prisma.invitationToken.findUnique({ where: { userId } });
+    const tw = await tenantWhere();
+    const invitation = await prisma.invitationToken.findFirst({ where: { userId, AND: [tw] } });
     if (!invitation) {
       return NextResponse.json({ success: true, data: null });
     }
@@ -102,7 +104,8 @@ export async function DELETE(
 
     const { userId } = await params;
 
-    await prisma.invitationToken.deleteMany({ where: { userId } });
+    const tw = await tenantWhere();
+    await prisma.invitationToken.deleteMany({ where: { userId, AND: [tw] } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

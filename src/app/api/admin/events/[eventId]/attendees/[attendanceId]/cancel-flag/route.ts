@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { addPoints } from "@/lib/points";
-import { getDefaultTenantId } from "@/lib/tenant";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 
 interface Params {
   params: Promise<{ eventId: string; attendanceId: string }>;
@@ -56,8 +56,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
-    const attendance = await prisma.attendance.findUnique({
-      where: { id: attendanceId },
+    const tw = await tenantWhere();
+    const attendance = await prisma.attendance.findFirst({
+      where: { id: attendanceId, AND: [tw] },
     });
     if (!attendance || attendance.eventId !== eventId) {
       return NextResponse.json(
