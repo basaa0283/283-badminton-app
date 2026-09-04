@@ -105,7 +105,7 @@ export function EventCard({ event }: EventCardProps) {
               )}
               {event.status === "draft" && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-bold text-white bg-gray-500 shrink-0">
-                  🔒 非公開
+                  {isAdmin ? "🔒 非公開" : "🔒 限定公開"}
                 </span>
               )}
               {event.allowedTags && event.allowedTags.length > 0 && (

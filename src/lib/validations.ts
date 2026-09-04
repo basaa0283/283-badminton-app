@@ -30,6 +30,8 @@ export const createEventSchema = z.object({
   minRespondRole: z.enum(["visitor", "member"]).default("visitor"),
   // 公開状態 (draft = 管理者と作成者のみ、published = 通常公開)
   status: z.enum(["draft", "published"]).default("published"),
+  // draft 限定: true なら Attendance レコードを持つ参加者本人には閲覧・出欠変更を許可する
+  visibleToParticipants: z.boolean().default(false),
   // タグ限定公開: 空配列なら従来通り (誰でも minViewRole 範囲)。
   // 値ありなら「閾値クリア + そのタグのいずれかを自分が持つ」に絞る。
   allowedTagIds: z.array(z.string()).optional(),

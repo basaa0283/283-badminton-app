@@ -327,6 +327,9 @@ model Event {
   // draft の間は一般メンバーには存在しない扱い (一覧・詳細とも非表示)。
   // LINE 通知やお知らせ投稿も draft 状態では走らない。
   status          String    @default("published")
+  // draft 限定オプション: true なら Attendance レコードを持つ参加者本人には
+  // 非公開でも閲覧・出欠変更を許可する (#53)
+  visibleToParticipants Boolean @default(false)
 
   // 経費・収支 (管理者用、イベント実施後に入力)
   shuttleCount    Int?      // 使用シャトル本数

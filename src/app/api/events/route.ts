@@ -77,16 +77,26 @@ export async function GET(request: NextRequest) {
             },
           ],
         };
+    // 非公開イベントの「参加者本人には見せる」オプション (#53)。
+    // visibleToParticipants=true かつ自分の Attendance レコードがあれば、
+    // status/タグ制限を問わず個別に見える (管理者からの明示的な招待扱い)。
+    const draftParticipantWhere = {
+      status: "draft",
+      visibleToParticipants: true,
+      attendances: { some: { userId: session.user.id } },
+    };
+    const accessWhere = isAdmin
+      ? {}
+      : { OR: [{ AND: [statusWhere, tagWhere] }, draftParticipantWhere] };
     const baseWhereWithStatus = isAdmin
       ? { ...baseWhere, ...statusWhere }
-      : { AND: [baseWhere, statusWhere, tagWhere] };
+      : { AND: [baseWhere, accessWhere] };
     const where =
       !upcoming && !isAdmin
         ? {
             AND: [
               baseWhere,
-              statusWhere,
-              tagWhere,
+              accessWhere,
               { attendances: { some: { userId: session.user.id, status: "attending" } } },
             ],
           }
@@ -251,6 +261,7 @@ export async function POST(request: NextRequest) {
         minViewRole: parsed.data.minViewRole ?? "visitor",
         minRespondRole: parsed.data.minRespondRole ?? "visitor",
         status: parsed.data.status ?? "published",
+        visibleToParticipants: parsed.data.visibleToParticipants ?? false,
         shuttleCount: parsed.data.shuttleCount ?? null,
         shuttleCost: parsed.data.shuttleCost ?? null,
         gymCost: parsed.data.gymCost ?? null,

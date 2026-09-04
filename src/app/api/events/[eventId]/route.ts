@@ -89,8 +89,21 @@ export async function GET(request: NextRequest, { params }: Params) {
       );
     }
 
+    // 非公開イベントの「参加者本人には見せる」オプション (#53)。
+    // visibleToParticipants=true かつ自分の Attendance レコードがあれば、
+    // 以降の draft ガード・タグ限定ガードを両方バイパスする (明示的な個別許可のため)。
+    const isCreator = event.createdById === session.user.id;
+    const isVisibleAsParticipant =
+      event.visibleToParticipants &&
+      event.attendances.some((a) => a.user.id === session.user.id);
+
     // draft 状態のイベントは管理者と作成者だけが閲覧可。
-    if (event.status === "draft" && !isStaff(role) && event.createdById !== session.user.id) {
+    if (
+      event.status === "draft" &&
+      !isStaff(role) &&
+      !isCreator &&
+      !isVisibleAsParticipant
+    ) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
         { status: 404 }
@@ -101,7 +114,8 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (
       event.allowedTags.length > 0 &&
       !isStaff(role) &&
-      event.createdById !== session.user.id
+      !isCreator &&
+      !isVisibleAsParticipant
     ) {
       const myTagIds = await prisma.userMemberTag.findMany({
         where: { userId: session.user.id },
@@ -214,6 +228,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         minViewRole: event.minViewRole,
         minRespondRole: event.minRespondRole,
         status: event.status,
+        visibleToParticipants: event.visibleToParticipants,
         allowedTags: event.allowedTags.map((at) => ({
           id: at.tag.id,
           name: at.tag.name,
@@ -358,6 +373,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.minViewRole !== undefined) updateData.minViewRole = parsed.data.minViewRole;
     if (parsed.data.minRespondRole !== undefined) updateData.minRespondRole = parsed.data.minRespondRole;
     if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
+    if (parsed.data.visibleToParticipants !== undefined)
+      updateData.visibleToParticipants = parsed.data.visibleToParticipants;
     // allowedTagIds は別途 transaction で delete+create する (下記)
     if (parsed.data.shuttleCount !== undefined) updateData.shuttleCount = parsed.data.shuttleCount;
     if (parsed.data.shuttleCost !== undefined) updateData.shuttleCost = parsed.data.shuttleCost;
