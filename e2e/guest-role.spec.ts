@@ -69,7 +69,7 @@ test.describe("ゲストロール (閲覧専用)", () => {
       await loginAs(page, guestUserId);
 
       // ----- /events を開いて検証 -----
-      await page.goto("/events");
+      await page.goto("/283bad/events");
 
       // 閲覧専用バナー
       await expect(page.getByText(/閲覧専用モード/)).toBeVisible();

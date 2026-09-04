@@ -29,7 +29,7 @@ test.describe("イベント (admin)", () => {
       eventId = created.data.id as string;
 
       // 一覧に表示されること
-      await page.goto("/events");
+      await page.goto("/283bad/events");
       await expect(page.getByText(title)).toBeVisible();
 
       // 詳細ページに遷移できること
