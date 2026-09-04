@@ -26,7 +26,7 @@ test.describe("シャトル単価マスタ (admin)", () => {
       createdId = (await createRes.json()).data.id as string;
 
       // 一覧に memo (一意) が表示される
-      await page.goto("/283bad/admin/shuttle-prices");
+      await page.goto("/28bad/admin/shuttle-prices");
       await expect(page.getByText(memo)).toBeVisible();
       // ケース価格が表示される
       await expect(page.getByText(new RegExp(casePrice.toLocaleString()))).toBeVisible();

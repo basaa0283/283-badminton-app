@@ -49,10 +49,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 404 },
       );
     }
-    // 自サークル (283bad) の凍結は誤操作の可能性が極めて高いので拒否する
+    // 自サークル (28bad) の凍結は誤操作の可能性が極めて高いので拒否する
     if (existing.slug === DEFAULT_TENANT_SLUG && status === "frozen") {
       return NextResponse.json(
-        { success: false, error: { code: "FORBIDDEN", message: "デフォルトテナント (283bad) は凍結できません" } },
+        { success: false, error: { code: "FORBIDDEN", message: "デフォルトテナント (28bad) は凍結できません" } },
         { status: 400 },
       );
     }

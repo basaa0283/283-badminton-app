@@ -11,8 +11,13 @@ import { NextRequest, NextResponse } from "next/server";
 //
 // P4 (複数テナント受け入れ) までは既知 slug をハードコードで許可する。
 // P4 で Tenant テーブル参照 (edge 対応のキャッシュ付き) に差し替える。
-const KNOWN_TENANT_SLUGS = new Set(["283bad"]);
-const DEFAULT_SLUG = "283bad";
+const KNOWN_TENANT_SLUGS = new Set(["28bad"]);
+const DEFAULT_SLUG = "28bad";
+
+// 過去に使っていた slug からのリダイレクト (旧リンク救済)
+const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
+  "283bad": "28bad",
+};
 
 export const TENANT_COOKIE = "tenant-slug";
 
@@ -37,6 +42,14 @@ function isTenantPage(pathname: string): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 0. 旧 slug は新 slug へリダイレクト (旧リンク・ブックマーク救済)
+  const m0 = pathname.match(/^\/([a-z0-9-]+)(\/.*)?$/);
+  if (m0 && LEGACY_SLUG_REDIRECTS[m0[1]]) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${LEGACY_SLUG_REDIRECTS[m0[1]]}${m0[2] ?? ""}`;
+    return NextResponse.redirect(url);
+  }
 
   // 1. /<slug>/... 形式: slug を剥がして内部パスに rewrite + cookie セット
   const m = pathname.match(/^\/([a-z0-9-]+)(\/.*)?$/);

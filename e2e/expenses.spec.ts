@@ -121,7 +121,7 @@ test.describe("経費・収支管理 (admin)", () => {
   });
 
   test("経費レポートで合計が表示される", async ({ page }) => {
-    await page.goto("/283bad/admin/expense-report");
+    await page.goto("/28bad/admin/expense-report");
     await expect(page.getByRole("heading", { name: "経費レポート" })).toBeVisible();
     await expect(page.getByText("合計収入")).toBeVisible();
     await expect(page.getByText("合計経費")).toBeVisible();

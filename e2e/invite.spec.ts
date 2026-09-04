@@ -14,7 +14,7 @@ test.describe("招待リンク発行 (admin)", () => {
     let userId: string | undefined;
     try {
       // 管理画面のメンバー一覧へ
-      await page.goto("/283bad/admin/members");
+      await page.goto("/28bad/admin/members");
 
       // 仮アカウント作成 UI を開く
       await page.getByRole("button", { name: "+ 仮アカウント作成" }).click();

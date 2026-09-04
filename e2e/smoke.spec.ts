@@ -3,7 +3,7 @@ import { adminUserId, loginAs } from "./helpers/auth";
 
 test.describe("smoke", () => {
   test("未ログインでトップへアクセスするとログインページへリダイレクト", async ({ page }) => {
-    await page.goto("/283bad");
+    await page.goto("/28bad");
     await expect(page).toHaveURL(/\/login/);
   });
 

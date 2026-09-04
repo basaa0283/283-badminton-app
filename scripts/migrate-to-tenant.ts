@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 
 // マルチテナント P0 の初期移行スクリプト (Issue #42):
-// 1. Tenant "283bad" を upsert する (plan=complimentary, status=active)
-// 2. 全 User のプロフィール項目を Membership (userId × 283bad) にコピーする
+// 1. Tenant "28bad" を upsert する (plan=complimentary, status=active)
+// 2. 全 User のプロフィール項目を Membership (userId × 28bad) にコピーする
 //
 // idempotent: 何度実行しても安全。
 // - Tenant は upsert (既存なら更新しない)
@@ -14,11 +14,11 @@ import { PrismaClient } from "@prisma/client";
 // 接続文字列の向き先を必ず確認すること。
 const prisma = new PrismaClient();
 
-const TENANT_SLUG = "283bad";
+const TENANT_SLUG = "28bad";
 const TENANT_NAME = "２８ばど";
 
 async function main() {
-  // 1. Tenant 283bad を用意
+  // 1. Tenant 28bad を用意
   const tenant = await prisma.tenant.upsert({
     where: { slug: TENANT_SLUG },
     update: {}, // 既存なら何もしない

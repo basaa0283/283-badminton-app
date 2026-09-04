@@ -25,7 +25,7 @@ export async function loginAs(page: Page, userId: string): Promise<void> {
   // 規約同意 (失敗しても致命的ではないので catch して握り潰す)。
   await page.request.post("/api/onboarding/terms").catch(() => {});
 
-  await page.goto("/283bad");
+  await page.goto("/28bad");
 
   // セッション確立を UI で待つ (Header のユーザーメニューボタンは認証時のみ
   // 描画される)。これを待たずに次の page.goto を始めると、初回セッション取得

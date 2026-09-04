@@ -13,7 +13,7 @@ test.describe("大会登録の DateInput プルダウン操作", () => {
   });
 
   test("年→月→日 を順にタップすると表示が反映され、次へが活性化する", async ({ page }) => {
-    await page.goto("/283bad/tournaments/new");
+    await page.goto("/28bad/tournaments/new");
     await expect(page.getByRole("heading", { name: "大会を登録" })).toBeVisible();
 
     const nextBtn = page.getByRole("button", { name: "次へ" });

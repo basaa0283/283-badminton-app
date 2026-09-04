@@ -1,16 +1,16 @@
 import { prisma } from "./prisma";
 
 // マルチテナント P1: 移行期間中のデフォルトテナント解決。
-// URL からの slug 解決 (P2) までは、全データを 283bad テナントとして扱う。
+// URL からの slug 解決 (P2) までは、全データを 28bad テナントとして扱う。
 // 設計: docs/superpowers/specs/2026-09-04-multi-tenant-business-design.md
 
-export const DEFAULT_TENANT_SLUG = "283bad";
+export const DEFAULT_TENANT_SLUG = "28bad";
 const DEFAULT_TENANT_NAME = "２８ばど";
 
 // プロセス内キャッシュ。テナント ID は不変なので TTL 無しで持つ。
 let cachedDefaultTenantId: string | null = null;
 
-// デフォルトテナント (283bad) の ID を返す。
+// デフォルトテナント (28bad) の ID を返す。
 // 存在しない環境 (新規ローカル DB / e2e など) では自動作成する (冪等)。
 export async function getDefaultTenantId(): Promise<string> {
   if (cachedDefaultTenantId) return cachedDefaultTenantId;
@@ -45,7 +45,7 @@ async function getRequestTenantSlug(): Promise<string | null> {
 
 // 現在のリクエストが属するテナント ID。
 // P2: middleware が URL の slug を cookie に載せるので、それを解決する。
-// cookie が無い/不正な場合はデフォルトテナント (283bad) にフォールバック。
+// cookie が無い/不正な場合はデフォルトテナント (28bad) にフォールバック。
 // 呼び出し側はこの関数だけ使うこと。
 export async function getCurrentTenantId(): Promise<string> {
   const slug = await getRequestTenantSlug();
