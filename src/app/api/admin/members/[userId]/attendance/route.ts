@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 import { notifyWaitlistPromotion } from "@/lib/line-messaging";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 const proxyAttendanceSchema = z.object({
   eventId: z.string().min(1),
@@ -120,6 +121,7 @@ export async function POST(
       }
     }
 
+    const tenantId = await getDefaultTenantId();
     if (existing) {
       await prisma.attendance.update({
         where: { id: existing.id },
@@ -127,12 +129,12 @@ export async function POST(
       });
     } else {
       await prisma.attendance.create({
-        data: { userId, eventId, status: finalStatus, position: finalStatus === "waitlist" ? position : null },
+        data: { userId, eventId, status: finalStatus, position: finalStatus === "waitlist" ? position : null, tenantId },
       });
     }
 
     await prisma.attendanceHistory.create({
-      data: { userId, eventId, status: finalStatus, isProxy: true },
+      data: { userId, eventId, status: finalStatus, isProxy: true, tenantId },
     });
 
     // 参加→不参加の場合、キャンセル待ち繰り上げ

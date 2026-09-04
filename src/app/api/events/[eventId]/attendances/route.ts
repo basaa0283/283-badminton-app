@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { getDefaultTenantId } from "@/lib/tenant";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -65,17 +66,19 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true, data: updated });
   }
 
+  const tenantId = await getDefaultTenantId();
   const created = await prisma.attendance.create({
     data: {
       userId: parsed.data.userId,
       eventId,
       status: parsed.data.status,
       declaredTournamentClassId: declaredClassId,
+      tenantId,
     },
   });
 
   await prisma.attendanceHistory.create({
-    data: { userId: parsed.data.userId, eventId, status: parsed.data.status, isProxy: true },
+    data: { userId: parsed.data.userId, eventId, status: parsed.data.status, isProxy: true, tenantId },
   });
 
   return NextResponse.json({ success: true, data: created }, { status: 201 });

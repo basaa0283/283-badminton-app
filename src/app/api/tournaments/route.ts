@@ -6,6 +6,7 @@ import { permissions, UserRole } from "@/lib/permissions";
 import { tournamentInputSchema } from "@/lib/validations";
 import { sendAdminNotification } from "@/lib/email";
 import { logActivity } from "@/lib/activity-log";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 // GET /api/tournaments - 大会マスター一覧
 //   - 一般メンバー: approved のみ + 自分が登録した pending (本人にだけ可視)
@@ -210,6 +211,7 @@ export async function POST(request: NextRequest) {
         const tournamentCategory = await prisma.eventCategory.findFirst({
           where: { name: "大会" },
         });
+        const tenantId = await getDefaultTenantId();
         const event = await prisma.event.create({
           data: {
             title: tournament.name,
@@ -220,6 +222,7 @@ export async function POST(request: NextRequest) {
             categoryId: tournamentCategory?.id ?? null,
             linkedTournamentId: tournament.id,
             createdById: session.user.id,
+            tenantId,
           },
         });
         createdEvent = { id: event.id };

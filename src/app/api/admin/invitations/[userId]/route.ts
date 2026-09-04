@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 // POST /api/admin/invitations/[userId] - 招待トークン発行（再発行も可）
 export async function POST(
@@ -31,8 +32,9 @@ export async function POST(
     await prisma.invitationToken.deleteMany({ where: { userId } });
 
     const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3日間有効
+    const tenantId = await getDefaultTenantId();
     const invitation = await prisma.invitationToken.create({
-      data: { userId, expiresAt },
+      data: { userId, expiresAt, tenantId },
     });
 
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";

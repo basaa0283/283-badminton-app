@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDefaultTenantId } from "@/lib/tenant";
 import { z } from "zod";
 
 const schema = z.object({
@@ -26,12 +27,13 @@ export async function POST(request: NextRequest) {
   }
 
   // 各 id を upsert (already-read は何もしない)
+  const tenantId = await getDefaultTenantId();
   await Promise.all(
     parsed.data.ids.map((announcementId) =>
       prisma.announcementRead.upsert({
         where: { userId_announcementId: { userId, announcementId } },
         update: {},
-        create: { userId, announcementId },
+        create: { userId, announcementId, tenantId },
       })
     )
   );

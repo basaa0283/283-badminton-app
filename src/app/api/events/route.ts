@@ -9,6 +9,7 @@ import { logActivity } from "@/lib/activity-log";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 // GET /api/events - イベント一覧取得
 export async function GET(request: NextRequest) {
@@ -243,6 +244,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const tenantId = await getDefaultTenantId();
     const event = await prisma.event.create({
       data: {
         title: parsed.data.title,
@@ -269,6 +271,7 @@ export async function POST(request: NextRequest) {
         otherMemo: parsed.data.otherMemo ?? null,
         actualRevenue: parsed.data.actualRevenue ?? null,
         createdById: session.user.id,
+        tenantId,
         ...(parsed.data.allowedTagIds && parsed.data.allowedTagIds.length > 0
           ? {
               allowedTags: {
@@ -322,6 +325,7 @@ export async function POST(request: NextRequest) {
             audienceVisitor: true,
             audienceGuest: false,
             createdById: session.user.id,
+            tenantId,
           },
         })
         .catch((err) => console.error("[announce] new event announcement failed:", err));

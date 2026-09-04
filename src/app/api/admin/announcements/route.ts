@@ -6,6 +6,7 @@ import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 import { logActivity } from "@/lib/activity-log";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 const createSchema = z.object({
   title: z.string().min(1, "タイトルは必須です").max(200, "タイトルは200文字以内"),
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const tenantId = await getDefaultTenantId();
   const created = await prisma.announcement.create({
     data: {
       title: parsed.data.title,
@@ -65,6 +67,7 @@ export async function POST(request: NextRequest) {
       severity: parsed.data.severity,
       publishedAt: parsed.data.publishedAt ? new Date(parsed.data.publishedAt) : new Date(),
       createdById: session.user.id,
+      tenantId,
     },
   });
 

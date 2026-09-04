@@ -250,6 +250,8 @@ model EventAllowedTag {
 // - entityType / entityId は対象レコードがある場合のみ
 // - metadata はフィルタ条件や変更差分などの追加情報を JSON 文字列で
 model ActivityLog {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id         String   @id @default(cuid())
   userId     String?
   action     String
@@ -263,6 +265,8 @@ model ActivityLog {
   @@index([action, createdAt])
   @@index([entityType, entityId])
   @@index([createdAt])
+
+  @@index([tenantId])
 }
 
 // NextAuth Account
@@ -307,6 +311,8 @@ model VerificationToken {
 // 1ケース = 10本 × 12個 = 120個 (shuttlesPerCase で変更可)
 // イベント開催日 >= effectiveFrom の最大日付のレコードが適用される。
 model ShuttlePrice {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id              String   @id @default(cuid())
   effectiveFrom   DateTime // 適用開始日
   casePrice       Int      // ケース価格 (円)
@@ -315,10 +321,14 @@ model ShuttlePrice {
   createdAt       DateTime @default(now())
 
   @@index([effectiveFrom])
+
+  @@index([tenantId])
 }
 
 // お知らせ (イベント紐付き "当日連絡" にも使う)
 model Announcement {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id              String   @id @default(cuid())
   title           String   @db.NVarChar(200)
   body            String   @db.NVarChar(4000)
@@ -341,10 +351,14 @@ model Announcement {
 
   @@index([publishedAt])
   @@index([eventId])
+
+  @@index([tenantId])
 }
 
 // お知らせ既読マーカー
 model AnnouncementRead {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   userId         String
   announcementId String
   readAt         DateTime @default(now())
@@ -354,10 +368,14 @@ model AnnouncementRead {
 
   @@id([userId, announcementId])
   @@index([userId])
+
+  @@index([tenantId])
 }
 
 // イベント種別 (タグ)
 model EventCategory {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id              String   @id @default(cuid())
   name            String   @unique
   description     String?  @db.NVarChar(Max) // タグの説明文 (ホバー/タップで表示)
@@ -368,10 +386,14 @@ model EventCategory {
   events    Event[]
 
   @@index([order])
+
+  @@index([tenantId])
 }
 
 // イベント
 model Event {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id              String    @id @default(cuid())
   title           String    // イベント名
   description     String?   @db.NVarChar(2000) // 説明
@@ -437,10 +459,14 @@ model Event {
 
   @@index([linkedTournamentId])
   @@index([eventDate])
+
+  @@index([tenantId])
 }
 
 // 出欠
 model Attendance {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id          String   @id @default(cuid())
   userId      String
   eventId     String
@@ -468,10 +494,14 @@ model Attendance {
 
   @@unique([userId, eventId])
   @@index([eventId])
+
+  @@index([tenantId])
 }
 
 // 出欠回答履歴（変更のたびに記録）
 model AttendanceHistory {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id          String   @id @default(cuid())
   userId      String
   eventId     String
@@ -490,6 +520,8 @@ model AttendanceHistory {
   @@index([userId])
   @@index([eventId])
   @@index([changedAt])
+
+  @@index([tenantId])
 }
 
 // メール確認・配信停止用トークン
@@ -507,6 +539,8 @@ model EmailToken {
 
 // 招待トークン
 model InvitationToken {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id        String   @id @default(cuid())
   token     String   @unique @default(cuid())
   userId    String   @unique
@@ -514,12 +548,18 @@ model InvitationToken {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenantId])
 }
 
 // システム設定（key-value）
 model SystemSetting {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   key   String @id
   value String @db.NVarChar(Max)
+
+  @@index([tenantId])
 }
 
 // メッセージ（対象者へのメッセージ送信用）

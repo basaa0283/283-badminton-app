@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { getDefaultTenantId } from "@/lib/tenant";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -80,12 +81,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
   // 出欠ステータスを変更した場合のみ履歴を残す
   if (parsed.data.status !== undefined && parsed.data.status !== existing.status) {
+    const tenantId = await getDefaultTenantId();
     await prisma.attendanceHistory.create({
       data: {
         userId: existing.userId,
         eventId,
         status: parsed.data.status,
         isProxy: true,
+        tenantId,
       },
     });
   }

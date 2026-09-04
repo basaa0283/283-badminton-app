@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { getDefaultTenantId } from "@/lib/tenant";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -49,12 +50,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const tenantId = await getDefaultTenantId();
   const created = await prisma.shuttlePrice.create({
     data: {
       effectiveFrom: new Date(parsed.data.effectiveFrom),
       casePrice: parsed.data.casePrice,
       shuttlesPerCase: parsed.data.shuttlesPerCase,
       memo: parsed.data.memo ?? null,
+      tenantId,
     },
   });
   return NextResponse.json({ success: true, data: created }, { status: 201 });

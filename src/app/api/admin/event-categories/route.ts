@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { getDefaultTenantId } from "@/lib/tenant";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -56,12 +57,14 @@ export async function POST(request: NextRequest) {
   const maxOrder = await prisma.eventCategory.aggregate({ _max: { order: true } });
   const order = parsed.data.order ?? (maxOrder._max.order ?? 0) + 10;
   try {
+    const tenantId = await getDefaultTenantId();
     const created = await prisma.eventCategory.create({
       data: {
         name: parsed.data.name,
         description: parsed.data.description ?? null,
         color: parsed.data.color ?? null,
         order,
+        tenantId,
       },
     });
     return NextResponse.json({ success: true, data: created }, { status: 201 });

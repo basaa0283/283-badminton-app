@@ -6,6 +6,7 @@ import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { isEventAnnouncementVisibleTo } from "@/lib/announcement";
 import { logActivity } from "@/lib/activity-log";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -160,6 +161,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       : "";
     const title = event ? `【${dateStr} ${event.title}】` : "【イベントお知らせ】";
 
+    const tenantId = await getDefaultTenantId();
     const ann = await prisma.announcement.create({
       data: {
         title,
@@ -171,6 +173,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         createdById: session.user.id,
         eventId,
         attendanceTargetType: targetType,
+        tenantId,
       },
     });
     void logActivity({

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { addPoints } from "@/lib/points";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 interface Params {
   params: Promise<{ eventId: string; attendanceId: string }>;
@@ -98,6 +99,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     });
 
     // AttendanceHistory にも残す (管理者操作ログ的に)
+    const tenantId = await getDefaultTenantId();
     await prisma.attendanceHistory.create({
       data: {
         userId: attendance.userId,
@@ -105,6 +107,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         status: attendance.status,
         comment: `[admin cancel-flag] ${oldType ?? "none"} → ${newType ?? "none"}`,
         cancelType: newType,
+        tenantId,
       },
     });
 

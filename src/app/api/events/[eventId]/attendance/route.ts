@@ -7,6 +7,7 @@ import { notifyWaitlistPromotion } from "@/lib/line-messaging";
 import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity-log";
 import { addPoints } from "@/lib/points";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 // 12 時間以内のキャンセルか判定する閾値 (12h = 12 * 60 * 60 * 1000 ms)
 const SAME_DAY_THRESHOLD_MS = 12 * 60 * 60 * 1000;
@@ -157,6 +158,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const declaredClassId =
       finalStatus === "attending" ? parsed.data.declaredTournamentClassId ?? null : null;
 
+    const tenantId = await getDefaultTenantId();
     if (existingAttendance) {
       // 更新
       await prisma.attendance.update({
@@ -186,6 +188,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           position: status === "waitlist" ? position : null,
           declaredTournamentClassId: declaredClassId,
           cancelType: cancelType,
+          tenantId,
         },
       });
     }
@@ -198,6 +201,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         status: finalStatus,
         comment: parsed.data.comment || null,
         cancelType,
+        tenantId,
       },
     });
 

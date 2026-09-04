@@ -256,6 +256,8 @@ model EventAllowedTag {
 // - entityType / entityId は対象レコードがある場合のみ
 // - metadata はフィルタ条件や変更差分などの追加情報を JSON 文字列で
 model ActivityLog {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id         String   @id @default(cuid())
   userId     String?
   action     String
@@ -269,6 +271,8 @@ model ActivityLog {
   @@index([action, createdAt])
   @@index([entityType, entityId])
   @@index([createdAt])
+
+  @@index([tenantId])
 }
 
 // NextAuth Account
@@ -313,6 +317,8 @@ model VerificationToken {
 // 1ケース = 10本 × 12個 = 120個 (shuttlesPerCase で変更可)
 // イベント開催日 >= effectiveFrom の最大日付のレコードが適用される。
 model ShuttlePrice {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id              String   @id @default(cuid())
   effectiveFrom   DateTime // 適用開始日
   casePrice       Int      // ケース価格 (円)
@@ -321,12 +327,16 @@ model ShuttlePrice {
   createdAt       DateTime @default(now())
 
   @@index([effectiveFrom])
+
+  @@index([tenantId])
 }
 
 // お知らせ
 // 表示対象は non-admin role ごとに on/off。admin/subadmin は常に全件閲覧。
 // イベント紐付け (eventId != null) の場合はさらに Attendance ステータスで絞り込む。
 model Announcement {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id              String   @id @default(cuid())
   title           String
   body            String
@@ -354,10 +364,14 @@ model Announcement {
 
   @@index([publishedAt])
   @@index([eventId])
+
+  @@index([tenantId])
 }
 
 // お知らせ既読マーカー (ユーザー × お知らせ)
 model AnnouncementRead {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   userId         String
   announcementId String
   readAt         DateTime @default(now())
@@ -367,10 +381,14 @@ model AnnouncementRead {
 
   @@id([userId, announcementId])
   @@index([userId])
+
+  @@index([tenantId])
 }
 
 // イベント種別 (タグ)
 model EventCategory {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id              String   @id @default(cuid())
   name            String   @unique
   description     String?  // タグの説明文。ホバー/タップでツールチップ表示。
@@ -381,10 +399,14 @@ model EventCategory {
   events    Event[]
 
   @@index([order])
+
+  @@index([tenantId])
 }
 
 // イベント
 model Event {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id              String    @id @default(cuid())
   title           String    // イベント名
   description     String?   // 説明
@@ -453,10 +475,14 @@ model Event {
 
   @@index([linkedTournamentId])
   @@index([eventDate])
+
+  @@index([tenantId])
 }
 
 // 出欠
 model Attendance {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id          String   @id @default(cuid())
   userId      String
   eventId     String
@@ -492,10 +518,14 @@ model Attendance {
 
   @@unique([userId, eventId])
   @@index([eventId])
+
+  @@index([tenantId])
 }
 
 // 出欠回答履歴（変更のたびに記録）
 model AttendanceHistory {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id          String   @id @default(cuid())
   userId      String
   eventId     String
@@ -514,6 +544,8 @@ model AttendanceHistory {
   @@index([userId])
   @@index([eventId])
   @@index([changedAt])
+
+  @@index([tenantId])
 }
 
 // メール確認・配信停止用トークン
@@ -531,6 +563,8 @@ model EmailToken {
 
 // 招待トークン（仮アカウントをLINEアカウントに紐づけるためのワンタイムトークン）
 model InvitationToken {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   id        String   @id @default(cuid())
   token     String   @unique @default(cuid())
   userId    String   @unique
@@ -538,12 +572,18 @@ model InvitationToken {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 // システム設定（key-value）
 model SystemSetting {
+  // マルチテナント P1: 所属テナント。移行期間中は nullable。FK は意図的に張らない (db push の FK 制約事故回避)
+  tenantId String?
   key   String @id
   value String
+
+  @@index([tenantId])
 }
 
 // メッセージ（対象者へのメッセージ送信用）
