@@ -49,6 +49,11 @@ model User {
   holdAt              DateTime?
   holdMessageSentAt   DateTime?
 
+  // マルチテナント (P0): プラットフォーム全体の管理者フラグ。
+  // テナント内の role (admin 等) とは独立。/platform 管理ツールで使用。
+  // 設計: docs/superpowers/specs/2026-09-04-multi-tenant-business-design.md
+  isPlatformAdmin Boolean @default(false)
+
   // メール通知 (任意登録)。notifyEmail は NextAuth の email とは独立 (unique なし)
   notifyEmail           String?
   notifyEmailVerifiedAt DateTime? // null = 未確認。未確認アドレスには送信しない
@@ -84,6 +89,93 @@ model User {
 
   pointTransactions  PointTransaction[]
   achievementUnlocks AchievementUnlock[]
+
+  memberships        Membership[]
+}
+
+// ============================================================
+// マルチテナント (Issue #42 / 設計 2026-09-04)
+// P0: テーブル追加のみ。アプリの挙動は変えない。
+// ============================================================
+
+// テナント (サークル)。slug が URL サブパス (例: app.com/283bad/...) になる。
+model Tenant {
+  id     String @id @default(cuid())
+  slug   String @unique @db.NVarChar(50) // URL サブパス。英数字とハイフンのみ
+  name   String @db.NVarChar(100) // サークル表示名
+
+  // active = 通常稼働 / frozen = 未払い・解約等でロック / pending = 承認待ち
+  status String @default("active") @db.NVarChar(20)
+  // free = 無料プラン / paid = 有料 (Stripe) / complimentary = 全機能無料解放 (知人パイロット用)
+  plan   String @default("free") @db.NVarChar(20)
+
+  // Stripe (plan=paid のみ使用、P2.5 で実装)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  // LINE チャネル (テナント自前契約、P3 の動的 OAuth で使用)
+  lineLoginChannelId         String?
+  lineLoginChannelSecret     String? @db.NVarChar(500)
+  lineMessagingChannelId     String?
+  lineMessagingChannelSecret String? @db.NVarChar(500)
+  lineMessagingAccessToken   String? @db.NVarChar(Max)
+
+  // オーナー (User.id)。FK は張らない (User 削除との干渉を避ける)
+  ownerUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+}
+
+// ユーザー × テナントの所属情報。プロフィール・ロールはテナントごとに持つ。
+// P1 以降で User のプロフィール項目をこちらへ移行していく (P0 ではコピーのみ)。
+model Membership {
+  userId   String
+  tenantId String
+
+  role            String    @default("pending") @db.NVarChar(20) // admin / subadmin / member / visitor / guest / pending
+  nickname        String    @default("名無し") @db.NVarChar(100)
+  gender          String?   @db.NVarChar(20)
+  birthdate       DateTime?
+  ageVisible      Boolean   @default(true)
+  profileImageUrl String?   @db.NVarChar(500)
+  comment         String?   @db.NVarChar(1000)
+  skillLevel      Int?
+  adminNote       String?   @db.NVarChar(2000)
+  priorityScore   Int       @default(0)
+  tournamentResultsPublic Boolean @default(false)
+  lastActiveAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // SQL Server 循環参照対策: user は NoAction (削除は deleteUserCascade で明示処理)
+  user   User   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tenantId])
+  @@index([tenantId])
+}
+
+// サークル開設の申請。プラットフォーム管理者が承認すると Tenant が作成される。
+model TenantApplication {
+  id          String  @id @default(cuid())
+  circleName  String  @db.NVarChar(100) // サークル名
+  desiredSlug String? @db.NVarChar(50) // 希望 slug (承認時に調整可)
+  contactName String  @db.NVarChar(100) // 申請者名
+  contactInfo String  @db.NVarChar(200) // 連絡先 (メール / LINE 等)
+  note        String? @db.NVarChar(2000) // 補足 (活動地域・人数など)
+
+  status      String    @default("pending") @db.NVarChar(20) // pending / approved / rejected
+  processedAt DateTime?
+  resultNote  String?   @db.NVarChar(1000) // 承認/却下時のメモ
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
 }
 
 // ポイント増減の履歴。設計 docs/superpowers/specs/2026-06-11-points-achievements-cancel-design.md 参照。
