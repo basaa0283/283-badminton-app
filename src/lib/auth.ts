@@ -191,12 +191,14 @@ export const authOptions: NextAuthOptions = {
           lineId: dbUser.lineId,
           nickname: dbUser.nickname,
           role: dbUser.role,
+          isPlatformAdmin: dbUser.isPlatformAdmin,
           termsAcceptedVersion: dbUser.termsAcceptedVersion,
         } as typeof session.user & {
           id: string;
           lineId: string | null;
           nickname: string;
           role: string;
+          isPlatformAdmin: boolean;
           termsAcceptedVersion: string | null;
         };
       } catch (error) {
