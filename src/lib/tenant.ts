@@ -28,11 +28,38 @@ export async function getDefaultTenantId(): Promise<string> {
   return tenant.id;
 }
 
+// slug → tenantId のプロセス内キャッシュ (不変扱い)
+const slugIdCache = new Map<string, string>();
+
+// リクエストの cookie (middleware がセットした tenant-slug) を読む。
+// cron やスクリプト等リクエスト外のコンテキストでは null を返す。
+async function getRequestTenantSlug(): Promise<string | null> {
+  try {
+    const { cookies } = await import("next/headers");
+    const store = await cookies();
+    return store.get("tenant-slug")?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // 現在のリクエストが属するテナント ID。
-// P2 (URL サブパス化) までは常にデフォルトテナント (283bad) を返す。
-// P2 で middleware の slug 解決に差し替える。呼び出し側はこの関数だけ使うこと。
+// P2: middleware が URL の slug を cookie に載せるので、それを解決する。
+// cookie が無い/不正な場合はデフォルトテナント (283bad) にフォールバック。
+// 呼び出し側はこの関数だけ使うこと。
 export async function getCurrentTenantId(): Promise<string> {
-  return getDefaultTenantId();
+  const slug = await getRequestTenantSlug();
+  if (!slug || slug === DEFAULT_TENANT_SLUG) return getDefaultTenantId();
+
+  const cached = slugIdCache.get(slug);
+  if (cached) return cached;
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  if (!tenant) return getDefaultTenantId(); // 未知 slug はデフォルトに倒す
+  slugIdCache.set(slug, tenant.id);
+  return tenant.id;
 }
 
 // 読み取りクエリ用の tenant フィルタ断片。where に AND で合成して使う。
