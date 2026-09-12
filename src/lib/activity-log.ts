@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { getDefaultTenantId } from "./tenant";
 
 // アプリ内操作ログを記録する。fire-and-forget が原則 (本処理を止めない)。
 // 利用状況分析・監査の両方を兼ねる。
@@ -19,6 +20,7 @@ export async function logActivity({
   metadata?: Record<string, unknown>;
 }): Promise<void> {
   try {
+    const tenantId = await getDefaultTenantId();
     await prisma.activityLog.create({
       data: {
         userId: userId ?? null,
@@ -26,6 +28,7 @@ export async function logActivity({
         entityType: entityType ?? null,
         entityId: entityId ?? null,
         metadata: metadata ? JSON.stringify(metadata) : null,
+        tenantId,
       },
     });
   } catch (err) {

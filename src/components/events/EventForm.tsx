@@ -25,6 +25,7 @@ interface EventFormData {
   minViewRole: "guest" | "visitor" | "member";
   minRespondRole: "visitor" | "member";
   status: "draft" | "published";
+  visibleToParticipants: boolean;
   allowedTagIds: string[];
 }
 
@@ -143,6 +144,9 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
     initialData?.status ?? "published",
   );
   const [pendingStatus, setPendingStatus] = useState<"draft" | "published">("published");
+  const [visibleToParticipants, setVisibleToParticipants] = useState(
+    initialData?.visibleToParticipants ?? false,
+  );
   const [allowedTagIds, setAllowedTagIds] = useState<string[]>(initialData?.allowedTagIds ?? []);
   const [availableTags, setAvailableTags] = useState<AvailableTag[]>([]);
   const [categories, setCategories] = useState<EventCategory[]>([]);
@@ -251,6 +255,7 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
       minViewRole,
       minRespondRole,
       status: effectiveStatus,
+      visibleToParticipants,
       allowedTagIds,
     };
 
@@ -770,6 +775,26 @@ export function EventForm({ initialData, onSubmit, submitLabel = "作成", showN
           </div>
         </div>
       )}
+
+      <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="visibleToParticipants"
+            checked={visibleToParticipants}
+            onChange={(e) => setVisibleToParticipants(e.target.checked)}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="visibleToParticipants" className="text-sm font-medium text-gray-700">
+            非公開でも登録済み参加者本人には見せる
+          </label>
+        </div>
+        <p className="text-xs text-gray-500 mt-1 ml-6">
+          「非公開で保存」時のみ有効。ON にすると、このイベントに Attendance
+          (代理登録含む) がある参加者本人は、非公開のままでもカード・詳細を閲覧でき、出欠変更もできます。
+          代理登録した瞬間から本人に見え始める点に注意してください。
+        </p>
+      </div>
 
       <div className="flex gap-3 pt-4 flex-wrap">
         <Button type="button" variant="secondary" className="flex-1 min-w-[6rem]" onClick={() => router.back()}>

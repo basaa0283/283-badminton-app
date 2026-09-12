@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { tenantWhere } from "@/lib/tenant";
 
 // GET /api/events/locations - 過去イベントで使われた場所の distinct リスト
 // 補完用なので admin/subadmin のみ。
@@ -16,8 +17,9 @@ export async function GET() {
     return NextResponse.json({ success: false, error: { code: "FORBIDDEN" } }, { status: 403 });
   }
 
+  const tw = await tenantWhere();
   const rows = await prisma.event.findMany({
-    where: { location: { not: null } },
+    where: { AND: [{ location: { not: null } }, tw] },
     select: { location: true, eventDate: true },
     orderBy: { eventDate: "desc" },
     take: 200,

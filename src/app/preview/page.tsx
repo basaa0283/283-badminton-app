@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
+import { tenantWhere } from "@/lib/tenant";
 
 const JST = "Asia/Tokyo";
 
@@ -37,12 +38,18 @@ async function getData(): Promise<{
   officialLineUrl: string;
 }> {
   const now = new Date();
+  const tw = await tenantWhere();
   const [events, setting] = await Promise.all([
     prisma.event.findMany({
       where: {
-        eventDate: { gte: now },
-        minViewRole: "guest",
-        status: "published",
+        AND: [
+          {
+            eventDate: { gte: now },
+            minViewRole: "guest",
+            status: "published",
+          },
+          tw,
+        ],
       },
       orderBy: { eventDate: "asc" },
       take: 8,

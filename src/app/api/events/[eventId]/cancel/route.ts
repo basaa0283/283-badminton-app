@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { tenantWhere } from "@/lib/tenant";
 import { z } from "zod";
 
 const cancelSchema = z.object({
@@ -34,6 +35,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     );
   }
 
+  const tw = await tenantWhere();
+  const existing = await prisma.event.findFirst({ where: { id: eventId, AND: [tw] } });
+  if (!existing) {
+    return NextResponse.json({ success: false, error: { code: "NOT_FOUND" } }, { status: 404 });
+  }
+
   const event = await prisma.event.update({
     where: { id: eventId },
     data: {
@@ -56,6 +63,12 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   }
 
   const { eventId } = await params;
+  const tw = await tenantWhere();
+  const existing = await prisma.event.findFirst({ where: { id: eventId, AND: [tw] } });
+  if (!existing) {
+    return NextResponse.json({ success: false, error: { code: "NOT_FOUND" } }, { status: 404 });
+  }
+
   const event = await prisma.event.update({
     where: { id: eventId },
     data: { cancelledAt: null, cancelReason: null },

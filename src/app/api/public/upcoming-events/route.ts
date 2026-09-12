@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { tenantWhere } from "@/lib/tenant";
 
 // GET /api/public/upcoming-events
 // 認証不要。未ログインの見学検討者向けに「直近のゲスト向けイベント」を返す。
@@ -9,11 +10,17 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const now = new Date();
+    const tw = await tenantWhere();
     const events = await prisma.event.findMany({
       where: {
-        eventDate: { gte: now },
-        minViewRole: "guest",
-        status: "published",
+        AND: [
+          {
+            eventDate: { gte: now },
+            minViewRole: "guest",
+            status: "published",
+          },
+          tw,
+        ],
       },
       orderBy: { eventDate: "asc" },
       take: 8, // 直近 8 件まで

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 import { notifyWaitlistPromotion } from "@/lib/line-messaging";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 
 const proxyAttendanceSchema = z.object({
   eventId: z.string().min(1),
@@ -112,14 +113,16 @@ export async function POST(
       const currentAttending = event.attendances.filter((a) => a.userId !== userId).length;
       if (currentAttending >= event.capacity) {
         finalStatus = "waitlist";
+        const twForMax = await tenantWhere();
         const maxPos = await prisma.attendance.aggregate({
-          where: { eventId, status: "waitlist" },
+          where: { eventId, status: "waitlist", AND: [twForMax] },
           _max: { position: true },
         });
         position = (maxPos._max.position || 0) + 1;
       }
     }
 
+    const tenantId = await getDefaultTenantId();
     if (existing) {
       await prisma.attendance.update({
         where: { id: existing.id },
@@ -127,12 +130,12 @@ export async function POST(
       });
     } else {
       await prisma.attendance.create({
-        data: { userId, eventId, status: finalStatus, position: finalStatus === "waitlist" ? position : null },
+        data: { userId, eventId, status: finalStatus, position: finalStatus === "waitlist" ? position : null, tenantId },
       });
     }
 
     await prisma.attendanceHistory.create({
-      data: { userId, eventId, status: finalStatus, isProxy: true },
+      data: { userId, eventId, status: finalStatus, isProxy: true, tenantId },
     });
 
     // 参加→不参加の場合、キャンセル待ち繰り上げ
@@ -154,13 +157,14 @@ export async function POST(
 async function promoteFromWaitlist(eventId: string, capacity: number | null): Promise<void> {
   if (!capacity) return;
 
+  const tw = await tenantWhere();
   const currentAttending = await prisma.attendance.count({
-    where: { eventId, status: "attending" },
+    where: { eventId, status: "attending", AND: [tw] },
   });
   if (currentAttending >= capacity) return;
 
   const nextInLine = await prisma.attendance.findFirst({
-    where: { eventId, status: "waitlist" },
+    where: { eventId, status: "waitlist", AND: [tw] },
     orderBy: { position: "asc" },
     include: { user: { select: { lineId: true, nickname: true } } },
   });

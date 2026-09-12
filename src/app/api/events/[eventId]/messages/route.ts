@@ -6,6 +6,7 @@ import { permissions, UserRole, meetsRoleThreshold } from "@/lib/permissions";
 import { isEventAnnouncementVisibleTo } from "@/lib/announcement";
 import { logActivity } from "@/lib/activity-log";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 
 interface Params {
   params: Promise<{ eventId: string }>;
@@ -27,8 +28,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
     const { eventId } = await params;
     const role = session.user.role as UserRole;
 
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
+    const tw = await tenantWhere();
+    const event = await prisma.event.findFirst({
+      where: { id: eventId, AND: [tw] },
       select: { id: true, minViewRole: true, status: true, createdById: true },
     });
     if (!event) {
@@ -143,8 +145,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     // "all" = 全員に見せるので member/visitor/guest 全部 ON、
     // それ以外は少なくとも member+visitor は ON (attendance 判定で更に絞られる)。
     const audienceGuest = targetType === "all";
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
+    const twPost = await tenantWhere();
+    const event = await prisma.event.findFirst({
+      where: { id: eventId, AND: [twPost] },
       select: {
         title: true,
         eventDate: true,
@@ -160,6 +163,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       : "";
     const title = event ? `【${dateStr} ${event.title}】` : "【イベントお知らせ】";
 
+    const tenantId = await getDefaultTenantId();
     const ann = await prisma.announcement.create({
       data: {
         title,
@@ -171,6 +175,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         createdById: session.user.id,
         eventId,
         attendanceTargetType: targetType,
+        tenantId,
       },
     });
     void logActivity({

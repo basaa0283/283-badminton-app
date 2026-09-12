@@ -98,7 +98,12 @@ function OnboardingGate({ children }: { children: ReactNode }) {
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
+    // refetchOnWindowFocus=false: iOS Safari (WebKit) でページ遷移開始時に
+    // フォーカス由来のセッション再取得 fetch が中断されると、next-auth が
+    // 一瞬「未認証」と誤判定し、各ページの /login リダイレクトが誤発火する
+    // レースがあるため無効化する。API 側の認可は毎リクエスト DB を見るので
+    // クライアント側セッションの鮮度低下による実害はない。
+    <SessionProvider refetchOnWindowFocus={false}>
       <StaleSessionGuard />
       <OnboardingGate>{children}</OnboardingGate>
     </SessionProvider>

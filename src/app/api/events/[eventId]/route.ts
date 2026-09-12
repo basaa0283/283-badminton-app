@@ -8,6 +8,7 @@ import { logActivity } from "@/lib/activity-log";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
+import { tenantWhere } from "@/lib/tenant";
 
 function isStaff(role: UserRole) {
   return role === "admin" || role === "subadmin";
@@ -34,8 +35,9 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { eventId } = await params;
     const role = session.user.role as UserRole;
 
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
+    const tw = await tenantWhere();
+    const event = await prisma.event.findFirst({
+      where: { id: eventId, AND: [tw] },
       include: {
         createdBy: {
           select: { nickname: true },
@@ -89,8 +91,21 @@ export async function GET(request: NextRequest, { params }: Params) {
       );
     }
 
+    // 非公開イベントの「参加者本人には見せる」オプション (#53)。
+    // visibleToParticipants=true かつ自分の Attendance レコードがあれば、
+    // 以降の draft ガード・タグ限定ガードを両方バイパスする (明示的な個別許可のため)。
+    const isCreator = event.createdById === session.user.id;
+    const isVisibleAsParticipant =
+      event.visibleToParticipants &&
+      event.attendances.some((a) => a.user.id === session.user.id);
+
     // draft 状態のイベントは管理者と作成者だけが閲覧可。
-    if (event.status === "draft" && !isStaff(role) && event.createdById !== session.user.id) {
+    if (
+      event.status === "draft" &&
+      !isStaff(role) &&
+      !isCreator &&
+      !isVisibleAsParticipant
+    ) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
         { status: 404 }
@@ -101,7 +116,8 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (
       event.allowedTags.length > 0 &&
       !isStaff(role) &&
-      event.createdById !== session.user.id
+      !isCreator &&
+      !isVisibleAsParticipant
     ) {
       const myTagIds = await prisma.userMemberTag.findMany({
         where: { userId: session.user.id },
@@ -214,6 +230,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         minViewRole: event.minViewRole,
         minRespondRole: event.minRespondRole,
         status: event.status,
+        visibleToParticipants: event.visibleToParticipants,
         allowedTags: event.allowedTags.map((at) => ({
           id: at.tag.id,
           name: at.tag.name,
@@ -330,7 +347,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
-    const existing = await prisma.event.findUnique({ where: { id: eventId } });
+    const tw = await tenantWhere();
+    const existing = await prisma.event.findFirst({ where: { id: eventId, AND: [tw] } });
     if (!existing) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },
@@ -358,6 +376,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (parsed.data.minViewRole !== undefined) updateData.minViewRole = parsed.data.minViewRole;
     if (parsed.data.minRespondRole !== undefined) updateData.minRespondRole = parsed.data.minRespondRole;
     if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
+    if (parsed.data.visibleToParticipants !== undefined)
+      updateData.visibleToParticipants = parsed.data.visibleToParticipants;
     // allowedTagIds は別途 transaction で delete+create する (下記)
     if (parsed.data.shuttleCount !== undefined) updateData.shuttleCount = parsed.data.shuttleCount;
     if (parsed.data.shuttleCost !== undefined) updateData.shuttleCost = parsed.data.shuttleCost;
@@ -404,8 +424,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
       void (async () => {
         try {
           // allowedTags を再取得 (差分処理後の最新状態)
-          const eventWithTags = await prisma.event.findUnique({
-            where: { id: eventId },
+          const eventWithTags = await prisma.event.findFirst({
+            where: { id: eventId, AND: [tw] },
             include: { allowedTags: { select: { tagId: true } } },
           });
           const allowedTagIds = eventWithTags?.allowedTags.map((t) => t.tagId) ?? [];
@@ -492,7 +512,8 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     const { eventId } = await params;
 
-    const existing = await prisma.event.findUnique({ where: { id: eventId } });
+    const tw = await tenantWhere();
+    const existing = await prisma.event.findFirst({ where: { id: eventId, AND: [tw] } });
     if (!existing) {
       return NextResponse.json(
         { success: false, error: { code: "NOT_FOUND", message: "イベントが見つかりません" } },

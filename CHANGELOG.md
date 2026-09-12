@@ -3,6 +3,27 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [4.0.0] - 2026-09-13
+
+マルチテナント SaaS 化の基盤リリース。アプリの URL 構造が `/28bad/...` に変わる
+(旧 URL は自動リダイレクトされるため、既存のブックマーク・LINE 内リンクはそのまま使える)。
+28ばど の見た目・機能は従来どおりで、裏側の全データがテナント (サークル) 単位の管理に移行した。
+
+### Added
+- 非公開イベントに「登録済み参加者本人には見せる」オプションを追加。ON にすると、代理登録された参加者本人には非公開のままカード・詳細が見え、出欠変更もできる (バッジは参加者視点では「🔒 限定公開」表示) (#53)
+- マルチテナント基盤 (Tenant / Membership / TenantApplication テーブル、全データの tenantId 管理、テナント別の読み取りフィルタ) (#42)
+- URL サブパス化: アプリのページ URL が `/28bad/...` になった。旧 URL (`/events` 等、旧 slug `/283bad/...` 含む) は自動リダイレクト (#42)
+- プラットフォーム管理ツール `/platform` (isPlatformAdmin 保持者のみ): テナント一覧・プラン切替 (free/paid/complimentary)・凍結、テナント直接作成、開設申請の承認/却下、テナント横断の統計 (MRR 等) (#42)
+- テナント別 LINE OAuth: テナントに自前の LINE Login チャネルを登録すると、そのチャネルで認証できる (未登録テナント・28ばど は従来どおり環境変数のチャネル) (#42)
+- 有料プラン判定の骨格 (planHasPaidFeatures)。機能制限の本稼働は Stripe 統合時 (#42)
+
+### Changed
+- セッションの role を「現在テナントの Membership」から解決するよう変更 (Membership 未整備の移行期間中は従来の User.role にフォールバック)。role 変更 API は両方に書き込む (#42)
+- 新規ユーザー登録時に、現在テナントの Membership (pending) を自動作成 (#42)
+
+### Fixed
+- iOS Safari でページ遷移時にセッション再取得が中断されると一瞬「未認証」扱いになり、ログイン画面へ誤って飛ばされることがあるレースを緩和 (セッションのフォーカス時再取得を無効化) (#42)
+
 ## [3.7.2] - 2026-08-17
 
 ### Fixed
@@ -598,6 +619,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[4.0.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.2...v4.0.0
 [3.7.2]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.1...v3.7.2
 [3.7.1]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.0...v3.7.1
 [3.7.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.6.0...v3.7.0

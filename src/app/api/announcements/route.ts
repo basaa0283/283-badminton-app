@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { UserRole } from "@/lib/permissions";
 import { isVisibleTo, isEventAnnouncementVisibleTo } from "@/lib/announcement";
 import { logActivity } from "@/lib/activity-log";
+import { tenantWhere } from "@/lib/tenant";
 
 // GET /api/announcements - 自分の role に届いている公開中お知らせ + 既読状態
 // イベント紐付き (eventId != null) のお知らせは Attendance ステータスでさらに絞り込む
@@ -16,8 +17,9 @@ export async function GET() {
   const role = session.user.role as UserRole;
   const userId = session.user.id;
 
+  const tw = await tenantWhere();
   const all = await prisma.announcement.findMany({
-    where: { publishedAt: { lte: new Date() } },
+    where: { publishedAt: { lte: new Date() }, AND: [tw] },
     orderBy: { publishedAt: "desc" },
     take: 100,
     include: {

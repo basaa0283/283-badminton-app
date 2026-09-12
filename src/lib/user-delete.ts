@@ -14,6 +14,8 @@ export async function deleteUserCascade(userId: string): Promise<void> {
     prisma.message.deleteMany({ where: { senderId: userId } }),
     // メンバータグの割り当て。SQL Server では Cascade だが孤児が残った実績があるため明示削除
     prisma.userMemberTag.deleteMany({ where: { userId } }),
+    // テナント所属 (マルチテナント P0)。SQL Server 側 FK は NoAction のため明示削除が必須
+    prisma.membership.deleteMany({ where: { userId } }),
     // EmailToken は User への FK を張っていないので明示削除が必須
     prisma.emailToken.deleteMany({ where: { userId } }),
     prisma.invitationToken.deleteMany({ where: { userId } }),

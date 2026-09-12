@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 import { logActivity } from "@/lib/activity-log";
+import { tenantWhere } from "@/lib/tenant";
 
 const updateSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -49,6 +50,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   if (parsed.data.severity !== undefined) data.severity = parsed.data.severity;
   if (parsed.data.publishedAt !== undefined) data.publishedAt = new Date(parsed.data.publishedAt);
 
+  const tw = await tenantWhere();
+  const existing = await prisma.announcement.findFirst({ where: { id, AND: [tw] } });
+  if (!existing) {
+    return NextResponse.json({ success: false, error: { code: "NOT_FOUND" } }, { status: 404 });
+  }
+
   try {
     const updated = await prisma.announcement.update({ where: { id }, data });
     void logActivity({
@@ -74,6 +81,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: false, error: { code: "FORBIDDEN" } }, { status: 403 });
   }
   const { id } = await params;
+  const tw = await tenantWhere();
+  const existing = await prisma.announcement.findFirst({ where: { id, AND: [tw] } });
+  if (!existing) {
+    return NextResponse.json({ success: false, error: { code: "NOT_FOUND" } }, { status: 404 });
+  }
   await prisma.announcement.delete({ where: { id } }).catch(() => null);
   void logActivity({
     userId: session.user.id,

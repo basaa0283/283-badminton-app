@@ -9,6 +9,7 @@ import { logActivity } from "@/lib/activity-log";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 
 // GET /api/events - イベント一覧取得
 export async function GET(request: NextRequest) {
@@ -77,24 +78,37 @@ export async function GET(request: NextRequest) {
             },
           ],
         };
+    // 非公開イベントの「参加者本人には見せる」オプション (#53)。
+    // visibleToParticipants=true かつ自分の Attendance レコードがあれば、
+    // status/タグ制限を問わず個別に見える (管理者からの明示的な招待扱い)。
+    const draftParticipantWhere = {
+      status: "draft",
+      visibleToParticipants: true,
+      attendances: { some: { userId: session.user.id } },
+    };
+    const accessWhere = isAdmin
+      ? {}
+      : { OR: [{ AND: [statusWhere, tagWhere] }, draftParticipantWhere] };
     const baseWhereWithStatus = isAdmin
       ? { ...baseWhere, ...statusWhere }
-      : { AND: [baseWhere, statusWhere, tagWhere] };
+      : { AND: [baseWhere, accessWhere] };
     const where =
       !upcoming && !isAdmin
         ? {
             AND: [
               baseWhere,
-              statusWhere,
-              tagWhere,
+              accessWhere,
               { attendances: { some: { userId: session.user.id, status: "attending" } } },
             ],
           }
         : baseWhereWithStatus;
 
+    const tw = await tenantWhere();
+    const whereWithTenant = { AND: [where, tw] };
+
     const [events, total] = await Promise.all([
       prisma.event.findMany({
-        where,
+        where: whereWithTenant,
         orderBy: { eventDate: upcoming ? "asc" : "desc" },
         include: {
           attendances: {
@@ -114,7 +128,7 @@ export async function GET(request: NextRequest) {
           allowedTags: { include: { tag: true } },
         },
       }),
-      prisma.event.count({ where }),
+      prisma.event.count({ where: whereWithTenant }),
     ]);
 
     const userId = session.user.id;
@@ -233,6 +247,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const tenantId = await getDefaultTenantId();
     const event = await prisma.event.create({
       data: {
         title: parsed.data.title,
@@ -251,6 +266,7 @@ export async function POST(request: NextRequest) {
         minViewRole: parsed.data.minViewRole ?? "visitor",
         minRespondRole: parsed.data.minRespondRole ?? "visitor",
         status: parsed.data.status ?? "published",
+        visibleToParticipants: parsed.data.visibleToParticipants ?? false,
         shuttleCount: parsed.data.shuttleCount ?? null,
         shuttleCost: parsed.data.shuttleCost ?? null,
         gymCost: parsed.data.gymCost ?? null,
@@ -258,6 +274,7 @@ export async function POST(request: NextRequest) {
         otherMemo: parsed.data.otherMemo ?? null,
         actualRevenue: parsed.data.actualRevenue ?? null,
         createdById: session.user.id,
+        tenantId,
         ...(parsed.data.allowedTagIds && parsed.data.allowedTagIds.length > 0
           ? {
               allowedTags: {
@@ -311,6 +328,7 @@ export async function POST(request: NextRequest) {
             audienceVisitor: true,
             audienceGuest: false,
             createdById: session.user.id,
+            tenantId,
           },
         })
         .catch((err) => console.error("[announce] new event announcement failed:", err));

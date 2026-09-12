@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -39,8 +40,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
     );
   }
 
-  const existing = await prisma.attendance.findUnique({ where: { id: attendanceId } });
-  if (!existing || existing.eventId !== eventId) {
+  // Attendance は直接 id で取得するのでテナントチェックなし。ここで tenantWhere を挟む。
+  const tw = await tenantWhere();
+  const existing = await prisma.attendance.findFirst({
+    where: { id: attendanceId, eventId, AND: [tw] },
+  });
+  if (!existing) {
     return NextResponse.json({ success: false, error: { code: "NOT_FOUND" } }, { status: 404 });
   }
 
@@ -66,8 +71,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
   const amountNotProvided = parsed.data.paymentAmount === undefined;
   const noExistingAmount = existing.paymentAmount === null;
   if (becomingPaid && amountNotProvided && noExistingAmount) {
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
+    const event = await prisma.event.findFirst({
+      where: { id: eventId, AND: [tw] },
       select: { fee: true },
     });
     data.paymentAmount = event?.fee ?? 0;
@@ -80,12 +85,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
   // 出欠ステータスを変更した場合のみ履歴を残す
   if (parsed.data.status !== undefined && parsed.data.status !== existing.status) {
+    const tenantId = await getDefaultTenantId();
     await prisma.attendanceHistory.create({
       data: {
         userId: existing.userId,
         eventId,
         status: parsed.data.status,
         isProxy: true,
+        tenantId,
       },
     });
   }

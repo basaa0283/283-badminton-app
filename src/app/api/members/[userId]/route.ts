@@ -254,6 +254,28 @@ export async function PUT(request: NextRequest, { params }: Params) {
       },
     });
 
+    // マルチテナント P3 (移行期間の dual-write): session の role は Membership から
+    // 解決されるため、role 変更は現在テナントの Membership にも反映する。
+    // Membership が無い場合 (PROD 移行前) は作成する。
+    if (parsed.data.role !== undefined) {
+      try {
+        const { getCurrentTenantId } = await import("@/lib/tenant");
+        const tenantId = await getCurrentTenantId();
+        await prisma.membership.upsert({
+          where: { userId_tenantId: { userId, tenantId } },
+          update: { role: parsed.data.role },
+          create: {
+            userId,
+            tenantId,
+            role: parsed.data.role,
+            nickname: user.nickname,
+          },
+        });
+      } catch (err) {
+        console.error("[member PUT] membership role dual-write failed:", err);
+      }
+    }
+
     // 承認 (pending → 他ロール) の場合、対象ユーザーに LINE で通知。
     // 失敗しても保存自体は成功させる (fire-and-forget)。
     if (existing.role === "pending" && user.role !== "pending" && user.lineId) {

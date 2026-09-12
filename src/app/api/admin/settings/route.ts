@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { getDefaultTenantId } from "@/lib/tenant";
 
 const BOOLEAN_KEYS = ["notifyReminderEnabled", "notifyWaitlistEnabled"] as const;
 const STRING_KEYS = [
@@ -71,13 +72,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+    const tenantId = await getDefaultTenantId();
 
     for (const key of BOOLEAN_KEYS) {
       if (typeof body[key] === "boolean") {
         await prisma.systemSetting.upsert({
           where: { key },
           update: { value: String(body[key]) },
-          create: { key, value: String(body[key]) },
+          create: { key, value: String(body[key]), tenantId },
         });
       }
     }
@@ -87,7 +89,7 @@ export async function PUT(request: NextRequest) {
         await prisma.systemSetting.upsert({
           where: { key },
           update: { value },
-          create: { key, value },
+          create: { key, value, tenantId },
         });
       }
     }

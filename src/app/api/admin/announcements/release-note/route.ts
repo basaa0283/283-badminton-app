@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
+import { getDefaultTenantId } from "@/lib/tenant";
 import pkg from "../../../../../../package.json";
 
 const LAST_ANNOUNCED_KEY = "lastAnnouncedReleaseVersion";
@@ -82,6 +83,7 @@ export async function POST() {
     `不具合修正や機能改善を含むアップデートを反映しました。\n` +
     `詳細は「更新履歴」からご確認ください。`;
 
+  const tenantId = await getDefaultTenantId();
   const announcement = await prisma.announcement.create({
     data: {
       title,
@@ -91,12 +93,13 @@ export async function POST() {
       audienceGuest: true,
       severity: "info",
       createdById: null, // system 投稿。UI 側で「運営」と表示する。
+      tenantId,
     },
   });
 
   await prisma.systemSetting.upsert({
     where: { key: LAST_ANNOUNCED_KEY },
-    create: { key: LAST_ANNOUNCED_KEY, value: version },
+    create: { key: LAST_ANNOUNCED_KEY, value: version, tenantId },
     update: { value: version },
   });
 
