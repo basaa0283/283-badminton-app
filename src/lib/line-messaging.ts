@@ -10,17 +10,38 @@ async function isSettingEnabled(key: string): Promise<boolean> {
 }
 
 const MESSAGING_API_URL = "https://api.line.me/v2/bot/message";
-const TOKEN = process.env.LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN;
+
+// マルチテナント P4: Messaging API のトークンを現在テナントから解決する。
+// - デフォルトテナント (28ばど): env のトークン (従来どおり)
+// - 他テナント: Tenant.lineMessagingAccessToken。未設定なら送らない
+//   (LINE の userId はチャネル単位のため、28ばど のチャネルから他サークルの
+//   ユーザーへは届かない。誤配信を避けるためフォールバックしない)
+async function resolveMessagingToken(): Promise<string | undefined> {
+  const envToken = process.env.LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN;
+  try {
+    const { getCurrentTenantId, getDefaultTenantId } = await import("./tenant");
+    const tenantId = await getCurrentTenantId();
+    if (tenantId === (await getDefaultTenantId())) return envToken;
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { lineMessagingAccessToken: true },
+    });
+    return tenant?.lineMessagingAccessToken ?? undefined;
+  } catch {
+    return envToken;
+  }
+}
 
 async function push(lineId: string, text: string): Promise<void> {
-  if (!TOKEN) {
-    console.warn("[LINE] LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN not set, skipping notification");
+  const token = await resolveMessagingToken();
+  if (!token) {
+    console.warn("[LINE] Messaging トークン未設定のため通知をスキップ");
     return;
   }
   const res = await fetch(`${MESSAGING_API_URL}/push`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${TOKEN}`,
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -35,8 +56,9 @@ async function push(lineId: string, text: string): Promise<void> {
 }
 
 async function multicast(lineIds: string[], text: string): Promise<void> {
-  if (!TOKEN) {
-    console.warn("[LINE] LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN not set, skipping notification");
+  const token = await resolveMessagingToken();
+  if (!token) {
+    console.warn("[LINE] Messaging トークン未設定のため通知をスキップ");
     return;
   }
   if (lineIds.length === 0) return;
@@ -45,7 +67,7 @@ async function multicast(lineIds: string[], text: string): Promise<void> {
     const res = await fetch(`${MESSAGING_API_URL}/multicast`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${TOKEN}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
