@@ -36,6 +36,7 @@ export const RESERVED_SLUGS = new Set([
   "platform", "api", "login", "about", "preview", "terms", "privacy",
   "email", "invite", "onboarding", "events", "members", "admin",
   "tournaments", "profile", "release-notes", "auth", "www", "app",
+  "apply", "announcements",
 ]);
 
 export const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{2,29}$/;
