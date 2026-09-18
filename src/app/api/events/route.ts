@@ -377,6 +377,8 @@ export async function POST(request: NextRequest) {
             })
             .map((u) => u.id);
 
+          const { getCurrentTenantInfo } = await import("@/lib/tenant");
+          const tenantInfo = await getCurrentTenantInfo();
           const appUrl = process.env.NEXTAUTH_URL ?? "";
           const dateStr = event.isAllDay
             ? formatInTimeZone(event.eventDate, "Asia/Tokyo", "M月d日(E)", { locale: ja }) + " 終日"
@@ -390,12 +392,12 @@ export async function POST(request: NextRequest) {
             ...(event.location ? [`📍 ${event.location}`] : []),
             "",
             "参加登録はアプリから:",
-            `${appUrl}/events/${event.id}`,
+            `${appUrl}/${tenantInfo.slug}/events/${event.id}`,
           ];
 
           await dispatchNotificationEmails({
             type: "new_event",
-            subject: `【２８ばど】新しいイベント: ${event.title}`,
+            subject: `【${tenantInfo.name}】新しいイベント: ${event.title}`,
             body: bodyLines.join("\n"),
             recipientUserIds: targetUserIds,
           });

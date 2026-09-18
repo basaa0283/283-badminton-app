@@ -70,6 +70,23 @@ export async function tenantWhere(): Promise<{ tenantId: string }> {
   return { tenantId };
 }
 
+// 現在のリクエストのテナント情報 (メールの件名・リンク URL 生成用)。
+// メール内リンクは必ず slug 付き URL にすること (slug 無し URL はデフォルト
+// テナントへリダイレクトされるため、他テナントのユーザーには 404 になる)。
+export async function getCurrentTenantInfo(): Promise<{
+  id: string;
+  slug: string;
+  name: string;
+}> {
+  const tenantId = await getCurrentTenantId();
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { id: true, slug: true, name: true },
+  });
+  // getCurrentTenantId が返す ID は必ず存在するが、型上の保険としてフォールバック
+  return tenant ?? { id: tenantId, slug: DEFAULT_TENANT_SLUG, name: DEFAULT_TENANT_NAME };
+}
+
 // テスト用: キャッシュをリセットする
 export function _resetTenantCacheForTest(): void {
   cachedDefaultTenantId = null;
