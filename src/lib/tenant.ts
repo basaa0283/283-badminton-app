@@ -63,13 +63,28 @@ export async function getCurrentTenantId(): Promise<string> {
 }
 
 // 読み取りクエリ用の tenant フィルタ断片。where に AND で合成して使う。
-// 移行期間中 (PROD の backfill 完了前) は tenantId=NULL の旧レコードも
-// デフォルトテナントの持ち物として扱う。backfill 完了後に NULL 許容を外す。
-export async function tenantWhere(): Promise<{
-  OR: [{ tenantId: string }, { tenantId: null }];
+// v4.0.0 で DEV/PROD とも tenantId の backfill が完了したため、
+// NULL 許容 (移行期間の安全弁) は撤去済み。全レコードが tenantId を持つ前提。
+export async function tenantWhere(): Promise<{ tenantId: string }> {
+  const tenantId = await getCurrentTenantId();
+  return { tenantId };
+}
+
+// 現在のリクエストのテナント情報 (メールの件名・リンク URL 生成用)。
+// メール内リンクは必ず slug 付き URL にすること (slug 無し URL はデフォルト
+// テナントへリダイレクトされるため、他テナントのユーザーには 404 になる)。
+export async function getCurrentTenantInfo(): Promise<{
+  id: string;
+  slug: string;
+  name: string;
 }> {
   const tenantId = await getCurrentTenantId();
-  return { OR: [{ tenantId }, { tenantId: null }] };
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { id: true, slug: true, name: true },
+  });
+  // getCurrentTenantId が返す ID は必ず存在するが、型上の保険としてフォールバック
+  return tenant ?? { id: tenantId, slug: DEFAULT_TENANT_SLUG, name: DEFAULT_TENANT_NAME };
 }
 
 // テスト用: キャッシュをリセットする

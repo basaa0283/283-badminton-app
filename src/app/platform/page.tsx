@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 
 type TenantPlan = "free" | "paid" | "complimentary";
 type TenantStatus = "active" | "frozen" | "pending";
@@ -73,6 +74,66 @@ const STATUS_BADGE: Record<TenantStatus, string> = {
   pending: "bg-yellow-100 text-yellow-700",
 };
 
+type LineFieldKey =
+  | "lineLoginChannelId"
+  | "lineLoginChannelSecret"
+  | "lineMessagingChannelId"
+  | "lineMessagingChannelSecret"
+  | "lineMessagingAccessToken";
+
+interface LineFieldDef {
+  key: LineFieldKey;
+  label: string;
+  secret: boolean;
+  hasKey?: "hasLineLoginSecret" | "hasLineMessagingSecret" | "hasLineMessagingAccessToken";
+}
+
+const LINE_FIELDS: LineFieldDef[] = [
+  { key: "lineLoginChannelId", label: "Login チャネルID", secret: false },
+  { key: "lineLoginChannelSecret", label: "Login チャネルシークレット", secret: true, hasKey: "hasLineLoginSecret" },
+  { key: "lineMessagingChannelId", label: "Messaging チャネルID", secret: false },
+  {
+    key: "lineMessagingChannelSecret",
+    label: "Messaging チャネルシークレット",
+    secret: true,
+    hasKey: "hasLineMessagingSecret",
+  },
+  {
+    key: "lineMessagingAccessToken",
+    label: "Messaging アクセストークン",
+    secret: true,
+    hasKey: "hasLineMessagingAccessToken",
+  },
+];
+
+const EMPTY_LINE_VALUES: Record<LineFieldKey, string> = {
+  lineLoginChannelId: "",
+  lineLoginChannelSecret: "",
+  lineMessagingChannelId: "",
+  lineMessagingChannelSecret: "",
+  lineMessagingAccessToken: "",
+};
+
+const EMPTY_LINE_CLEAR: Record<LineFieldKey, boolean> = {
+  lineLoginChannelId: false,
+  lineLoginChannelSecret: false,
+  lineMessagingChannelId: false,
+  lineMessagingChannelSecret: false,
+  lineMessagingAccessToken: false,
+};
+
+interface LineChannelData {
+  hasLineLoginSecret: boolean;
+  hasLineMessagingSecret: boolean;
+  hasLineMessagingAccessToken: boolean;
+}
+
+const EMPTY_LINE_HAS: LineChannelData = {
+  hasLineLoginSecret: false,
+  hasLineMessagingSecret: false,
+  hasLineMessagingAccessToken: false,
+};
+
 function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return "—";
   const d = new Date(dateString);
@@ -99,6 +160,15 @@ export default function PlatformPage() {
 
   const [processingAppId, setProcessingAppId] = useState<string | null>(null);
   const [appError, setAppError] = useState<string | null>(null);
+
+  const [lineTenant, setLineTenant] = useState<Tenant | null>(null);
+  const [lineLoading, setLineLoading] = useState(false);
+  const [lineSaving, setLineSaving] = useState(false);
+  const [lineError, setLineError] = useState<string | null>(null);
+  const [lineValues, setLineValues] = useState<Record<LineFieldKey, string>>(EMPTY_LINE_VALUES);
+  const [lineInitial, setLineInitial] = useState<Record<LineFieldKey, string>>(EMPTY_LINE_VALUES);
+  const [lineClear, setLineClear] = useState<Record<LineFieldKey, boolean>>(EMPTY_LINE_CLEAR);
+  const [lineHas, setLineHas] = useState<LineChannelData>(EMPTY_LINE_HAS);
 
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
 
@@ -263,6 +333,100 @@ export default function PlatformPage() {
     }
   };
 
+  const openLineModal = async (tenant: Tenant) => {
+    setLineTenant(tenant);
+    setLineError(null);
+    setLineValues(EMPTY_LINE_VALUES);
+    setLineInitial(EMPTY_LINE_VALUES);
+    setLineClear(EMPTY_LINE_CLEAR);
+    setLineHas(EMPTY_LINE_HAS);
+    setLineLoading(true);
+    try {
+      const res = await fetch(`/api/platform/tenants/${tenant.id}/line-channel`);
+      const json = await res.json();
+      if (json.success) {
+        const d = json.data;
+        const fetched: Record<LineFieldKey, string> = {
+          ...EMPTY_LINE_VALUES,
+          lineLoginChannelId: d.lineLoginChannelId ?? "",
+          lineMessagingChannelId: d.lineMessagingChannelId ?? "",
+        };
+        setLineValues(fetched);
+        setLineInitial(fetched);
+        setLineHas({
+          hasLineLoginSecret: !!d.hasLineLoginSecret,
+          hasLineMessagingSecret: !!d.hasLineMessagingSecret,
+          hasLineMessagingAccessToken: !!d.hasLineMessagingAccessToken,
+        });
+      } else {
+        setLineError(json.error?.message || "取得に失敗しました");
+      }
+    } catch (e) {
+      setLineError("通信エラー: " + String(e));
+    } finally {
+      setLineLoading(false);
+    }
+  };
+
+  const closeLineModal = () => {
+    if (lineSaving) return;
+    setLineTenant(null);
+  };
+
+  const handleLineFieldChange = (field: LineFieldKey, value: string) => {
+    setLineValues((prev) => ({ ...prev, [field]: value }));
+    // 入力を始めたら「クリア予定」は取り消す (入力値を優先する)
+    if (lineClear[field]) {
+      setLineClear((prev) => ({ ...prev, [field]: false }));
+    }
+  };
+
+  const handleLineFieldClear = (field: LineFieldKey) => {
+    setLineValues((prev) => ({ ...prev, [field]: "" }));
+    setLineClear((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const handleSaveLine = async () => {
+    if (!lineTenant || lineSaving) return;
+    const body: Record<string, string> = {};
+    for (const f of LINE_FIELDS) {
+      const current = lineValues[f.key].trim();
+      if (f.secret) {
+        if (lineClear[f.key]) {
+          body[f.key] = "";
+        } else if (current.length > 0) {
+          body[f.key] = current;
+        }
+      } else if (current !== lineInitial[f.key].trim()) {
+        body[f.key] = current;
+      }
+    }
+    if (Object.keys(body).length === 0) {
+      setLineError("変更がありません");
+      return;
+    }
+    setLineSaving(true);
+    setLineError(null);
+    try {
+      const res = await fetch(`/api/platform/tenants/${lineTenant.id}/line-channel`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setLineTenant(null);
+        await fetchOverview();
+      } else {
+        setLineError(json.error?.message || "保存に失敗しました");
+      }
+    } catch (e) {
+      setLineError("通信エラー: " + String(e));
+    } finally {
+      setLineSaving(false);
+    }
+  };
+
   // 未ログイン・非プラットフォーム管理者には存在を秘匿する
   if (status === "unauthenticated" || (status === "authenticated" && !isPlatformAdmin)) {
     return (
@@ -352,12 +516,13 @@ export default function PlatformPage() {
                   <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider">イベント</th>
                   <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider">直近30日操作</th>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">作成日</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {(data?.tenants.length ?? 0) === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-6 text-gray-500">テナントがありません</td>
+                    <td colSpan={9} className="text-center py-6 text-gray-500">テナントがありません</td>
                   </tr>
                 ) : (
                   data!.tenants.map((tenant) => (
@@ -392,6 +557,11 @@ export default function PlatformPage() {
                       <td className="px-3 py-2 text-right text-gray-700">{tenant.eventCount}</td>
                       <td className="px-3 py-2 text-right text-gray-700">{tenant.recentActivityCount}</td>
                       <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{formatDate(tenant.createdAt)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <Button size="sm" variant="secondary" onClick={() => openLineModal(tenant)}>
+                          LINE設定
+                        </Button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -523,6 +693,71 @@ export default function PlatformPage() {
           </div>
         </div>
       </main>
+
+      <Modal
+        isOpen={!!lineTenant}
+        onClose={closeLineModal}
+        title={`LINE設定 - ${lineTenant?.name ?? ""}`}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500">
+            各サークルが LINE Developers で作成した LINE Login チャネルを登録すると、そのサークルの URL からはそのチャネルでログインされます。コールバックURLには
+            https://&lt;このアプリのドメイン&gt;/api/auth/callback/line を登録してもらってください。
+          </p>
+
+          {lineError && (
+            <p className="text-sm text-red-600">{lineError}</p>
+          )}
+
+          {lineLoading ? (
+            <p className="text-sm text-gray-500">読み込み中...</p>
+          ) : (
+            <div className="space-y-3">
+              {LINE_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{f.label}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type={f.secret ? "password" : "text"}
+                      value={lineValues[f.key]}
+                      onChange={(e) => handleLineFieldChange(f.key, e.target.value)}
+                      placeholder={
+                        f.secret && f.hasKey && lineHas[f.hasKey]
+                          ? "設定済み (変更する場合のみ入力)"
+                          : undefined
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      disabled={lineSaving}
+                    />
+                    {f.secret && (
+                      <button
+                        type="button"
+                        onClick={() => handleLineFieldClear(f.key)}
+                        disabled={lineSaving}
+                        className="text-xs text-red-600 hover:underline shrink-0 disabled:opacity-50"
+                      >
+                        クリア
+                      </button>
+                    )}
+                  </div>
+                  {f.secret && lineClear[f.key] && (
+                    <p className="text-xs text-red-600 mt-0.5">クリア予定</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button variant="secondary" onClick={closeLineModal} disabled={lineSaving}>
+              キャンセル
+            </Button>
+            <Button onClick={handleSaveLine} loading={lineSaving} disabled={lineLoading}>
+              保存
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -104,13 +104,15 @@ export async function POST(request: NextRequest) {
           select: { id: true },
         });
 
+        const { getCurrentTenantInfo } = await import("@/lib/tenant");
+        const tenantInfo = await getCurrentTenantInfo();
         const appUrl = process.env.NEXTAUTH_URL ?? "";
         const bodyText =
-          created.body + `\n\n詳しくはアプリで: ${appUrl}/announcements`;
+          created.body + `\n\n詳しくはアプリで: ${appUrl}/${tenantInfo.slug}/announcements`;
 
         await dispatchNotificationEmails({
           type: "announcement",
-          subject: `【２８ばど】${created.title}`,
+          subject: `【${tenantInfo.name}】${created.title}`,
           body: bodyText,
           recipientUserIds: targetUsers.map((u) => u.id),
         });

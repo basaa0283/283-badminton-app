@@ -189,9 +189,11 @@ export async function POST(request: NextRequest, { params }: Params) {
     // メール通知: fire-and-forget (cron と異なり API レスポンスを待たせない)
     void (async () => {
       try {
+        const { getCurrentTenantInfo } = await import("@/lib/tenant");
+        const tenantInfo = await getCurrentTenantInfo();
         const appUrl = process.env.NEXTAUTH_URL ?? "";
-        const subject = `【２８ばど】${dateStr} ${event?.title ?? "イベント"} の連絡`;
-        const emailBody = content + `\n\n詳細: ${appUrl}/events/${eventId}`;
+        const subject = `【${tenantInfo.name}】${dateStr} ${event?.title ?? "イベント"} の連絡`;
+        const emailBody = content + `\n\n詳細: ${appUrl}/${tenantInfo.slug}/events/${eventId}`;
 
         const allowedTagIds = (event?.allowedTags ?? []).map((t) => t.tagId);
         const hasTagRestriction = allowedTagIds.length > 0;
