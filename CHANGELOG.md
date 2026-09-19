@@ -3,6 +3,24 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [4.1.0] - 2026-09-19
+
+パイロットサークル受け入れの最終ピース。通知・LINE チャネル方針
+(認証は共通チャネル / 他サークルの通知はメールのみ / LINE Push は 28ばど 専用) を確定し、
+サークル開設申請フォームと全テナント向けメール通知基盤を整えた。
+
+### Added
+- サークル利用申請フォーム `/apply` を新設 (未ログインで送信可、honeypot + 受付上限のスパム対策付き)。申請は `/platform` の承認フローにつながる (#42)
+- `/platform` にテナントの LINE チャネル設定 UI を追加 (シークレットはレスポンス・ログに残さない設計。通常運用では使わない上級オプション) (#42)
+
+### Changed
+- リマインダー cron を全 active テナント対応に変更 (メールは全テナント、LINE Push は 28ばど のみ。凍結テナントには送らない) (#42)
+- LINE Messaging API のトークンをテナント別に解決 (28ばど は従来どおり環境変数、未設定テナントはスキップ) (#42)
+- 読み取りテナントフィルタの tenantId=NULL 許容 (v4.0.0 移行期間の安全弁) を撤去 (#42)
+
+### Fixed
+- メール通知 (新規イベント / 公開時 / 当日連絡 / お知らせ / リマインダー) の本文リンクを slug 付き URL に修正 (他テナントのユーザーがリンクを開くと 404 になる問題の解消)。件名も「【２８ばど】」固定からテナント名に変更 (#42)
+
 ## [4.0.0] - 2026-09-13
 
 マルチテナント SaaS 化の基盤リリース。アプリの URL 構造が `/28bad/...` に変わる
@@ -619,6 +637,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[4.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.2...v4.0.0
 [3.7.2]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.1...v3.7.2
 [3.7.1]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.0...v3.7.1

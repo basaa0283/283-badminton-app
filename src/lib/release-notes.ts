@@ -21,6 +21,20 @@ export interface ReleaseSection {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "4.1.0",
+    date: "2026-09-19",
+    title: "通知メールの改善",
+    highlights: [
+      {
+        label: "改善",
+        items: [
+          "通知メール内のリンクが新しい URL 形式 (/28bad/〜) になりました。リンク先は今までと同じです。",
+          "アプリ全体の裏側の整備を行いました (表示や操作は変わりません)。",
+        ],
+      },
+    ],
+  },
+  {
     version: "4.0.0",
     date: "2026-09-13",
     title: "アプリの URL が新しくなりました",
