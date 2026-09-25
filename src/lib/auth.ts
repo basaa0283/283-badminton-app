@@ -235,6 +235,11 @@ export function makeAuthOptions(lineChannel?: TenantLineChannel): NextAuthOption
           // 解決失敗時は User.role のまま (可用性優先)
           console.error("[session] membership role lookup failed:", roleErr);
         }
+        // プラットフォーム管理者は全テナントで admin 扱い。新テナントの初期セットアップ
+        // (最初のログイン者を admin に昇格させる等) とサポートのため。
+        if (dbUser.isPlatformAdmin) {
+          effectiveRole = "admin";
+        }
 
         session.user = {
           ...session.user,
