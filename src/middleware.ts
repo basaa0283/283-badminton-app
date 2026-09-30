@@ -85,10 +85,17 @@ export function middleware(request: NextRequest) {
     return res;
   }
 
-  // 2. 旧 URL (スラッグ無しのテナントページ): /283bad/... へリダイレクト
+  // 2. スラッグ無しのテナントページ (/events 等): いま居るテナント (cookie) の
+  //    URL へリダイレクト。アプリ内リンクは slug 無しで書かれているため、これで
+  //    テナント内の遷移が維持される。cookie が無ければデフォルトテナントへ。
   if (isTenantPage(pathname)) {
+    const cookieSlug = request.cookies.get(TENANT_COOKIE)?.value;
+    const slug =
+      cookieSlug && SLUG_SEGMENT.test(cookieSlug) && !GLOBAL_PAGE_SEGMENTS.has(cookieSlug)
+        ? cookieSlug
+        : DEFAULT_SLUG;
     const url = request.nextUrl.clone();
-    url.pathname = `/${DEFAULT_SLUG}${pathname === "/" ? "" : pathname}`;
+    url.pathname = `/${slug}${pathname === "/" ? "" : pathname}`;
     return NextResponse.redirect(url);
   }
 
