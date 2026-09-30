@@ -9,10 +9,26 @@ import { NextRequest, NextResponse } from "next/server";
 // API (/api/...) と認証コールバックはスラッグ無しのまま (LINE Login の
 // コールバック URL 設定を変えないため)。テナントは cookie で伝搬する。
 //
-// P4 (複数テナント受け入れ) までは既知 slug をハードコードで許可する。
-// P4 で Tenant テーブル参照 (edge 対応のキャッシュ付き) に差し替える。
-const KNOWN_TENANT_SLUGS = new Set(["28bad"]);
+// 先頭セグメントが slug 形式で、下記のグローバルページ・テナントページ名でなければ
+// テナント slug とみなして rewrite する。slug が DB に実在するかは middleware では
+// 見ない (DB に触れないため)。実在しない slug はアプリ側 (getCurrentTenantId) で
+// 「存在しないテナント」に解決され、データは何も見えない。
 const DEFAULT_SLUG = "28bad";
+const SLUG_SEGMENT = /^[a-z0-9][a-z0-9-]{2,29}$/;
+
+// テナント外のグローバルページ (slug と誤認しないよう除外)
+const GLOBAL_PAGE_SEGMENTS = new Set([
+  "login",
+  "about",
+  "preview",
+  "terms",
+  "privacy",
+  "email",
+  "invite",
+  "onboarding",
+  "platform",
+  "apply",
+]);
 
 // 過去に使っていた slug からのリダイレクト (旧リンク救済)
 const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
@@ -31,6 +47,7 @@ const TENANT_PAGE_PREFIXES = [
   "/tournaments",
   "/profile",
   "/release-notes",
+  "/announcements",
 ];
 
 function isTenantPage(pathname: string): boolean {
@@ -53,7 +70,12 @@ export function middleware(request: NextRequest) {
 
   // 1. /<slug>/... 形式: slug を剥がして内部パスに rewrite + cookie セット
   const m = pathname.match(/^\/([a-z0-9-]+)(\/.*)?$/);
-  if (m && KNOWN_TENANT_SLUGS.has(m[1])) {
+  if (
+    m &&
+    SLUG_SEGMENT.test(m[1]) &&
+    !GLOBAL_PAGE_SEGMENTS.has(m[1]) &&
+    !isTenantPage(`/${m[1]}`)
+  ) {
     const slug = m[1];
     const innerPath = m[2] || "/";
     const url = request.nextUrl.clone();

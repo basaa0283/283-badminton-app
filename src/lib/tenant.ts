@@ -28,6 +28,9 @@ export async function getDefaultTenantId(): Promise<string> {
   return tenant.id;
 }
 
+// 未知 slug 用の番兵 ID。どのレコードの tenantId とも一致しない
+export const NONEXISTENT_TENANT_ID = "tenant-not-found";
+
 // slug → tenantId のプロセス内キャッシュ (不変扱い)
 const slugIdCache = new Map<string, string>();
 
@@ -57,7 +60,9 @@ export async function getCurrentTenantId(): Promise<string> {
     where: { slug },
     select: { id: true },
   });
-  if (!tenant) return getDefaultTenantId(); // 未知 slug はデフォルトに倒す
+  // 未知 slug (タイプミス・未承認) はデフォルトに倒さない。28ばど のデータが
+  // 別 URL で見えてしまうのを防ぐため、存在しない ID を返して何もヒットさせない。
+  if (!tenant) return NONEXISTENT_TENANT_ID;
   slugIdCache.set(slug, tenant.id);
   return tenant.id;
 }
