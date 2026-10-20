@@ -24,9 +24,21 @@ export interface TenantLineChannel {
   channelSecret: string;
 }
 
+// User.email はフィルタ付きユニークインデックスで一意性を担保しており、schema に
+// @unique を付けられない (v3.7.2)。標準アダプタの getUserByEmail は
+// findUnique({ where: { email } }) を使うため、新規ユーザーの OAuth 登録時に
+// Prisma のバリデーションエラーで必ず失敗する。findFirst に差し替える。
+export function createAuthAdapter(): NextAuthOptions["adapter"] {
+  const base = PrismaAdapter(prisma);
+  return {
+    ...base,
+    getUserByEmail: (email: string) => prisma.user.findFirst({ where: { email } }),
+  } as NextAuthOptions["adapter"];
+}
+
 export function makeAuthOptions(lineChannel?: TenantLineChannel): NextAuthOptions {
   return {
-  adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
+  adapter: createAuthAdapter(),
   providers: [
     // 開発環境のみ: テストユーザーでログイン
     ...(isDevelopment
