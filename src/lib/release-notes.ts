@@ -21,6 +21,19 @@ export interface ReleaseSection {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "4.1.1",
+    date: "2026-10-21",
+    title: "新規登録時のログイン不具合を修正",
+    highlights: [
+      {
+        label: "修正",
+        items: [
+          "はじめてアプリを使う方が LINE でログインしようとすると、ログイン画面に戻ってしまう不具合を修正しました。",
+        ],
+      },
+    ],
+  },
+  {
     version: "4.1.0",
     date: "2026-09-19",
     title: "通知メールの改善",
