@@ -3,6 +3,11 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [4.1.1] - 2026-10-21
+
+### Fixed
+- 新規ユーザーが LINE ログインできず、ログイン画面に戻されてしまう不具合を修正。v3.7.2 で `User.email` の `@unique` を外した影響で、認証ライブラリ (NextAuth の Prisma アダプタ) が新規登録時に行う email 検索 (`findUnique`) が必ずエラーになっていた。email 検索を `findFirst` に差し替えるアダプタを用意し、回帰テストを追加。既存ユーザーのログインには影響なし
+
 ## [4.1.0] - 2026-09-19
 
 パイロットサークル受け入れの最終ピース。通知・LINE チャネル方針
@@ -637,6 +642,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[4.1.1]: https://github.com/basaa0283/283-badminton-app/compare/v4.1.0...v4.1.1
 [4.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.2...v4.0.0
 [3.7.2]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.1...v3.7.2
