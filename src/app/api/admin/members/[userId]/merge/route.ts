@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 import { logActivity } from "@/lib/activity-log";
+import { getCurrentTenantId } from "@/lib/tenant";
 
 const mergeSchema = z.object({
   provisionalUserId: z.string().min(1),
@@ -83,6 +84,30 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
+    // セッションの role は Membership から解決されるため、仮アカウントの所属情報
+    // (テナント内の role / プロフィール) を pending 側の Membership に引き継ぐ。
+    const tenantId = await getCurrentTenantId();
+    const provisionalMembership = await prisma.membership.findUnique({
+      where: { userId_tenantId: { userId: provisionalUserId, tenantId } },
+    });
+    const mergedRole = provisionalMembership?.role ?? provisionalUser.role;
+    const mergedNickname =
+      provisionalMembership?.nickname ??
+      (provisionalUser.nickname !== "名無し" ? provisionalUser.nickname : pendingUser.nickname);
+    const provisionalTags = await prisma.userMemberTag.findMany({
+      where: { userId: provisionalUserId },
+      select: { tagId: true },
+    });
+    const pendingTagIds = new Set(
+      (
+        await prisma.userMemberTag.findMany({
+          where: { userId },
+          select: { tagId: true },
+        })
+      ).map((t) => t.tagId),
+    );
+
+    // Azure SQL Basic では対話型トランザクションの既定 5 秒を超えることがあるため延長
     await prisma.$transaction(async (tx) => {
       // 出欠を pending 側に移行 (同一イベントの重複は仮アカウント側を優先)
       for (const attendance of provisionalUser.attendances) {
@@ -123,13 +148,68 @@ export async function PUT(request: NextRequest, { params }: Params) {
         },
       });
 
-      // 仮アカウントに紐付くトークン類を先に削除 (SQL Server: NoAction の FK 対応)
+      // 所属情報: pending 側の Membership に仮アカウントの role / プロフィールを反映
+      const membershipData = {
+        role: mergedRole,
+        nickname: mergedNickname,
+        gender: provisionalMembership?.gender ?? provisionalUser.gender ?? undefined,
+        birthdate: provisionalMembership?.birthdate ?? provisionalUser.birthdate ?? undefined,
+        ageVisible: provisionalMembership?.ageVisible ?? provisionalUser.ageVisible,
+        comment: provisionalMembership?.comment ?? provisionalUser.comment ?? undefined,
+        skillLevel: provisionalMembership?.skillLevel ?? provisionalUser.skillLevel ?? undefined,
+        adminNote: provisionalMembership?.adminNote ?? provisionalUser.adminNote ?? undefined,
+        priorityScore: provisionalMembership?.priorityScore ?? provisionalUser.priorityScore,
+      };
+      await tx.membership.upsert({
+        where: { userId_tenantId: { userId, tenantId } },
+        update: membershipData,
+        create: { userId, tenantId, ...membershipData },
+      });
+
+      // メンバータグを引き継ぐ (重複は除く)
+      for (const t of provisionalTags) {
+        if (!pendingTagIds.has(t.tagId)) {
+          await tx.userMemberTag.create({ data: { userId, tagId: t.tagId } });
+        }
+      }
+
+      // 仮アカウントを参照する記録を pending 側へ付け替え
+      await tx.tournamentResult.updateMany({
+        where: { userId: provisionalUserId },
+        data: { userId },
+      });
+      await tx.tournament.updateMany({
+        where: { createdById: provisionalUserId },
+        data: { createdById: userId },
+      });
+      await tx.event.updateMany({
+        where: { createdById: provisionalUserId },
+        data: { createdById: userId },
+      });
+      await tx.announcement.updateMany({
+        where: { createdById: provisionalUserId },
+        data: { createdById: userId },
+      });
+      await tx.message.updateMany({
+        where: { senderId: provisionalUserId },
+        data: { senderId: userId },
+      });
+      await tx.pointTransaction.updateMany({
+        where: { userId: provisionalUserId },
+        data: { userId },
+      });
+
+      // 仮アカウントに紐付く残りの行を先に削除 (SQL Server: NoAction の FK 対応)
+      await tx.membership.deleteMany({ where: { userId: provisionalUserId } });
+      await tx.userMemberTag.deleteMany({ where: { userId: provisionalUserId } });
+      await tx.achievementUnlock.deleteMany({ where: { userId: provisionalUserId } });
+      await tx.emailToken.deleteMany({ where: { userId: provisionalUserId } });
       await tx.invitationToken.deleteMany({ where: { userId: provisionalUserId } });
       await tx.announcementRead.deleteMany({ where: { userId: provisionalUserId } });
 
       // 仮アカウント本体を削除
       await tx.user.delete({ where: { id: provisionalUserId } });
-    });
+    }, { maxWait: 10_000, timeout: 30_000 });
 
     void logActivity({
       userId: session.user.id,

@@ -21,6 +21,19 @@ export interface ReleaseSection {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "4.1.2",
+    date: "2026-10-21",
+    title: "メンバーのマージ不具合を修正 (運営向け)",
+    highlights: [
+      {
+        label: "修正",
+        items: [
+          "管理画面で、参加申請したメンバーを既存のアカウントにまとめる (マージ) 操作がエラーになる不具合を修正しました。",
+        ],
+      },
+    ],
+  },
+  {
     version: "4.1.1",
     date: "2026-10-21",
     title: "新規登録時のログイン不具合を修正",

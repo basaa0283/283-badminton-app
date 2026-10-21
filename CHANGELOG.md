@@ -3,6 +3,13 @@
 このドキュメントは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) の形式に基づいて記述されています。
 本プロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) (`MAJOR.MINOR.PATCH`) に従います。
 
+## [4.1.2] - 2026-10-21
+
+### Fixed
+- 承認待ちの新規参加者を既存の仮アカウントとマージすると「サーバーエラーが発生しました」で失敗する不具合を修正。v4.0.0 で導入した所属情報 (Membership) が仮アカウント側に残ったまま削除しようとして、DB の外部キー制約違反になっていた
+- 上記に伴い、マージ後も仮アカウントの権限 (role) が引き継がれず「承認待ち」のままになる問題を修正。所属情報 (Membership) に role / プロフィールを引き継ぐようにした。あわせてメンバータグ・大会成績なども新アカウントへ引き継ぐ
+- マージ処理のトランザクションの制限時間を延長 (既定の 5 秒を超えて失敗することがあった)
+
 ## [4.1.1] - 2026-10-21
 
 ### Fixed
@@ -642,6 +649,7 @@ Android LINE WebView (内蔵ブラウザ) で `<select>` のドロップダウ�
 - Azure SQL Database (Basic 5 DTU) を本番DBに採用、Prisma SQL Server スキーマで対応
 - ローカル開発は SQLite + 開発用ログイン (テストユーザー) でLINE依存を回避
 
+[4.1.2]: https://github.com/basaa0283/283-badminton-app/compare/v4.1.1...v4.1.2
 [4.1.1]: https://github.com/basaa0283/283-badminton-app/compare/v4.1.0...v4.1.1
 [4.1.0]: https://github.com/basaa0283/283-badminton-app/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/basaa0283/283-badminton-app/compare/v3.7.2...v4.0.0
