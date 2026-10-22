@@ -289,13 +289,8 @@ export default function ProfilePage() {
     }
   }, [status, router]);
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchProfile();
-    }
-  }, [status]);
 
-  const fetchProfile = async () => {
+  async function fetchProfile() {
     try {
       const res = await fetch("/api/profile?fromPage=1");
       const data = await res.json();
@@ -317,7 +312,13 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchProfile();
+    }
+  }, [status]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>

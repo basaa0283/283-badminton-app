@@ -56,14 +56,8 @@ export default function EventsPage() {
     }
   }, [tab]);
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchEvents();
-    }
-    // pastMonthsBack を依存に入れて「もっと前を見る」で再取得する
-  }, [status, tab, pastMonthsBack]);
 
-  const fetchEvents = async () => {
+  async function fetchEvents() {
     setLoading(true);
     try {
       const qs =
@@ -84,7 +78,14 @@ export default function EventsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchEvents();
+    }
+    // pastMonthsBack を依存に入れて「もっと前を見る」で再取得する
+  }, [status, tab, pastMonthsBack]);
 
   const loadMorePast = () => {
     setPastMonthsBack((m) => Math.min(m + PAST_LOAD_MORE_STEP, PAST_MAX_MONTHS));

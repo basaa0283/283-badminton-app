@@ -164,7 +164,7 @@ export default function AdminMembersPage() {
     }
   }, [status]);
 
-  const fetchMembers = async () => {
+  async function fetchMembers() {
     try {
       const res = await fetch("/api/members");
       const data = await res.json();
@@ -176,7 +176,7 @@ export default function AdminMembersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleMemberClick = (memberId: string) => {
     router.push(`/admin/members/${memberId}`);

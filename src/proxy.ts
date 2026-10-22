@@ -57,7 +57,7 @@ function isTenantPage(pathname: string): boolean {
   );
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 0. 旧 slug は新 slug へリダイレクト (旧リンク・ブックマーク救済)

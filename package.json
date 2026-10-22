@@ -20,15 +20,15 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "^2.11.1",
+    "@auth/prisma-adapter": "^2.11.3",
     "@prisma/client": "^5.22.0",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^17.2.3",
-    "next": "16.0.7",
-    "next-auth": "^4.24.13",
-    "nodemailer": "^7.0.13",
+    "next": "^16.4.2",
+    "next-auth": "^4.24.15",
+    "nodemailer": "^10.2.0",
     "prisma": "^5.22.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -49,11 +49,16 @@
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^9",
-    "eslint-config-next": "16.0.7",
+    "eslint-config-next": "^16.4.2",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5",
     "vitest": "^4.1.5"
+  },
+  "overrides": {
+    "next-auth": {
+      "nodemailer": "$nodemailer"
+    }
   }
 }

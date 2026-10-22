@@ -56,13 +56,8 @@ export default function EditEventPage() {
     }
   }, [session, router]);
 
-  useEffect(() => {
-    if (status === "authenticated" && eventId) {
-      fetchEvent();
-    }
-  }, [status, eventId]);
 
-  const fetchEvent = async () => {
+  async function fetchEvent() {
     try {
       const res = await fetch(`/api/events/${eventId}`);
       const data = await res.json();
@@ -77,7 +72,13 @@ export default function EditEventPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (status === "authenticated" && eventId) {
+      fetchEvent();
+    }
+  }, [status, eventId]);
 
   if (status === "loading" || !session || loading) {
     return (
