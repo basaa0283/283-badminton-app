@@ -47,13 +47,8 @@ export default function HistoryPage() {
     }
   }, [session, router]);
 
-  useEffect(() => {
-    if (session) {
-      fetchData();
-    }
-  }, [session]);
 
-  const fetchData = async () => {
+  async function fetchData() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/history?type=attendance&limit=100");
@@ -66,7 +61,13 @@ export default function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (session) {
+      fetchData();
+    }
+  }, [session]);
 
   const formatDateTime = (dateString: string) => {
     return format(new Date(dateString), "MM/dd HH:mm", { locale: ja });

@@ -120,7 +120,7 @@ export default function EventDetailPage() {
     }
   }, [status, eventId]);
 
-  const fetchEvent = async () => {
+  async function fetchEvent() {
     setLoading(true);
     try {
       const res = await fetch(`/api/events/${eventId}`);
@@ -136,7 +136,7 @@ export default function EventDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleAttendanceSubmit = async (
     attendanceStatus: "attending" | "not_attending",

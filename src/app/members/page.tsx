@@ -36,13 +36,8 @@ export default function MembersPage() {
     }
   }, [session, router]);
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchMembers();
-    }
-  }, [status]);
 
-  const fetchMembers = async () => {
+  async function fetchMembers() {
     try {
       const res = await fetch("/api/members");
       const data = await res.json();
@@ -54,7 +49,13 @@ export default function MembersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchMembers();
+    }
+  }, [status]);
 
   if (status === "loading" || !session) {
     return (

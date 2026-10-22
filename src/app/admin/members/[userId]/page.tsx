@@ -148,7 +148,7 @@ export default function MemberDetailPage() {
     }
   }, [status, userId]);
 
-  const fetchMember = async () => {
+  async function fetchMember() {
     try {
       const res = await fetch(`/api/members/${userId}`);
       const data = await res.json();
@@ -181,7 +181,7 @@ export default function MemberDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const fetchInvitation = async () => {
     try {
@@ -225,7 +225,7 @@ export default function MemberDetailPage() {
     setInviteUrl(null);
   };
 
-  const fetchProxyEvents = async () => {
+  async function fetchProxyEvents() {
     try {
       const res = await fetch(`/api/admin/members/${userId}/attendance`);
       const data = await res.json();
@@ -233,7 +233,7 @@ export default function MemberDetailPage() {
     } catch (error) {
       console.error("Failed to fetch proxy events:", error);
     }
-  };
+  }
 
   const handleProxyConfirm = async (eventId: string) => {
     const status = pendingStatus[eventId];
