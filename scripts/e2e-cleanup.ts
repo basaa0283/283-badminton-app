@@ -59,8 +59,14 @@ async function main() {
       const hist = await prisma.attendanceHistory.deleteMany({ where: { userId: { in: userIds } } });
       const inv = await prisma.invitationToken.deleteMany({ where: { userId: { in: userIds } } });
       const reads = await prisma.announcementRead.deleteMany({ where: { userId: { in: userIds } } });
+      // SQL Server 側で User への FK が NoAction のテーブルは、User 削除前に明示削除が必要
+      const mem = await prisma.membership.deleteMany({ where: { userId: { in: userIds } } });
+      const tags = await prisma.userMemberTag.deleteMany({ where: { userId: { in: userIds } } });
+      const pts = await prisma.pointTransaction.deleteMany({ where: { userId: { in: userIds } } });
+      const ach = await prisma.achievementUnlock.deleteMany({ where: { userId: { in: userIds } } });
+      const etok = await prisma.emailToken.deleteMany({ where: { userId: { in: userIds } } });
       console.log(
-        `[cleanup] dependents removed: attendances=${att.count} histories=${hist.count} invitations=${inv.count} announcementReads=${reads.count}`
+        `[cleanup] dependents removed: attendances=${att.count} histories=${hist.count} invitations=${inv.count} announcementReads=${reads.count} memberships=${mem.count} memberTags=${tags.count} points=${pts.count} achievements=${ach.count} emailTokens=${etok.count}`
       );
 
       // Announcement.createdById は nullable なので null 化
