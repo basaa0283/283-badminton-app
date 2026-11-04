@@ -129,3 +129,11 @@ Private
 ---
 
 *最終更新: 2024年12月*
+
+## Longplay お知らせ作成権限 (任意の試験導入)
+
+`LONGPLAY_ANNOUNCEMENTS_FEATURE_ID` 未設定時は課金サービスに接続せず、従来の作成動作を維持します。有効時は access Feature UUID と `LONGPLAY_BASE_URL`、サーバー専用 `LONGPLAY_SECRET_KEY`、`LONGPLAY_APP_ID`、明示的な `LONGPLAY_ENVIRONMENT` (`sandbox` / `live`) を設定します。SDK は 0.10.15 固定で、Node.js 22 以上が必要です。
+
+管理者セッションと入力検証の後、現在のテナントを DB から取得し、`283bad:tenant:<id>` の権限を新規お知らせの保存前に確認します。セッションの所属判定・課金・保存先で同じテナントを使用し、別テナントからデフォルトの28ばどへ投稿しません。active な complimentary パイロットは購入不要です。frozen/pending は許可せず、保存済み paid フラグだけでは購入済みと判断しません。本文、宛先、LINE/メール資格情報は課金先へ送信しません。
+
+対象は `POST /api/admin/announcements` のみです。既存お知らせの閲覧、他の有料候補機能、購入・解約・webhook・プラン UI の全体実装は #64 に残ります。拒否や障害ではお知らせを保存せず、メール通知も開始しません。採用前に課金商品の範囲と SDK 利用許諾を確認してください。

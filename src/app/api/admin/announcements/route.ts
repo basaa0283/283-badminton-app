@@ -6,7 +6,8 @@ import { permissions, UserRole } from "@/lib/permissions";
 import { z } from "zod";
 import { logActivity } from "@/lib/activity-log";
 import { dispatchNotificationEmails } from "@/lib/notify-email-dispatch";
-import { getDefaultTenantId, tenantWhere } from "@/lib/tenant";
+import { getCurrentTenantId, tenantWhere } from "@/lib/tenant";
+import { AnnouncementAccessError, requireAnnouncementAccess } from "@/lib/longplay-announcement-access";
 
 const createSchema = z.object({
   title: z.string().min(1, "タイトルは必須です").max(200, "タイトルは200文字以内"),
@@ -58,7 +59,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const tenantId = await getDefaultTenantId();
+  // The same tenant used to resolve the session's membership must own the write
+  // and the billing Customer; a selected tenant must not write into 28bad.
+  const tenantId = await getCurrentTenantId();
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, plan: true, status: true } });
+  try {
+    await requireAnnouncementAccess(tenant);
+  } catch (error) {
+    const denial = error instanceof AnnouncementAccessError ? error : new AnnouncementAccessError(503, "BILLING_UNAVAILABLE");
+    return NextResponse.json({ success: false, error: { code: denial.code } }, { status: denial.status });
+  }
   const created = await prisma.announcement.create({
     data: {
       title: parsed.data.title,
