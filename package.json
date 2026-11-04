@@ -2,6 +2,7 @@
   "name": "283-badminton-app",
   "version": "4.1.2",
   "private": true,
+  "engines": { "node": ">=22" },
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -22,6 +23,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
     "@prisma/client": "^5.22.0",
+    "@tinkerlandai/longplay-sdk": "0.10.15",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
